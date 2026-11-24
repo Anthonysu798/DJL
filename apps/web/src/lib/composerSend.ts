@@ -220,6 +220,7 @@ export function resolvePromptEffortFromModelSelection(
     case "kimi":
     case "iflow":
     case "qwen":
+    case "copilot":
     case "codebuddy":
     case "kilo":
     case "opencode":

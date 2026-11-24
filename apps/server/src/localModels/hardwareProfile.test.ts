@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   collectHardwareProfile,
+  parseMacAvailableMemory,
   detectHardwareProfile,
   parseMacGpuInventory,
   parseNvidiaSmiGpuInventory,
@@ -468,6 +469,32 @@ describe("hardware profile", () => {
       },
     ]);
     expect(parseMacGpuInventory("not json", "arm64")).toEqual([]);
+  });
+
+  it("counts memory macOS reclaims on demand, not only free pages", async () => {
+    // vm_stat from a 32 GB M1 Max with apps open: 1.8 GB free, 9.3 GB inactive.
+    const vmStat = [
+      "Mach Virtual Memory Statistics: (page size of 16384 bytes)",
+      "Pages free:                                   119904.",
+      "Pages active:                                 619486.",
+      "Pages inactive:                               606833.",
+      "Pages speculative:                             26246.",
+      "Pages wired down:                             205840.",
+    ].join("\n");
+    const profile = await collectHardwareProfile({
+      stateDir: "unused",
+      platform: "darwin",
+      architecture: "arm64",
+      totalMemoryBytes: 32 * 1024 ** 3,
+      cpuLogicalCores: 10,
+      freeDiskBytes: 80 * 1024 ** 3,
+      runMacGpuQuery: async () =>
+        JSON.stringify({ SPDisplaysDataType: [{ _name: "Apple M1 Max" }] }),
+      runMacOsVersionQuery: async () => "15.6.1\n",
+      runMacMemoryQuery: async () => vmStat,
+    });
+    expect(profile.availableMemoryBytes).toBe((119904 + 606833) * 16384);
+    expect(parseMacAvailableMemory("garbage")).toBeNull();
   });
 
   it("uses reclaimable process memory and records Apple Silicon host details", async () => {

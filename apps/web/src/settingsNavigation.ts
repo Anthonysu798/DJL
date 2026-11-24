@@ -14,11 +14,9 @@ export const SETTINGS_SECTION_IDS = [
   "shortcuts",
   "worktrees",
   "archived",
-  "models",
   "accounts",
   "local-models",
   "servers",
-  "providers",
   "plugins",
   "skills",
   "usage",
@@ -27,9 +25,7 @@ export const SETTINGS_SECTION_IDS = [
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
 export type SettingsNavGroupId = "app" | "djl";
-type SettingsNavCatalogItemId =
-  | Exclude<SettingsSectionId, "local-models" | "providers">
-  | "localModels";
+type SettingsNavCatalogItemId = Exclude<SettingsSectionId, "local-models"> | "localModels";
 type SettingsNavItemTranslationKey =
   `navigation.items.${SettingsNavCatalogItemId}.${"label" | "description" | "eyebrow"}`;
 
@@ -159,14 +155,6 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrowKey: "navigation.items.archived.eyebrow",
   },
   {
-    id: "models",
-    group: "djl",
-    labelKey: "navigation.items.models.label",
-    descriptionKey: "navigation.items.models.description",
-    icon: "brain",
-    eyebrowKey: "navigation.items.models.eyebrow",
-  },
-  {
     id: "local-models",
     group: "djl",
     labelKey: "navigation.items.localModels.label",
@@ -235,7 +223,8 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (typeof value !== "string") {
     return "general";
   }
-  if (value === "providers") return "models";
+  // The retired "Models & API keys" page (and its older "providers" alias) now lives in Accounts.
+  if (value === "models" || value === "providers") return "accounts";
   const section = SETTINGS_SECTION_IDS.find((candidate) => candidate === value);
   return section ?? "general";
 }

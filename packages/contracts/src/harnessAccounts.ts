@@ -11,6 +11,7 @@ export const HarnessId = Schema.Literals([
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
 ]);
@@ -50,6 +51,7 @@ export const HarnessToolId = Schema.Literals([
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
   "cursor",

@@ -224,8 +224,8 @@ describe("settings, profile, notifications, and release localization", () => {
     }
     expect(source).toContain("id={SETTINGS_TARGETS.environmentPanel}");
     expect(source).toContain("id={SETTINGS_TARGETS.providerUpdates}");
-    expect(source).toContain("<HarnessAccountsPanel />");
-    expect(source).toContain("<OpenCodeModelsSettingsPanel");
+    expect(source).toContain("<HarnessAccountsPanel");
+    expect(source).toContain("<GitWritingModelSetting");
     expect(source).not.toContain('t("search.entries.general.default-provider.title")');
   });
 

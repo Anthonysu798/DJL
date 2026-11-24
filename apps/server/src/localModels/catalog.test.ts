@@ -1,3 +1,4 @@
+import { CODING_HARNESS_MIN_CONTEXT_TOKENS } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -104,7 +105,7 @@ describe("local model catalog", () => {
           general: "granite-4.1-3b",
           document: "granite-4.1-3b",
           reasoning: "qwen3.5-2b",
-          coding: "qwen2.5-coder-7b",
+          coding: "granite-4.1-3b",
         },
       },
       {
@@ -113,7 +114,7 @@ describe("local model catalog", () => {
           general: "gpt-oss-20b",
           document: "granite-4.1-3b",
           reasoning: "gpt-oss-20b",
-          coding: "qwen2.5-coder-14b",
+          coding: "gpt-oss-20b",
         },
       },
       {
@@ -164,7 +165,7 @@ describe("local model catalog", () => {
         general: "granite-4.1-3b",
         document: "granite-4.1-3b",
         reasoning: "qwen3.5-2b",
-        coding: "qwen2.5-coder-7b",
+        coding: "granite-4.1-3b",
       },
     ],
     [
@@ -173,7 +174,7 @@ describe("local model catalog", () => {
         general: "gpt-oss-20b",
         document: "granite-4.1-3b",
         reasoning: "gpt-oss-20b",
-        coding: "qwen2.5-coder-14b",
+        coding: "gpt-oss-20b",
       },
     ],
     [
@@ -247,7 +248,7 @@ describe("local model catalog", () => {
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-7b",
+      coding: "granite-4.1-3b",
     });
   });
 
@@ -275,7 +276,7 @@ describe("local model catalog", () => {
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-14b",
+      coding: "granite-4.1-3b",
     });
   });
 
@@ -329,7 +330,7 @@ describe("local model catalog", () => {
 
   it.each([
     ["M1 Max", 64, 50, 10, "arm64", false, "gpt-oss-20b", "qwen3-coder-30b"],
-    ["M3 Pro", 36, 28, 11, "arm64", false, "gpt-oss-20b", "qwen2.5-coder-14b"],
+    ["M3 Pro", 36, 28, 11, "arm64", false, "gpt-oss-20b", "gpt-oss-20b"],
     ["M4 Pro", 48, 40, 14, "arm64", false, "gpt-oss-20b", "qwen3-coder-30b"],
     ["M1 Max under Rosetta", 64, 50, 10, "x64", true, "gpt-oss-20b", "qwen3-coder-30b"],
   ] as const)(
@@ -451,7 +452,7 @@ describe("local model catalog", () => {
     expect(recommendLocalModel({ platform: "darwin", ...capacity })).toBeNull();
   });
 
-  it("caps an Intel Mac using CPU-only inference at the curated 7B tier", () => {
+  it("caps an Intel Mac using CPU-only inference at the curated 7B size", () => {
     expect(
       recommendLocalModelsByUseCase({
         platform: "darwin",
@@ -469,7 +470,7 @@ describe("local model catalog", () => {
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-7b",
+      coding: "granite-4.1-3b",
     });
   });
 
@@ -527,7 +528,7 @@ describe("local model catalog", () => {
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-7b",
+      coding: "granite-4.1-3b",
     });
     expect(
       recommendLocalModelsByUseCase({
@@ -538,7 +539,7 @@ describe("local model catalog", () => {
       general: "gpt-oss-20b",
       document: "granite-4.1-3b",
       reasoning: "gpt-oss-20b",
-      coding: "qwen2.5-coder-14b",
+      coding: "gpt-oss-20b",
     });
   });
 
@@ -583,13 +584,7 @@ describe("local model catalog", () => {
       general: ["qwen3.5-2b", "granite-4.1-3b", "gpt-oss-20b"],
       document: ["qwen3.5-2b", "granite-4.1-3b"],
       reasoning: ["qwen3.5-2b", "gpt-oss-20b"],
-      coding: [
-        "qwen3.5-2b",
-        "granite-4.1-3b",
-        "qwen2.5-coder-7b",
-        "qwen2.5-coder-14b",
-        "qwen3-coder-30b",
-      ],
+      coding: ["qwen3.5-2b", "granite-4.1-3b", "gpt-oss-20b", "qwen3-coder-30b"],
     };
     const recommendationRank = (
       useCase: (typeof useCases)[number],
@@ -696,8 +691,7 @@ describe("local model catalog", () => {
   it("keeps automatic canary fallbacks inside the selected champion category", () => {
     expect(localModelFallbackChain("qwen3-coder-30b", "coding").map(({ id }) => id)).toEqual([
       "qwen3-coder-30b",
-      "qwen2.5-coder-14b",
-      "qwen2.5-coder-7b",
+      "gpt-oss-20b",
       "granite-4.1-3b",
       "qwen3.5-2b",
       "qwen3-1.7b",
@@ -712,8 +706,9 @@ describe("local model catalog", () => {
       "qwen3.5-2b",
       "qwen3-1.7b",
     ]);
+    // A model that is no longer a coding pick never comes back as a coding fallback.
     expect(localModelFallbackChain("qwen3-coder-30b", "coding").map(({ id }) => id)).not.toContain(
-      "gpt-oss-20b",
+      "qwen2.5-coder-14b",
     );
     expect(localModelFallbackChain("missing", "coding")).toEqual([]);
   });
@@ -1042,5 +1037,22 @@ describe("curated tool capability is measured, not assumed", () => {
     // outcome; claiming the 1.7B tier can drive an agent is what shipped a broken experience.
     const tiny = recommendLocalModel(4 * GIB);
     expect(tiny && curatedToolSupport("ollama", tiny.sources[0]!.modelId)).toBe(false);
+  });
+});
+
+describe("coding picks and context windows", () => {
+  it("records a window for every curated model", () => {
+    for (const recommendation of LOCAL_MODEL_RECOMMENDATIONS)
+      expect(recommendation.contextWindowTokens, recommendation.id).toBeGreaterThan(0);
+  });
+
+  it("only picks tool-capable coding models that can hold Claude Code and Codex", () => {
+    for (const tier of LOCAL_MODEL_CHAMPION_TIERS) {
+      const pick = LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === tier.champions.coding)!;
+      if (!pick.supportsToolCalls) continue;
+      expect(pick.contextWindowTokens, tier.id).toBeGreaterThanOrEqual(
+        CODING_HARNESS_MIN_CONTEXT_TOKENS,
+      );
+    }
   });
 });

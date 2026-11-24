@@ -16,6 +16,7 @@ export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = [
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
 ];

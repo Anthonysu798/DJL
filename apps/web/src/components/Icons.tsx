@@ -427,6 +427,21 @@ export const QwenIcon: Icon = (props) => (
   </svg>
 );
 
+// GitHub Copilot: a generic pilot face with goggles.
+export const CopilotIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M4 12.5a8 8 0 0 1 16 0V17a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4.5Z"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinejoin="round"
+    />
+    <circle cx="9" cy="12" r="2.2" stroke="currentColor" strokeWidth="2" />
+    <circle cx="15" cy="12" r="2.2" stroke="currentColor" strokeWidth="2" />
+    <path d="M10 16.5h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 // CodeBuddy Code: a chat bubble with a code chevron.
 export const CodeBuddyIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

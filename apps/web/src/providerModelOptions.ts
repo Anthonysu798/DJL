@@ -4,6 +4,7 @@ import {
   humanizeModelSlug,
   normalizeModelSlug,
 } from "@djl/shared/model";
+import { findCodingPlan } from "@djl/contracts";
 import { translateRendererCopy } from "./i18n";
 import type {
   ClaudeModelOptions,
@@ -62,6 +63,16 @@ export function formatProviderModelOptionName(input: {
     input.provider === "cursor" ? input.slug.trim().replace(/\[[^\]]*\]$/u, "") : input.slug.trim();
   if (trimmedSlug.length === 0) {
     return trimmedSlug;
+  }
+
+  if (input.provider === "claudeAgent" || input.provider === "codex") {
+    // Local and coding-plan models carry a DJL routing prefix; show the model itself.
+    if (trimmedSlug.startsWith("ollama/")) return trimmedSlug.slice("ollama/".length);
+    const plan = /^plan\/([^/]+)\/(.+)$/u.exec(trimmedSlug);
+    if (plan) {
+      const model = findCodingPlan(plan[1]!)?.models.find(({ id }) => id === plan[2]);
+      return model?.name ?? plan[2]!;
+    }
   }
 
   if (input.provider === "kilo" || input.provider === "opencode" || input.provider === "pi") {
@@ -195,6 +206,7 @@ export function mergeDynamicModelOptions(input: {
       input.provider === "kimi" ||
       input.provider === "iflow" ||
       input.provider === "qwen" ||
+      input.provider === "copilot" ||
       input.provider === "codebuddy") &&
     normalizedDynamicOptions.length > 0
       ? []
@@ -442,6 +454,7 @@ export function buildModelSelection(
     case "kimi":
     case "iflow":
     case "qwen":
+    case "copilot":
     case "codebuddy":
     case "djlCloud":
     case "group":

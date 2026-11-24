@@ -31,6 +31,7 @@ export * from "./document";
 export * from "./filesystem";
 export * from "./rpc";
 export * from "./harnessAccounts";
+export * from "./codingPlans";
 
 export * from "./runtimePermissions";
 export * from "./marketing/campaign";

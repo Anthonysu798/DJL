@@ -1241,6 +1241,7 @@ function makeModelSelection(
     case "kimi":
     case "iflow":
     case "qwen":
+    case "copilot":
     case "codebuddy":
     case "djlCloud":
     case "group":

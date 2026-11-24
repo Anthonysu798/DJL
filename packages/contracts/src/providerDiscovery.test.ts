@@ -1,12 +1,7 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import {
-  OpenCodeCredentialMutationResult,
-  OpenCodeListModelProvidersResult,
-  OpenCodeSetApiKeyInput,
-  ProviderListModelsResult,
-} from "./providerDiscovery";
+import { OpenCodeListModelProvidersResult, ProviderListModelsResult } from "./providerDiscovery";
 
 const decodeProviderListModelsResult = Schema.decodeUnknownSync(ProviderListModelsResult);
 
@@ -75,20 +70,5 @@ describe("OpenCode credential contracts", () => {
     });
 
     expect(result.providers[0]).not.toHaveProperty("apiKey");
-  });
-
-  it("accepts API keys only on mutation inputs", () => {
-    expect(
-      Schema.decodeUnknownSync(OpenCodeSetApiKeyInput)({
-        providerId: "openai",
-        apiKey: "sk-test",
-      }),
-    ).toMatchObject({ providerId: "openai", apiKey: "sk-test" });
-    expect(
-      Schema.decodeUnknownSync(OpenCodeCredentialMutationResult)({
-        providerId: "openai",
-        connected: true,
-      }),
-    ).not.toHaveProperty("apiKey");
   });
 });

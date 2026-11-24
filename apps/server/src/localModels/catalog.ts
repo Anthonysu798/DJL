@@ -11,6 +11,8 @@ const estimatedBytes = (gibibytes: number): number => Math.round(gibibytes * GIB
 // Keep one cross-platform reserve so first-run recommendations cannot consume that space.
 export const LOCAL_MODEL_RUNTIME_STORAGE_RESERVE_BYTES = 4 * GIB;
 
+// contextWindowTokens is each model's trained window as Ollama lists it (verified 2026-11-23 on
+// https://ollama.com/library/<name>/tags; qwen3:1.7b and qwen2.5-coder also via /api/show).
 export const LOCAL_MODEL_RECOMMENDATIONS = [
   {
     id: "qwen3-1.7b",
@@ -18,6 +20,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "Qwen3 1.7B",
     description: "A fast chat model for low-memory computers with 4 GB or more. Chat only.",
     minimumMemoryBytes: 4 * GIB,
+    contextWindowTokens: 40_960,
     sources: [
       { runtime: "ollama", modelId: "qwen3:1.7b", estimatedDownloadBytes: estimatedBytes(1.4) },
       {
@@ -35,6 +38,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     description:
       "A lightweight general-purpose and coding model for systems with 6 GB of memory. Chat only.",
     minimumMemoryBytes: 6 * GIB,
+    contextWindowTokens: 262_144,
     sources: [
       {
         runtime: "ollama",
@@ -55,6 +59,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "Granite 4.1 3B",
     description: "A compact general, document, and coding model for systems with 8 GB of memory.",
     minimumMemoryBytes: 8 * GIB,
+    contextWindowTokens: 131_072,
     sources: [
       { runtime: "ollama", modelId: "granite4.1:3b", estimatedDownloadBytes: estimatedBytes(2.1) },
       {
@@ -70,6 +75,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "Qwen2.5 Coder 7B",
     description: "A balanced coding model for systems with 12 GB of memory.",
     minimumMemoryBytes: 12 * GIB,
+    contextWindowTokens: 32_768,
     sources: [
       {
         runtime: "ollama",
@@ -90,6 +96,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "Qwen2.5 Coder 14B",
     description: "A capable coding model for systems with 24 GB of memory.",
     minimumMemoryBytes: 24 * GIB,
+    contextWindowTokens: 32_768,
     sources: [
       {
         runtime: "ollama",
@@ -110,6 +117,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "GPT-OSS 20B",
     description: "A capable general and reasoning model for systems with 24 GB or more.",
     minimumMemoryBytes: 24 * GIB,
+    contextWindowTokens: 131_072,
     sources: [
       { runtime: "ollama", modelId: "gpt-oss:20b", estimatedDownloadBytes: 14 * GIB },
       { runtime: "lmstudio", modelId: "openai/gpt-oss-20b", estimatedDownloadBytes: 13 * GIB },
@@ -121,6 +129,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     name: "Qwen3 Coder 30B",
     description: "The strongest curated local coding option, intended for 48 GB systems.",
     minimumMemoryBytes: 48 * GIB,
+    contextWindowTokens: 262_144,
     sources: [
       { runtime: "ollama", modelId: "qwen3-coder:30b", estimatedDownloadBytes: 19 * GIB },
       { runtime: "lmstudio", modelId: "qwen/qwen3-coder-30b", estimatedDownloadBytes: 19 * GIB },
@@ -170,7 +179,8 @@ export const LOCAL_MODEL_CHAMPION_TIERS = [
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-7b",
+      // Qwen2.5 Coder is capped at 32k, too short for Claude Code and Codex.
+      coding: "granite-4.1-3b",
     },
   },
   {
@@ -180,7 +190,7 @@ export const LOCAL_MODEL_CHAMPION_TIERS = [
       general: "gpt-oss-20b",
       document: "granite-4.1-3b",
       reasoning: "gpt-oss-20b",
-      coding: "qwen2.5-coder-14b",
+      coding: "gpt-oss-20b",
     },
   },
   {

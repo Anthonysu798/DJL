@@ -66,7 +66,6 @@ import {
   type OpenCodeInventory,
   OPENCODE_CLI_SPEC,
   resolveDjlOpenCodeBinaryPath,
-  resolveOpenCodeAuthFilePath,
   type OpenCodeRuntimeShape,
   OpenCodeRuntime,
   OpenCodeRuntimeLive,
@@ -92,13 +91,7 @@ import type {
 import { PluginsService } from "../../plugins/PluginsService.ts";
 import { recordProviderModelDocumentCapabilities } from "../../work/modelDocumentRouting.ts";
 import { isSupportedOfficialDeepSeekCatalogModel } from "../deepSeekCompatibility.ts";
-import {
-  readCustomProviders,
-  writeCustomProvider,
-  removeCustomProvider as deleteCustomProvider,
-  fetchCustomModels as discoverCustomModels,
-  fetchSavedCustomModels,
-} from "../customModelProviders";
+import { readCustomProviders } from "../customModelProviders";
 
 const collectKnownMessageIds = (context: OpenCodeSessionContext): Set<string> =>
   new Set(context.messageRoleById.keys());
@@ -5664,166 +5657,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           );
         });
 
-      const customProviderMutations = yield* Semaphore.make(1);
-      const saveCustomProvider: NonNullable<OpenCodeAdapterShape["saveCustomProvider"]> = (input) =>
-        withDiscoveryInventory({}, ({ client, inventory }) =>
-          Effect.gen(function* () {
-            if (!managedRootDir)
-              return yield* new ProviderAdapterRequestError({
-                provider,
-                method: "saveCustomProvider",
-                detail: "Custom provider storage is unavailable.",
-              });
-            const existing = yield* Effect.tryPromise({
-              try: () => readCustomProviders(managedRootDir),
-              catch: customProviderError,
-            });
-            const exists = existing.some((entry) => entry.providerId === input.providerId);
-            if ((exists && !input.replaceExisting) || (!exists && input.replaceExisting))
-              return yield* customProviderError(
-                new Error(
-                  exists
-                    ? "This provider ID already exists. Choose another ID."
-                    : "This custom provider no longer exists. Create it again.",
-                ),
-              );
-            if (
-              !exists &&
-              inventory.providerList.all.some((entry) => entry.id === input.providerId)
-            ) {
-              return yield* new ProviderAdapterRequestError({
-                provider,
-                method: "saveCustomProvider",
-                detail: "This provider ID belongs to the built-in catalog. Choose another ID.",
-              });
-            }
-            if (input.apiKey)
-              yield* runOpenCodeSdk("auth.set", () =>
-                client.auth.set({
-                  providerID: input.providerId,
-                  auth: { type: "api", key: input.apiKey! },
-                }),
-              ).pipe(Effect.mapError(toAdapterRequestError));
-            yield* Effect.tryPromise({
-              try: () => writeCustomProvider(managedRootDir, input, input.replaceExisting),
-              catch: customProviderError,
-            });
-            return { providerId: input.providerId, connected: true };
-          }),
-        ).pipe(customProviderMutations.withPermit);
-
-      const removeCustomProvider: NonNullable<OpenCodeAdapterShape["removeCustomProvider"]> = (
-        input,
-      ) =>
-        withDiscoveryClient({}, ({ client }) =>
-          Effect.gen(function* () {
-            if (!managedRootDir)
-              return yield* new ProviderAdapterRequestError({
-                provider,
-                method: "removeCustomProvider",
-                detail: "Custom provider storage is unavailable.",
-              });
-            const existing = yield* Effect.tryPromise({
-              try: () => readCustomProviders(managedRootDir),
-              catch: customProviderError,
-            });
-            if (!existing.some((entry) => entry.providerId === input.providerId))
-              return yield* new ProviderAdapterRequestError({
-                provider,
-                method: "removeCustomProvider",
-                detail: "Custom provider not found.",
-              });
-            yield* runOpenCodeSdk("auth.remove", () =>
-              client.auth.remove({ providerID: input.providerId }),
-            ).pipe(Effect.mapError(toAdapterRequestError));
-            yield* Effect.tryPromise({
-              try: () => deleteCustomProvider(managedRootDir, input.providerId),
-              catch: customProviderError,
-            });
-            return { providerId: input.providerId, connected: false };
-          }),
-        ).pipe(customProviderMutations.withPermit);
-
-      const fetchCustomModels: NonNullable<OpenCodeAdapterShape["fetchCustomModels"]> = (input) => {
-        if (!input.providerId || input.apiKey)
-          return Effect.tryPromise({
-            try: () => discoverCustomModels(input),
-            catch: customProviderError,
-          });
-        return withDiscoveryClient({}, ({ client }) =>
-          Effect.gen(function* () {
-            if (!managedRootDir)
-              return yield* customProviderError(
-                new Error("Custom provider storage is unavailable."),
-              );
-            const paths = yield* runOpenCodeSdk("path.get", () => client.path.get()).pipe(
-              Effect.mapError(toAdapterRequestError),
-            );
-            if (!paths.data)
-              return yield* customProviderError(
-                new Error("Credential location is unavailable. Enter the API key again."),
-              );
-            return yield* Effect.tryPromise({
-              try: () =>
-                fetchSavedCustomModels(
-                  managedRootDir,
-                  { ...input, providerId: input.providerId! },
-                  resolveOpenCodeAuthFilePath(paths.data!),
-                ),
-              catch: customProviderError,
-            });
-          }),
-        );
-      };
-
-      const setApiKey: OpenCodeAdapterShape["setApiKey"] = (input) =>
-        withDiscoveryInventory(input.cwd ? { cwd: input.cwd } : {}, ({ client, inventory }) =>
-          Effect.gen(function* () {
-            const authMethods = yield* runOpenCodeSdk("provider.auth", () =>
-              client.provider.auth(),
-            );
-            const providerDefinition = inventory.providerList.all.find(
-              (provider) => provider.id === input.providerId,
-            );
-            const supportsApiKey =
-              providerDefinition !== undefined &&
-              supportsSimpleOpenCodeApiKey(
-                providerDefinition,
-                authMethods.data?.[input.providerId] ?? [],
-              );
-            if (!supportsApiKey) {
-              return yield* new OpenCodeRuntimeError({
-                operation: "auth.set",
-                detail: `Provider '${input.providerId}' does not support API-key authentication.`,
-              });
-            }
-            yield* runOpenCodeSdk("auth.set", () =>
-              client.auth.set({
-                providerID: input.providerId,
-                auth: { type: "api", key: input.apiKey },
-              }),
-            );
-            // Shared auth changes rotate the pool key for subsequent acquisitions.
-            // Do not dispose an instance that may still serve an active turn.
-            return { providerId: input.providerId, connected: true } as const;
-          }).pipe(Effect.mapError(toAdapterRequestError)),
-        );
-
-      const removeCredential: OpenCodeAdapterShape["removeCredential"] = (input) =>
-        withDiscoveryClient(input.cwd ? { cwd: input.cwd } : {}, ({ client }) =>
-          Effect.gen(function* () {
-            yield* runOpenCodeSdk("auth.remove", () =>
-              client.auth.remove({ providerID: input.providerId }),
-            );
-            // Shared auth changes rotate the pool key for subsequent acquisitions.
-            // Do not dispose an instance that may still serve an active turn.
-            return {
-              providerId: input.providerId,
-              connected: false,
-            } as const;
-          }).pipe(Effect.mapError(toAdapterRequestError)),
-        );
-
       const listAgents: NonNullable<OpenCodeAdapterShape["listAgents"]> = (input) => {
         return withDiscoveryInventory(
           { binaryPath: input.binaryPath ?? null, ...(input.cwd ? { cwd: input.cwd } : {}) },
@@ -5921,11 +5754,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         stopAll,
         listModels,
         listModelProviders,
-        setApiKey,
-        saveCustomProvider,
-        removeCustomProvider,
-        fetchCustomModels,
-        removeCredential,
         listAgents,
         ...(provider === "opencode" ? { listCommands } : {}),
         getComposerCapabilities,

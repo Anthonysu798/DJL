@@ -329,4 +329,105 @@ describe("fresh native adapter lifecycle", () => {
       ),
     );
   });
+
+  it("lists plan and local models and refuses to switch a running chat to another backend", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const started: string[] = [];
+          const factory: NativeDriverFactory = async (input) => {
+            started.push(input.modelSelection?.model ?? "");
+            return {
+              ...(await resumeFactory(input)),
+              send: async () => {},
+              models: async () => ({ models: [{ slug: "claude-sonnet-4-6", name: "Sonnet" }] }),
+            };
+          };
+          const adapter = yield* makeNativeAdapter(
+            "claudeAgent",
+            factory,
+            async () => ({}),
+            async () => [
+              {
+                slug: "plan/zai-coding-plan/glm-5.3",
+                name: "GLM-5.3",
+                upstreamProviderName: "Z.AI Coding Plan",
+              },
+            ],
+          );
+          const listed = yield* adapter.listModels!({ provider: "claudeAgent", cwd: "/tmp" });
+          expect(listed.models.map((model) => model.slug)).toEqual([
+            "claude-sonnet-4-6",
+            "plan/zai-coding-plan/glm-5.3",
+          ]);
+
+          yield* adapter.startSession({
+            ...start,
+            modelSelection: { provider: "claudeAgent", model: "plan/zai-coding-plan/glm-5.3" },
+          });
+          const sameBackend = yield* adapter
+            .sendTurn({
+              threadId,
+              input: "hi",
+              modelSelection: {
+                provider: "claudeAgent",
+                model: "plan/zai-coding-plan/glm-5.3-flash",
+              },
+            })
+            .pipe(Effect.result);
+          expect(sameBackend._tag).toBe("Success");
+          yield* Effect.promise(tick);
+          const switched = yield* adapter
+            .sendTurn({
+              threadId,
+              input: "hi",
+              modelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+            })
+            .pipe(Effect.flip);
+          expect(switched.message).toContain("Start a new chat to use the default provider");
+          const sessions = yield* adapter.listSessions();
+          const cursor = sessions[0]?.resumeCursor as { modelBackend?: string };
+          expect(cursor.modelBackend).toBe("plan:zai-coding-plan");
+          yield* adapter.stopSession(threadId);
+
+          const resumed = yield* adapter
+            .startSession({
+              ...start,
+              resumeCursor: cursor,
+              modelSelection: { provider: "claudeAgent", model: "ollama/llama3.2" },
+            })
+            .pipe(Effect.flip);
+          expect(resumed.message).toContain("This chat runs on Z.AI Coding Plan");
+          // The first, model-less start is listModels' discovery driver.
+          expect(started.filter(Boolean)).toEqual(["plan/zai-coding-plan/glm-5.3"]);
+        }),
+      ),
+    );
+  });
+
+  it("still lists plan and local models when the signed-out harness cannot list its own", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* makeNativeAdapter(
+            "claudeAgent",
+            async () => {
+              throw new Error("Not logged in");
+            },
+            async () => ({}),
+            async () => [{ slug: "ollama/qwen3:1.7b", name: "qwen3:1.7b" }],
+          );
+          const listed = yield* adapter.listModels!({ provider: "claudeAgent", cwd: "/tmp" });
+          expect(listed.models.map((model) => model.slug)).toEqual(["ollama/qwen3:1.7b"]);
+          const plain = yield* makeNativeAdapter("claudeAgent", async () => {
+            throw new Error("Not logged in");
+          });
+          const failure = yield* plain.listModels!({ provider: "claudeAgent", cwd: "/tmp" }).pipe(
+            Effect.flip,
+          );
+          expect(failure.message).toContain("Not logged in");
+        }),
+      ),
+    );
+  });
 });

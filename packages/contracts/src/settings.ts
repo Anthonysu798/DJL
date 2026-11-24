@@ -63,6 +63,13 @@ export const QwenServerProviderSettings = Schema.Struct({
 });
 export type QwenServerProviderSettings = typeof QwenServerProviderSettings.Type;
 
+// https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli — npm `@github/copilot` installs `copilot`.
+export const CopilotServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "copilot")),
+});
+export type CopilotServerProviderSettings = typeof CopilotServerProviderSettings.Type;
+
 export const CodeBuddyServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codebuddy")),
@@ -130,6 +137,18 @@ export const SkillsServerSettings = Schema.Struct({
 });
 export type SkillsServerSettings = typeof SkillsServerSettings.Type;
 
+// Which harnesses list downloaded local (Ollama) models in their model picker.
+const LocalModelHarnessToggle = Schema.Boolean.pipe(Schema.withDecodingDefault(() => true));
+export const LocalModelsServerSettings = Schema.Struct({
+  harnesses: Schema.Struct({
+    claudeAgent: LocalModelHarnessToggle,
+    codex: LocalModelHarnessToggle,
+    opencode: LocalModelHarnessToggle,
+  }).pipe(Schema.withDecodingDefault(() => ({}))),
+});
+export type LocalModelsServerSettings = typeof LocalModelsServerSettings.Type;
+export type LocalModelHarness = keyof LocalModelsServerSettings["harnesses"];
+
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -151,6 +170,7 @@ export const ServerSettings = Schema.Struct({
     kimi: KimiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     iflow: IFlowServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     qwen: QwenServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    copilot: CopilotServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codebuddy: CodeBuddyServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -159,6 +179,7 @@ export const ServerSettings = Schema.Struct({
     djlCloud: DjlCloudServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  localModels: LocalModelsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type ServerSettings = typeof ServerSettings.Type;
 
@@ -213,6 +234,7 @@ export const ServerSettingsPatch = Schema.Struct({
       ),
       iflow: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       qwen: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      copilot: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       codebuddy: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       kilo: Schema.optionalKey(
@@ -248,6 +270,17 @@ export const ServerSettingsPatch = Schema.Struct({
   skills: Schema.optionalKey(
     Schema.Struct({
       disabled: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMaxLength(256)))),
+    }),
+  ),
+  localModels: Schema.optionalKey(
+    Schema.Struct({
+      harnesses: Schema.optionalKey(
+        Schema.Struct({
+          claudeAgent: Schema.optionalKey(Schema.Boolean),
+          codex: Schema.optionalKey(Schema.Boolean),
+          opencode: Schema.optionalKey(Schema.Boolean),
+        }),
+      ),
     }),
   ),
 });

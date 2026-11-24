@@ -17,6 +17,7 @@ const ProviderDiscoveryKind = Schema.Literals([
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "droid",
   "kilo",
@@ -68,23 +69,6 @@ export const CustomModelProvider = Schema.Struct({
   ),
 });
 export type CustomModelProvider = typeof CustomModelProvider.Type;
-export const SaveCustomModelProviderInput = Schema.Struct({
-  ...CustomModelProvider.fields,
-  replaceExisting: Schema.optional(Schema.Boolean),
-  apiKey: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(16_384))),
-});
-export type SaveCustomModelProviderInput = typeof SaveCustomModelProviderInput.Type;
-export const RemoveCustomModelProviderInput = Schema.Struct({ providerId: CustomProviderId });
-export type RemoveCustomModelProviderInput = typeof RemoveCustomModelProviderInput.Type;
-export const FetchCustomModelsInput = Schema.Struct({
-  providerId: Schema.optional(CustomProviderId),
-  baseUrl: CustomModelBaseUrl,
-  protocol: CustomModelApiProtocol,
-  apiKey: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(16_384))),
-});
-export type FetchCustomModelsInput = typeof FetchCustomModelsInput.Type;
-export const FetchCustomModelsResult = Schema.Struct({ models: Schema.Array(CustomModel) });
-export type FetchCustomModelsResult = typeof FetchCustomModelsResult.Type;
 
 export const OpenCodeModelProviderConnection = Schema.Struct({
   id: TrimmedNonEmptyString,
@@ -113,25 +97,6 @@ export const OpenCodeListModelProvidersResult = Schema.Struct({
   cached: Schema.optional(Schema.Boolean),
 });
 export type OpenCodeListModelProvidersResult = typeof OpenCodeListModelProvidersResult.Type;
-
-export const OpenCodeSetApiKeyInput = Schema.Struct({
-  providerId: TrimmedNonEmptyString,
-  apiKey: TrimmedNonEmptyString.check(Schema.isMaxLength(16_384)),
-  cwd: Schema.optional(TrimmedNonEmptyString),
-});
-export type OpenCodeSetApiKeyInput = typeof OpenCodeSetApiKeyInput.Type;
-
-export const OpenCodeRemoveCredentialInput = Schema.Struct({
-  providerId: TrimmedNonEmptyString,
-  cwd: Schema.optional(TrimmedNonEmptyString),
-});
-export type OpenCodeRemoveCredentialInput = typeof OpenCodeRemoveCredentialInput.Type;
-
-export const OpenCodeCredentialMutationResult = Schema.Struct({
-  providerId: TrimmedNonEmptyString,
-  connected: Schema.Boolean,
-});
-export type OpenCodeCredentialMutationResult = typeof OpenCodeCredentialMutationResult.Type;
 
 export const ProviderSkillInterface = Schema.Struct({
   displayName: Schema.optional(TrimmedNonEmptyString),

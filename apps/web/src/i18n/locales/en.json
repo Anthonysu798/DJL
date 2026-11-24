@@ -2035,30 +2035,33 @@
       "visibleLabels": "Static visible labels"
     },
     "localModels": {
+      "advanced": "Advanced",
       "agenticTools": "Agentic tools",
       "assistedTools": "Assisted tools",
       "chatOnly": "Chat only",
       "checking": "Checking local model runtimes…",
+      "codingTools": {
+        "tooShort": "Holds only {{window}} tokens, too few for Claude Code and Codex",
+        "works": "Works with Claude Code and Codex"
+      },
       "connectedOn": "Connected securely on {{endpoint}}",
       "contextLoaded": "Loaded context: {{loaded}}K / model maximum: {{maximum}}K",
       "contextTooSmallForTools": "Chat only at the current {{loaded}}K context. Reload the model with at least {{required}}K to use tools.",
       "desktopOnly": "Local model management is available in the DJL desktop app.",
       "downloadsTitle": "Downloads",
-      "getRuntime": "Get {{runtime}}",
-      "hero": {
-        "alternativesTitle": "Other models",
-        "detected": "Detected: {{processor}} · {{memory}} memory",
-        "detectedWithGpu": "Detected: {{processor}} · {{gpu}} · {{memory}} memory",
-        "fastOnYourHardware": "Fast on your hardware",
-        "readyTitle": "{{model}} is ready",
-        "switchToSmaller": "Switch to {{model}}",
-        "title": "Run AI privately on this computer",
-        "unknownProcessor": "This computer"
+      "fit": {
+        "failed": "Install failed",
+        "installed": "Installed",
+        "installing": "Installing",
+        "lowDisk": "Not enough disk space",
+        "lowFreeMemory": "Close some apps first",
+        "runsWell": "Runs well here",
+        "tooBig": "Too large for this computer"
       },
+      "getRuntime": "Get {{runtime}}",
       "installAnotherTitle": "Install another model",
       "installed": "Installed",
-      "installedEmpty": "No local models are installed yet. Start a runtime and choose a recommendation above.",
-      "installedModelsTitle": "Installed models",
+      "installedModelsTitle": "On this computer",
       "installHint": "Use an Ollama tag, an LM Studio catalog ID, or an exact Hugging Face model URL.",
       "installingOllama": "Installing Ollama…",
       "installingOllamaProgress": "Installing Ollama {{progress}}%",
@@ -2067,46 +2070,16 @@
       "installModel": "Install model",
       "installOllama": "Install & start Ollama",
       "installRuntime": "Install & start {{runtime}}",
+      "list": {
+        "install": "Install",
+        "meta": "{{size}} download · needs {{memory}} memory",
+        "title": "Other models"
+      },
       "lmStudioDescription": "Install LM Studio once, then DJL can start and manage its local server.",
       "manageInstalledTitle": "Manage installed models",
       "manageLmStudio": "Manage in LM Studio",
-      "moreOptions": "Show other models",
       "networkPrivacy": "DJL connects only to fixed loopback addresses (127.0.0.1). It does not expose either runtime to your network, upload local inference traffic, or automatically switch your selected model.",
       "ollamaDescription": "DJL installs, starts, and connects Ollama for you. No terminal or admin password needed.",
-      "privacyDescription": "Model inference stays on this computer. Prompts, code context, and output are not sent to a hosted model provider. Approved tools can access the network separately.",
-      "privacyTitle": "Private by design",
-      "quick": {
-        "chooseAnother": "Choose another setup",
-        "description": "DJL will install {{runtime}} and download {{model}} (about {{size}}). No terminal or administrator password needed.",
-        "download": "Download {{model}} (about {{size}})",
-        "insufficientDisk": "At least {{size}} of free disk space is required.",
-        "readyDescription": "{{model}} is installed through {{runtime}} and available in chat.",
-        "readyTitle": "{{runtime}} is ready",
-        "retry": "Retry setup",
-        "runtimeLabel": "Choose a local runtime",
-        "setup": "Set up local AI · {{model}} (about {{size}})",
-        "title": "One-click {{runtime}} setup",
-        "useCaseLabel": "Choose what the local AI should do best",
-        "useCases": {
-          "coding": {
-            "description": "Code, debugging, and project work",
-            "label": "Coding champion"
-          },
-          "document": {
-            "description": "Summaries, extraction, and long documents",
-            "label": "Document champion"
-          },
-          "general": {
-            "description": "Questions, writing, and everyday tasks",
-            "label": "All-round champion"
-          },
-          "reasoning": {
-            "description": "Analysis, math, and complex problems",
-            "label": "Reasoning champion"
-          }
-        },
-        "useInChat": "Use in chat"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "A capable general and reasoning model for systems with 24 GB or more."
@@ -2130,7 +2103,6 @@
           "description": "A lightweight general-purpose and coding model for devices with 6 GB of memory."
         }
       },
-      "recommendedTitle": "Recommended for this computer",
       "removeAriaLabel": "Delete {{model}}",
       "removeButton": "Delete",
       "removeConfirmation": "Delete {{model}} from Ollama?",
@@ -2154,18 +2126,56 @@
       "runtimeStatusDescription": "Recheck localhost services and synchronize installed models with DJL.",
       "runtimeStatusTitle": "Runtime status",
       "runtimesTitle": "Local runtimes",
-      "shelf": {
+      "setup": {
+        "bestMatch": "Best match for this computer",
+        "busy": "Another model is installing. Wait for it to finish.",
+        "downloaded": "{{done}} of {{total}} downloaded",
         "downloadSize": "{{size}} download",
-        "fixOllama": "Check Ollama",
-        "installModel": "Install model",
-        "requiresDiskAction": "Requires {{size}} free",
-        "requiresMemoryAction": "Requires {{size}} memory",
-        "retry": "Retry",
-        "setupOllama": "Set up Ollama + model",
+        "facts": {
+          "disk": "Free disk space",
+          "graphics": "Graphics",
+          "label": "This computer",
+          "memory": "Memory",
+          "processor": "Processor",
+          "thisComputer": "This computer"
+        },
+        "fitReason": "Needs about {{need}} of memory. This computer has {{have}}.",
+        "fixOllama": "Fix Ollama",
+        "freeDisk": "Free up {{size}} of disk space to install this model.",
+        "freeMemory": "There isn’t enough free memory right now. Close some apps, then come back to this page.",
+        "install": "Install {{model}}",
+        "installedLabel": "Installed",
+        "installsOllama": "DJL also installs Ollama, the free app that runs models on your computer. No password needed.",
+        "ollamaAttention": "Ollama, the app that runs local models, needs attention. Open Advanced below to fix it.",
+        "privacy": "It works without the internet, and what you type never leaves this computer.",
+        "progressLabel": "Installing {{model}}",
+        "readyDescription": "Pick it from the model menu when you start a chat. It runs on this computer.",
+        "readyTitle": "{{model}} is ready",
         "startChat": "Start a chat",
-        "startOllama": "Start Ollama + install",
-        "tooLarge": "Too large for this computer",
-        "waitForSetup": "Another setup is running"
+        "startsOllama": "DJL starts Ollama, the app that runs the model, before downloading.",
+        "steps": {
+          "download": "Download",
+          "prepare": "Get ready",
+          "ready": "Ready",
+          "test": "Test it on this computer"
+        },
+        "switchToSmaller": "Switch to {{model}}",
+        "title": "Run AI privately on this computer",
+        "tooBig": "This model needs {{size}} of memory, more than this computer has.",
+        "tryAgain": "Try again",
+        "useCaseHints": {
+          "coding": "Code, debugging, and project work",
+          "document": "Summaries, extraction, and long documents",
+          "general": "Questions, writing, and everyday tasks",
+          "reasoning": "Analysis, math, and complex problems"
+        },
+        "useCaseLegend": "What will you use it for?",
+        "useCases": {
+          "coding": "Coding",
+          "document": "Documents",
+          "general": "Everyday help",
+          "reasoning": "Problem solving"
+        }
       },
       "sizeUnavailable": "Size unavailable",
       "startFirst": "Start {{runtime}} first",
@@ -2181,85 +2191,15 @@
         "runtimeRejected": "The local runtime rejected the request."
       },
       "tokensPerSecond": "about {{count}} tokens/sec",
-      "updateRuntime": "Update"
-    },
-    "localModelsStatusUnavailableDetail": "No local runtime diagnostic detail was provided.",
-    "models": {
-      "accessTitle": "Model access",
-      "addKeyPrompt": "Add an API key to choose a model",
-      "chooseModel": "Choose model",
-      "configuredTitle": "Configured models",
-      "configureFirst": "Configure a model first",
-      "custom": {
-        "add": "Add custom API",
-        "addModel": "Add model",
-        "apiKey": "API key (optional)",
-        "badge": "Custom API",
-        "baseUrl": "Base URL",
-        "create": "Create provider",
-        "description": "Connect a relay or self-hosted endpoint using its URL, protocol, and models.",
-        "displayName": "Display name",
-        "edit": "Edit",
-        "editTitle": "Edit custom API",
-        "empty": "Fetch available models or add the exact model IDs your endpoint accepts.",
-        "fetch": "Fetch models",
-        "fetchFailed": "Could not fetch models. {{detail}} You can add model IDs manually.",
-        "fetching": "Fetching…",
-        "idHint": "Use a unique lowercase ID starting with a letter. Letters, numbers, and hyphens only.",
-        "keepKey": "Leave blank to keep the saved key",
-        "keyHint": "Your API key is stored locally and is never shown again. Leave it blank to keep the saved key.",
-        "keyPlaceholder": "Leave blank if no key is needed",
-        "modelId": "Model ID",
-        "modelName": "Model name (optional)",
-        "models": "Models",
-        "namePlaceholder": "My relay",
-        "noModels": "No models returned. Add a model ID manually.",
-        "protocol": "API protocol",
-        "protocols": {
-          "anthropic": "Anthropic Messages",
-          "openai-chat": "OpenAI Chat Completions",
-          "openai-responses": "OpenAI Responses"
-        },
-        "providerId": "Provider ID",
-        "remove": "Remove provider",
-        "removeFailed": "Could not remove the provider",
-        "removeModel": "Remove model {{model}}",
-        "save": "Save changes",
-        "saveFailed": "Could not save the provider. {{detail}}",
-        "saving": "Saving…",
-        "title": "Custom model API",
-        "tryAgain": "Check the fields and try again.",
-        "tryManual": "Check the URL and key, or add models manually.",
-        "urlHint": "Enter an HTTP or HTTPS base URL without credentials, query parameters, or fragments."
-      },
-      "disconnect": "Disconnect",
-      "externalCredential": "This connection is managed by your CLI configuration. Change its login or configuration in your installed CLI.",
-      "generationDefaultsTitle": "Generation defaults",
-      "gitWritingAriaLabel": "Git writing model",
-      "gitWritingDescription": "Used for commit messages, pull request titles, and branch names.",
-      "gitWritingTitle": "Git writing model",
-      "keyAriaLabel": "{{provider}} API key",
-      "keyPlaceholder": "Enter API key",
-      "keyPrivacy": "Credentials are shared with your installed CLI. Disconnecting here also removes its saved login.",
-      "modelCount_one": "{{count}} model available",
-      "modelCount_other": "{{count}} models available",
-      "notConnected": "Not connected",
-      "providerCount_one": "{{count}} provider",
-      "providerCount_other": "{{count}} providers",
-      "replace": "Replace",
-      "replacementKeyPlaceholder": "Enter a replacement API key",
-      "runtimeUnavailable": "DJL could not start its model runtime.",
-      "test": "Test",
-      "toasts": {
-        "connectionRefreshed": "{{provider}} connection refreshed",
-        "disconnected": "Provider disconnected",
-        "keyRejected": "DJL rejected the credential.",
-        "keySaved": "API key saved",
-        "keySaveFailed": "Could not save API key",
-        "keySaveFailedWithDetail": "Could not save the API key. {{detail}}"
+      "updateRuntime": "Update",
+      "useWith": {
+        "description": "Downloaded Ollama models appear in the model picker under each harness you switch on. They run on this computer.",
+        "saveFailed": "Couldn’t save this setting. Try again.",
+        "title": "Use local models with",
+        "toggle": "Use local models with {{harness}}"
       }
     },
-    "modelsRuntimeUnavailableDetail": "No runtime diagnostic detail was provided.",
+    "localModelsStatusUnavailableDetail": "No local runtime diagnostic detail was provided.",
     "navigation": {
       "groups": {
         "app": "App",
@@ -2305,11 +2245,6 @@
           "description": "Run private models on this computer with Ollama or LM Studio through DJL.",
           "eyebrow": "Private inference",
           "label": "Local Models"
-        },
-        "models": {
-          "description": "Connect model providers and choose from authenticated DJL models.",
-          "eyebrow": "AI configuration",
-          "label": "Models & API keys"
         },
         "notifications": {
           "description": "In-app toasts and desktop alerts.",
@@ -2807,6 +2742,8 @@
         },
         "gitWriting": {
           "ariaLabel": "Git text generation model",
+          "chooseModel": "Choose model",
+          "configureFirst": "Configure a model first",
           "description": "Used for generated commit messages, PR titles, and branch names.",
           "resetLabel": "Git writing model"
         },
@@ -2988,6 +2925,10 @@
             "keywords": "word wrap diff panel",
             "title": "Diff line wrapping"
           },
+          "git-writing-model": {
+            "keywords": "commit messages PR titles branch names",
+            "title": "Git writing model"
+          },
           "terminal-close-confirmation": {
             "keywords": "ask terminal tab history",
             "title": "Terminal close confirmation"
@@ -3067,16 +3008,6 @@
           "runtimes": {
             "keywords": "Ollama LM Studio private localhost server",
             "title": "Local runtimes"
-          }
-        },
-        "models": {
-          "configured-models": {
-            "keywords": "API keys DJL providers authenticated",
-            "title": "Configured models"
-          },
-          "git-writing-model": {
-            "keywords": "commit messages PR titles branch names",
-            "title": "Git writing model"
           }
         },
         "notifications": {
@@ -3349,19 +3280,39 @@
       "title": "Skills"
     },
     "subscriptions": {
+      "cancel": "Cancel",
+      "checking": "Checking key…",
       "china": "Mainland China",
       "connect": "Connect",
+      "connected": "Connected · key ending in {{hint}}",
+      "description": "Use a coding plan you already pay for. DJL runs it through Claude Code with your plan key, so nothing else needs to be installed.",
+      "disconnect": "Disconnect",
+      "errors": {
+        "invalid_key": "{{provider}} rejected this key. Make sure you copied the whole coding-plan key.",
+        "network": "Couldn’t reach {{provider}}. Check your connection and try again.",
+        "no_opencode_key": "OpenCode has no saved key for this plan.",
+        "plan_inactive": "The key works, but the plan isn’t active. Check your subscription or balance on {{provider}}’s site.",
+        "unknown": "{{provider}} sent an unexpected response. Try again in a moment."
+      },
       "existingRegion": "Use existing CLI region",
+      "importFromOpenCode": "Import key from OpenCode",
       "international": "International",
+      "keyAriaLabel": "{{provider}} plan key",
+      "keyPlaceholder": "Paste your plan key",
       "kimiRegion": "Kimi account region",
-      "modelPicker": "After connecting, choose OpenCode in the model picker to use your plan. Other providers remain available in Models & API keys.",
-      "models_one": "{{count}} model available",
-      "models_other": "{{count}} models available",
+      "modelPicker": "Connected plans appear in the model picker under Claude Code, each in its own group.",
+      "notConnected": "Not connected",
+      "openSite": "Open {{provider}} again",
       "planKey": "Coding-plan API key",
-      "providerLogin": "Provider sign-in",
-      "runtimeRequired": "Enable and install a compatible OpenCode runtime to connect.",
-      "title": "Subscriptions and coding plans",
-      "unavailable": "Update OpenCode to check support for this plan."
+      "replaceKey": "Replace key",
+      "save": "Check and save",
+      "saved": "Key saved. Choose a {{provider}} model under Claude Code in the model picker.",
+      "steps": {
+        "copyKey": "Create or copy your coding-plan API key.",
+        "paste": "Paste it here. DJL checks it with {{provider}} before saving.",
+        "signIn": "Sign in on {{provider}}’s site. It just opened in your browser."
+      },
+      "title": "Subscriptions and coding plans"
     },
     "title": "Settings",
     "tools": {

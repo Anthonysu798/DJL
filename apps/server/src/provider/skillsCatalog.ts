@@ -446,6 +446,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   kimi: ["agents"],
   iflow: ["agents"],
   qwen: ["agents"],
+  copilot: ["agents"],
   codebuddy: ["agents"],
   droid: ["factory", "agents", "claude", "codex"],
   kilo: ["kilo", "agents", "claude"],

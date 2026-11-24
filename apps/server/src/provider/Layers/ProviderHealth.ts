@@ -121,6 +121,8 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.iflow.binaryPath;
     case "qwen":
       return settings.providers.qwen.binaryPath;
+    case "copilot":
+      return settings.providers.copilot.binaryPath;
     case "codebuddy":
       return settings.providers.codebuddy.binaryPath;
     case "droid":
@@ -179,6 +181,7 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const IFLOW_PROVIDER = "iflow" as const;
 const QWEN_PROVIDER = "qwen" as const;
+const COPILOT_PROVIDER = "copilot" as const;
 const CODEBUDDY_PROVIDER = "codebuddy" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
@@ -289,6 +292,14 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     provider: QWEN_PROVIDER,
     binaryName: "qwen",
     npmPackageName: "@qwen-code/qwen-code",
+    homebrew: null,
+    nativeUpdate: null,
+  },
+  // https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli — requires Node 22+.
+  copilot: {
+    provider: COPILOT_PROVIDER,
+    binaryName: "copilot",
+    npmPackageName: "@github/copilot",
     homebrew: null,
     nativeUpdate: null,
   },

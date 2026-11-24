@@ -1,11 +1,9 @@
 import type {
   LocalModelInstallInput,
   LocalInstalledModel,
-  LocalModelRecommendation,
   LocalModelRuntime,
   LocalModelRuntimeStatus,
   LocalModelUseCase,
-  LocalModelsSnapshot,
 } from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,13 +13,10 @@ import type { TFunction } from "i18next";
 import { appHistory } from "~/appNavigation";
 import { isElectron } from "~/env";
 import {
-  CheckCircle2Icon,
   ChevronRightIcon,
   ExternalLinkIcon,
   Loader2Icon,
-  LockIcon,
   RefreshCwIcon,
-  SparklesIcon,
   Trash2,
 } from "~/lib/icons";
 import { disclosureChevronClassName } from "~/lib/disclosureMotion";
@@ -33,11 +28,7 @@ import {
   readLocalModelsBrowserCache,
   writeLocalModelsBrowserCache,
 } from "~/lib/localModelsBrowserCache";
-import {
-  LOCAL_MODEL_USE_CASES,
-  readLocalModelUseCase,
-  writeLocalModelUseCase,
-} from "~/lib/localModelUseCaseStore";
+import { readLocalModelUseCase, writeLocalModelUseCase } from "~/lib/localModelUseCaseStore";
 import {
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
   SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
@@ -49,98 +40,13 @@ import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toastManager } from "../ui/toast";
-import { installProgressPercent, LocalModelAlternatives, LocalModelHero } from "./LocalModelHero";
+import { installProgressPercent, LocalModelCatalog, LocalModelSetupCard } from "./LocalModelHero";
+import { LocalModelHarnessToggles } from "./LocalModelHarnessToggles";
 import { SettingsListRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 
 const LOCAL_MODELS_QUERY_KEY = ["local-models", "snapshot"] as const;
 const LM_STUDIO_MANAGE_URL = "https://lmstudio.ai/docs/app/basics/download-model";
 const LM_STUDIO_TOOL_CONTEXT_FLOOR_TOKENS = 16_384;
-const LOCAL_MODEL_RUNTIMES = ["ollama", "lmstudio"] as const;
-export function recommendationSourceForRuntime(
-  recommendation: LocalModelRecommendation,
-  runtime: LocalModelRuntime,
-) {
-  return recommendation.sources.find((source) => source.runtime === runtime) ?? null;
-}
-
-export function quickSetupViewModel(
-  snapshot: LocalModelsSnapshot,
-  selectedRuntime: LocalModelRuntime = "ollama",
-  selectedUseCase: LocalModelUseCase = "general",
-) {
-  const categoryJobs = snapshot.setupJobs
-    .filter(
-      (job) => job.runtime === selectedRuntime && (job.useCase ?? "general") === selectedUseCase,
-    )
-    .toSorted(
-      (left, right) =>
-        right.startedAt.localeCompare(left.startedAt) || right.id.localeCompare(left.id),
-    );
-  const activeJob = categoryJobs.find(
-    ({ state }) => !["ready", "failed", "cancelled"].includes(state),
-  );
-  const latestTerminalJob = categoryJobs.find(({ state }) =>
-    ["ready", "failed", "cancelled"].includes(state),
-  );
-  const retryableJob =
-    latestTerminalJob?.state === "failed" || latestTerminalJob?.state === "cancelled"
-      ? latestTerminalJob
-      : undefined;
-  const installedReadyJob =
-    latestTerminalJob?.state === "ready" &&
-    snapshot.installedModels.some(
-      (model) =>
-        model.runtime === latestTerminalJob.runtime && model.modelId === latestTerminalJob.modelId,
-    )
-      ? latestTerminalJob
-      : undefined;
-  const setupJob = activeJob ?? retryableJob ?? installedReadyJob;
-  const currentRecommendedModelId =
-    snapshot.recommendedModelIdsByUseCase?.[selectedUseCase] ?? snapshot.recommendedModelId;
-  const recommendedModelId =
-    activeJob?.recommendationId ??
-    installedReadyJob?.recommendationId ??
-    currentRecommendedModelId ??
-    retryableJob?.recommendationId;
-  const recommendation = snapshot.recommendations.find(({ id }) => id === recommendedModelId);
-  const runtime = snapshot.runtimes.find((candidate) => candidate.runtime === selectedRuntime);
-  const source = recommendation?.sources.find((candidate) => candidate.runtime === selectedRuntime);
-  if (!recommendation || !runtime || !source) return null;
-  const installed = snapshot.installedModels.some(
-    (model) => model.runtime === selectedRuntime && model.modelId === source.modelId,
-  );
-  const ready = installed && (!setupJob || setupJob.state === "ready");
-  const estimatedBytes =
-    source.estimatedDownloadBytes +
-    (runtime.state === "not_installed" ? runtime.estimatedDownloadBytes : 0);
-  const requiredBytes = estimatedBytes + Math.max(2 * 1024 ** 3, Math.ceil(estimatedBytes * 0.1));
-  return {
-    action: ready
-      ? ("ready" as const)
-      : runtime.state === "not_installed"
-        ? ("setup" as const)
-        : ("download" as const),
-    recommendation,
-    runtime,
-    source,
-    setupJob,
-    estimatedBytes,
-    requiredBytes,
-    insufficientDisk:
-      !installed && snapshot.freeDiskBytes !== null && snapshot.freeDiskBytes < requiredBytes,
-  };
-}
-
-function localizedRecommendationDescription(
-  recommendation: LocalModelRecommendation,
-  t: TFunction,
-) {
-  return t(`localModels.recommendations.${recommendation.id}.description`, {
-    defaultValue: recommendation.description,
-    ns: "settings",
-  });
-}
-
 function runtimeStatusDescription(status: LocalModelRuntimeStatus, t: TFunction): string {
   switch (status.state) {
     case "running":
@@ -256,9 +162,7 @@ export function LocalModelsSettingsPanel() {
   const [customRuntime, setCustomRuntime] = useState<LocalModelRuntime>("ollama");
   const [customModelId, setCustomModelId] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [quickSetupRuntime, setQuickSetupRuntime] = useState<LocalModelRuntime>("ollama");
-  const [quickSetupUseCase, setQuickSetupUseCase] =
-    useState<LocalModelUseCase>(readLocalModelUseCase);
+  const [useCase, setUseCase] = useState<LocalModelUseCase>(readLocalModelUseCase);
   const inventoryFingerprint = useRef("");
   const cachedSnapshot = readLocalModelsBrowserCache();
   const snapshotQuery = useQuery({
@@ -351,17 +255,6 @@ export function LocalModelsSettingsPanel() {
     () => new Map(snapshot?.runtimes.map((runtime) => [runtime.runtime, runtime]) ?? []),
     [snapshot?.runtimes],
   );
-  const installedKeys = useMemo(
-    () =>
-      new Set(snapshot?.installedModels.map((model) => `${model.runtime}:${model.modelId}`) ?? []),
-    [snapshot?.installedModels],
-  );
-  const quickSetup = snapshot
-    ? quickSetupViewModel(snapshot, quickSetupRuntime, quickSetupUseCase)
-    : null;
-  const quickSetupIsActive =
-    quickSetup?.setupJob !== undefined &&
-    !["ready", "failed", "cancelled"].includes(quickSetup.setupJob.state);
   const currentInventoryFingerprint = useMemo(
     () =>
       snapshot?.installedModels
@@ -383,8 +276,12 @@ export function LocalModelsSettingsPanel() {
 
   const localModelActions = {
     actionPending: actionMutation.isPending,
-    onStartSetup: (recommendationId: string) =>
-      actionMutation.mutate({ type: "start-setup", recommendationId }),
+    onStartSetup: (recommendationId: string, setupUseCase?: LocalModelUseCase) =>
+      actionMutation.mutate({
+        type: "start-setup",
+        recommendationId,
+        ...(setupUseCase ? { useCase: setupUseCase } : {}),
+      }),
     onRetrySetup: (jobId: string) => actionMutation.mutate({ type: "retry-setup", jobId }),
     onCancelSetup: (jobId: string) => actionMutation.mutate({ type: "cancel-setup", jobId }),
     onRuntimeAttention: () => setAdvancedOpen(true),
@@ -456,21 +353,15 @@ export function LocalModelsSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/[0.045] px-5 py-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <LockIcon className="size-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-medium text-foreground">{t("localModels.privacyTitle")}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {t("localModels.privacyDescription")}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <LocalModelHero snapshot={snapshot} {...localModelActions} />
+      <LocalModelSetupCard
+        snapshot={snapshot}
+        useCase={useCase}
+        onUseCaseChange={(next) => {
+          setUseCase(next);
+          writeLocalModelUseCase(next);
+        }}
+        {...localModelActions}
+      />
 
       {snapshot.installJobs.length > 0 ? (
         <SettingsSection title={t("localModels.downloadsTitle")}>
@@ -526,224 +417,9 @@ export function LocalModelsSettingsPanel() {
         </SettingsSection>
       ) : null}
 
-      {quickSetup ? (
-        <div className="overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.035]">
-          <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                {quickSetup.action === "ready" ? (
-                  <CheckCircle2Icon className="size-4.5" />
-                ) : (
-                  <SparklesIcon className="size-4.5" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-sm font-medium text-foreground">
-                  {quickSetup.action === "ready"
-                    ? t("localModels.quick.readyTitle", { runtime: quickSetup.runtime.name })
-                    : t("localModels.quick.title", { runtime: quickSetup.runtime.name })}
-                </h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {quickSetup.action === "ready"
-                    ? t("localModels.quick.readyDescription", {
-                        model: quickSetup.recommendation.name,
-                        runtime: quickSetup.runtime.name,
-                      })
-                    : t("localModels.quick.description", {
-                        runtime: quickSetup.runtime.name,
-                        model: quickSetup.recommendation.name,
-                        size: formatBytes(quickSetup.estimatedBytes, t),
-                      })}
-                </p>
-                {quickSetup.insufficientDisk ? (
-                  <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                    {t("localModels.quick.insufficientDisk", {
-                      size: formatBytes(quickSetup.requiredBytes, t),
-                    })}
-                  </p>
-                ) : null}
-                <div className="mt-4">
-                  <p
-                    id="local-model-use-case-label"
-                    className="text-[11px] font-medium text-foreground"
-                  >
-                    {t("localModels.quick.useCaseLabel")}
-                  </p>
-                  <div
-                    className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
-                    role="radiogroup"
-                    aria-labelledby="local-model-use-case-label"
-                  >
-                    {LOCAL_MODEL_USE_CASES.map((useCase) => {
-                      const selected = quickSetupUseCase === useCase;
-                      return (
-                        <button
-                          key={useCase}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          disabled={quickSetupIsActive || actionMutation.isPending}
-                          className={cn(
-                            "rounded-lg border px-3 py-2 text-left transition-colors",
-                            selected
-                              ? "border-primary/40 bg-primary/10 text-foreground"
-                              : "border-border/70 bg-background/65 text-muted-foreground hover:border-primary/25 hover:bg-primary/[0.035]",
-                            "disabled:pointer-events-none disabled:opacity-60",
-                          )}
-                          onClick={() => {
-                            setQuickSetupUseCase(useCase);
-                            writeLocalModelUseCase(useCase);
-                          }}
-                        >
-                          <span className="block text-xs font-medium">
-                            {t(`localModels.quick.useCases.${useCase}.label`)}
-                          </span>
-                          <span className="mt-0.5 block text-[10px] leading-relaxed text-muted-foreground">
-                            {t(`localModels.quick.useCases.${useCase}.description`)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div
-                  className="mt-3 flex flex-wrap items-center gap-2"
-                  role="group"
-                  aria-label={t("localModels.quick.runtimeLabel")}
-                >
-                  {LOCAL_MODEL_RUNTIMES.map((runtime) => (
-                    <Button
-                      key={runtime}
-                      type="button"
-                      size="xs"
-                      variant={quickSetupRuntime === runtime ? "secondary" : "outline"}
-                      aria-pressed={quickSetupRuntime === runtime}
-                      disabled={quickSetupIsActive || actionMutation.isPending}
-                      onClick={() => setQuickSetupRuntime(runtime)}
-                    >
-                      {runtimeDisplayName(runtime)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {quickSetup.setupJob?.state === "failed" ? (
-                <Button
-                  size="sm"
-                  disabled={actionMutation.isPending}
-                  onClick={() =>
-                    actionMutation.mutate({
-                      type: "retry-setup",
-                      jobId: quickSetup.setupJob!.id,
-                    })
-                  }
-                >
-                  {t("localModels.quick.retry")}
-                </Button>
-              ) : quickSetup.setupJob &&
-                !["ready", "failed", "cancelled"].includes(quickSetup.setupJob.state) ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={actionMutation.isPending}
-                  onClick={() =>
-                    actionMutation.mutate({
-                      type: "cancel-setup",
-                      jobId: quickSetup.setupJob!.id,
-                    })
-                  }
-                >
-                  <Loader2Icon className="size-3.5 animate-spin" />
-                  {t("actions.cancel", { ns: "common" })}
-                </Button>
-              ) : quickSetup.action === "ready" ? (
-                <Button size="sm" onClick={() => window.history.back()}>
-                  {t("localModels.quick.useInChat")}
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  disabled={quickSetup.insufficientDisk || actionMutation.isPending}
-                  onClick={() =>
-                    actionMutation.mutate({
-                      type: "start-setup",
-                      runtime: quickSetup.runtime.runtime,
-                      useCase: quickSetupUseCase,
-                    })
-                  }
-                >
-                  {actionMutation.isPending ? (
-                    <Loader2Icon className="size-3.5 animate-spin" />
-                  ) : null}
-                  {quickSetup.action === "download"
-                    ? t("localModels.quick.download", {
-                        model: quickSetup.recommendation.name,
-                        size: formatBytes(quickSetup.source.estimatedDownloadBytes, t),
-                      })
-                    : t("localModels.quick.setup", {
-                        model: quickSetup.recommendation.name,
-                        size: formatBytes(quickSetup.estimatedBytes, t),
-                      })}
-                </Button>
-              )}
-            </div>
-          </div>
-          {quickSetup.setupJob ? (
-            <div className="border-t border-border/60 px-5 py-3">
-              <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-                <span>{quickSetup.setupJob.message ?? quickSetup.setupJob.state}</span>
-                {installProgressPercent(
-                  quickSetup.setupJob.downloadedBytes,
-                  quickSetup.setupJob.totalBytes,
-                ) !== null ? (
-                  <span>
-                    {installProgressPercent(
-                      quickSetup.setupJob.downloadedBytes,
-                      quickSetup.setupJob.totalBytes,
-                    )}
-                    %
-                  </span>
-                ) : null}
-              </div>
-              {!["ready", "failed", "cancelled"].includes(quickSetup.setupJob.state) ? (
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn(
-                      "h-full rounded-full bg-primary transition-[width]",
-                      installProgressPercent(
-                        quickSetup.setupJob.downloadedBytes,
-                        quickSetup.setupJob.totalBytes,
-                      ) === null && "w-1/3 animate-pulse",
-                    )}
-                    style={
-                      installProgressPercent(
-                        quickSetup.setupJob.downloadedBytes,
-                        quickSetup.setupJob.totalBytes,
-                      ) === null
-                        ? undefined
-                        : {
-                            width: `${installProgressPercent(
-                              quickSetup.setupJob.downloadedBytes,
-                              quickSetup.setupJob.totalBytes,
-                            )}%`,
-                          }
-                    }
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      <SettingsSection title={t("localModels.installedModelsTitle")}>
-        {snapshot.installedModels.length === 0 ? (
-          <div className="px-4 py-5 text-xs text-muted-foreground">
-            {t("localModels.installedEmpty")}
-          </div>
-        ) : (
-          snapshot.installedModels.map((model) => {
+      {snapshot.installedModels.length > 0 ? (
+        <SettingsSection title={t("localModels.installedModelsTitle")}>
+          {snapshot.installedModels.map((model) => {
             const removalAction = installedModelRemovalAction(model);
             const contextDiagnostics = localModelContextDiagnostics(model);
             const canRemove =
@@ -765,7 +441,7 @@ export function LocalModelsSettingsPanel() {
                         ...(model.tokensPerSecond
                           ? [t("localModels.tokensPerSecond", { count: model.tokensPerSecond })]
                           : []),
-                        model.modelId,
+                        ...(model.modelId === model.name ? [] : [model.modelId]),
                       ].join(" · ")}
                     </div>
                     {contextDiagnostics ? (
@@ -861,9 +537,15 @@ export function LocalModelsSettingsPanel() {
                 }
               />
             );
-          })
-        )}
-      </SettingsSection>
+          })}
+        </SettingsSection>
+      ) : null}
+
+      {snapshot.installedModels.some((model) => model.runtime === "ollama") ? (
+        <LocalModelHarnessToggles />
+      ) : null}
+
+      <LocalModelCatalog snapshot={snapshot} useCase={useCase} {...localModelActions} />
 
       <Button
         variant="ghost"
@@ -873,13 +555,11 @@ export function LocalModelsSettingsPanel() {
         onClick={() => setAdvancedOpen((open) => !open)}
       >
         <ChevronRightIcon className={disclosureChevronClassName(advancedOpen)} />
-        {t("localModels.moreOptions")}
+        {t("localModels.advanced")}
       </Button>
 
       <DisclosureRegion open={advancedOpen}>
         <div className="space-y-6 pt-1">
-          <LocalModelAlternatives snapshot={snapshot} {...localModelActions} />
-
           <SettingsSection title={t("localModels.runtimesTitle")}>
             {snapshot.runtimes.map((status) => {
               const runtimeInstall = snapshot.runtimeInstallJobs.find(
@@ -999,76 +679,6 @@ export function LocalModelsSettingsPanel() {
                 </Button>
               }
             />
-          </SettingsSection>
-
-          <SettingsSection title={t("localModels.recommendedTitle")}>
-            {snapshot.recommendations.map((recommendation) => {
-              const recommended =
-                recommendation.id ===
-                (snapshot.recommendedModelIdsByUseCase?.[quickSetupUseCase] ??
-                  snapshot.recommendedModelId);
-              return (
-                <div key={recommendation.id} className="px-4 py-3.5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
-                          {recommendation.name}
-                        </div>
-                        {recommended ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            {t("localModels.bestFit")}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
-                        {localizedRecommendationDescription(recommendation, t)}
-                      </p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {t("localModels.memoryTier", {
-                          size: formatBytes(recommendation.minimumMemoryBytes, t),
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {LOCAL_MODEL_RUNTIMES.map((runtime) => {
-                        const source = recommendationSourceForRuntime(recommendation, runtime);
-                        const runtimeStatus = runtimesById.get(runtime);
-                        if (!source || !runtimeStatus) return null;
-                        const installed = installedKeys.has(`${runtime}:${source.modelId}`);
-                        return (
-                          <Button
-                            key={runtime}
-                            size="xs"
-                            variant={recommended && runtime === "ollama" ? "default" : "outline"}
-                            disabled={
-                              installed ||
-                              !runtimeStatus.capabilities.canInstallModels ||
-                              actionMutation.isPending
-                            }
-                            title={
-                              runtimeStatus.state !== "running"
-                                ? t("localModels.startFirst", { runtime: runtimeStatus.name })
-                                : source.modelId
-                            }
-                            onClick={() =>
-                              actionMutation.mutate({
-                                type: "install",
-                                input: source as LocalModelInstallInput,
-                              })
-                            }
-                          >
-                            {installed
-                              ? t("localModels.installed")
-                              : t("localModels.installWith", { runtime: runtimeStatus.name })}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </SettingsSection>
 
           <SettingsSection title={t("localModels.installAnotherTitle")}>

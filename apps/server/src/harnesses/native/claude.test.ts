@@ -126,7 +126,15 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
     });
   },
 }));
-import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { buildClaudeBackendEnv } from "../../codingPlans/backend";
+import {
+  createClaudeDriver,
+  createClaudeDriverWithBackends,
+  createGroupMemberClaudeDriver,
+} from "./claude";
 const input = {
   threadId: ThreadId.makeUnsafe("claude-test"),
   cwd: "/tmp",
@@ -474,5 +482,120 @@ describe("fresh Claude SDK bridge", () => {
         { emit: () => {}, request: async () => "cancel", fail: () => {} },
       ),
     ).rejects.toThrow("OS sandbox");
+  });
+
+  it("gives a coding plan session its own env and leaves the next normal session untouched", async () => {
+    const home = await mkdtemp(join(tmpdir(), "djl-claude-home-"));
+    const settingsFile = join(home, ".claude", "settings.json");
+    await mkdir(join(home, ".claude"));
+    const userSettings = `${JSON.stringify({ env: { ANTHROPIC_BASE_URL: "https://user.example" } })}\n`;
+    await writeFile(settingsFile, userSettings);
+    const before = await stat(settingsFile);
+    const previousHome = process.env.HOME;
+    process.env.HOME = home;
+    const planKey = "sk-plan-only-for-this-session";
+    const sink = { emit: () => {}, request: async () => "cancel" as const, fail: () => {} };
+    const createWithPlans = createClaudeDriverWithBackends(async (backend) =>
+      buildClaudeBackendEnv(process.env, backend, backend.kind === "plan" ? planKey : undefined),
+    );
+    try {
+      const plan = await createWithPlans(
+        {
+          ...input,
+          modelSelection: { provider: "claudeAgent", model: "plan/zai-coding-plan/glm-5.3" },
+        },
+        sink,
+      );
+      const planEnv = state.options?.env as Record<string, string | undefined>;
+      // The SDK puts inline settings on the command line, where `ps` shows them to every local
+      // process, so the plan's env goes through an owner-only file and only its path is passed.
+      const planSettingsPath = state.options?.settings as string;
+      expect(typeof planSettingsPath).toBe("string");
+      expect((await stat(planSettingsPath)).mode & 0o777).toBe(0o600);
+      const planSettings = JSON.parse(await readFile(planSettingsPath, "utf8")) as {
+        env?: Record<string, string>;
+      };
+      plan.close();
+      await vi.waitFor(async () => {
+        await expect(stat(planSettingsPath)).rejects.toThrow();
+      });
+      expect(state.options?.model).toBe("glm-5.3");
+      expect(planEnv).toMatchObject({
+        ANTHROPIC_BASE_URL: "https://api.z.ai/api/anthropic",
+        ANTHROPIC_AUTH_TOKEN: planKey,
+        ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-5.3[1m]",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.3[1m]",
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-5.3-flash[1m]",
+      });
+      expect(planSettings.env).toMatchObject({
+        ANTHROPIC_BASE_URL: "https://api.z.ai/api/anthropic",
+        ANTHROPIC_AUTH_TOKEN: planKey,
+      });
+
+      const normal = await createWithPlans(
+        { ...input, modelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" } },
+        sink,
+      );
+      const normalEnv = state.options?.env as Record<string, string | undefined>;
+      const normalSettings = state.options?.settings as { env?: unknown };
+      normal.close();
+      expect(state.options?.model).toBe("claude-sonnet-4-6");
+      expect(normalSettings.env).toBeUndefined();
+      expect(JSON.stringify(normalEnv)).not.toContain(planKey);
+      expect(normalEnv.ANTHROPIC_BASE_URL).toBe(process.env.ANTHROPIC_BASE_URL);
+      expect(normalEnv.ANTHROPIC_AUTH_TOKEN).toBe(process.env.ANTHROPIC_AUTH_TOKEN);
+
+      const local = await createWithPlans(
+        {
+          ...input,
+          modelSelection: { provider: "claudeAgent", model: "ollama/qwen2.5-coder:1.5b" },
+        },
+        sink,
+      );
+      const localEnv = state.options?.env as Record<string, string | undefined>;
+      local.close();
+      expect(state.options?.model).toBe("qwen2.5-coder:1.5b");
+      expect(localEnv).toMatchObject({
+        ANTHROPIC_BASE_URL: "http://127.0.0.1:11434",
+        ANTHROPIC_AUTH_TOKEN: "ollama",
+        ANTHROPIC_API_KEY: "",
+      });
+
+      expect(await readFile(settingsFile, "utf8")).toBe(userSettings);
+      expect((await stat(settingsFile)).mtimeMs).toBe(before.mtimeMs);
+    } finally {
+      process.env.HOME = previousHome;
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("explains a local model whose window cannot hold Claude Code's prompt", async () => {
+    state.resultError = "Prompt is too long";
+    const driver = await createClaudeDriverWithBackends(async (backend) =>
+      buildClaudeBackendEnv(process.env, backend, undefined, {
+        contextTokens: 32768,
+        ollamaWindow: { served: 32768, modelMax: 32768 },
+      }),
+    )(
+      { ...input, modelSelection: { provider: "claudeAgent", model: "ollama/qwen2.5-coder:0.5b" } },
+      { emit: () => {}, request: async () => "cancel", fail: () => {} },
+    );
+    try {
+      await expect(driver.send({ threadId: input.threadId, input: "hello" })).rejects.toThrow(
+        "qwen2.5-coder:0.5b can hold at most 32k tokens",
+      );
+    } finally {
+      driver.close();
+      state.resultError = "";
+    }
+  });
+
+  it("keeps plan and local models out of the default Claude driver", async () => {
+    await expect(
+      createClaudeDriver(
+        { ...input, modelSelection: { provider: "claudeAgent", model: "ollama/llama3.2" } },
+        { emit: () => {}, request: async () => "cancel", fail: () => {} },
+      ),
+    ).rejects.toThrow("not available");
   });
 });

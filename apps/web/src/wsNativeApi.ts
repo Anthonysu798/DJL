@@ -871,6 +871,15 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.harnessStartLogin, input, { timeoutMs: 30_000 }),
       endLogin: (input) => transport.request(WS_METHODS.harnessEndLogin, input),
     },
+    codingPlans: {
+      list: () => transport.request(WS_METHODS.codingPlansList, {}, { timeoutMs: 15_000 }),
+      // Connecting validates the key against the provider first, so allow a slow network.
+      connect: (input) =>
+        transport.request(WS_METHODS.codingPlansConnect, input, { timeoutMs: 45_000 }),
+      disconnect: (input) => transport.request(WS_METHODS.codingPlansDisconnect, input),
+      importFromOpenCode: (input) =>
+        transport.request(WS_METHODS.codingPlansImportFromOpenCode, input, { timeoutMs: 45_000 }),
+    },
     cloud: {
       getStatus: () => transport.request(WS_METHODS.cloudGetStatus, {}, { timeoutMs: 20_000 }),
       startSignIn: () => transport.request(WS_METHODS.cloudStartSignIn, {}, { timeoutMs: 20_000 }),
@@ -898,14 +907,6 @@ export function createWsNativeApi(): NativeApi {
       listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
       listModelProviders: (input) =>
         transport.request(WS_METHODS.openCodeListModelProviders, input, { timeoutMs: 25_000 }),
-      setApiKey: (input) => transport.request(WS_METHODS.openCodeSetApiKey, input),
-      saveCustomProvider: (input) =>
-        transport.request(WS_METHODS.openCodeSaveCustomProvider, input),
-      removeCustomProvider: (input) =>
-        transport.request(WS_METHODS.openCodeRemoveCustomProvider, input),
-      fetchCustomModels: (input) => transport.request(WS_METHODS.openCodeFetchCustomModels, input),
-
-      removeCredential: (input) => transport.request(WS_METHODS.openCodeRemoveCredential, input),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),

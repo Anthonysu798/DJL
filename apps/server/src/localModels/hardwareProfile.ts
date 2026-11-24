@@ -95,6 +95,7 @@ export interface HardwareProfileCollectionOptions {
   readonly runWindowsGpuQuery?: () => Promise<string>;
   readonly runMacGpuQuery?: () => Promise<string>;
   readonly runMacOsVersionQuery?: () => Promise<string>;
+  readonly runMacMemoryQuery?: () => Promise<string>;
 }
 function finiteNonNegative(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
@@ -467,6 +468,31 @@ async function runMacOsVersionQuery(): Promise<string> {
   return await execFileText("/usr/bin/sw_vers", ["-productVersion"]);
 }
 
+async function runMacMemoryQuery(): Promise<string> {
+  return await execFileText("/usr/bin/vm_stat", []);
+}
+
+/**
+ * macOS keeps most idle memory as inactive pages it hands back on demand, so free pages alone
+ * (what `os.freemem()` and `process.availableMemory()` report there) badly understate what a
+ * model can use. Available = free + inactive, the same figure psutil reports.
+ */
+export function parseMacAvailableMemory(vmStat: string): number | null {
+  const pageSize = Number(/page size of (\d+) bytes/.exec(vmStat)?.[1]);
+  const pages = (label: string) =>
+    Number(new RegExp(`^Pages ${label}:\\s+(\\d+)\\.`, "m").exec(vmStat)?.[1]);
+  const available = (pages("free") + pages("inactive")) * pageSize;
+  return Number.isFinite(available) && available > 0 ? available : null;
+}
+
+async function detectMacAvailableMemory(query: () => Promise<string> = runMacMemoryQuery) {
+  try {
+    return parseMacAvailableMemory(await query());
+  } catch {
+    return null;
+  }
+}
+
 async function detectMacGpus(
   hostArchitecture: NodeJS.Architecture,
   query: () => Promise<string> = runMacGpuQuery,
@@ -707,6 +733,7 @@ export async function collectHardwareProfile(
   const detectedAvailableMemoryBytes =
     options.availableMemoryBytes ??
     options.readAvailableMemory?.() ??
+    (platform === "darwin" ? await detectMacAvailableMemory(options.runMacMemoryQuery) : null) ??
     (typeof process.availableMemory === "function" ? process.availableMemory() : freemem());
   const availableMemoryBytes = Math.min(
     totalMemoryBytes,

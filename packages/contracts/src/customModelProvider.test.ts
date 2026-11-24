@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { CustomModelProvider, SaveCustomModelProviderInput } from "./providerDiscovery";
+import { CustomModelProvider } from "./providerDiscovery";
 
 const valid = {
   providerId: "my-relay",
@@ -10,10 +10,7 @@ const valid = {
   models: [{ id: "org/model", name: "Model" }],
 };
 describe("custom model provider contracts", () => {
-  it("accepts an optional secret only on save and strips it from public definitions", () => {
-    expect(
-      Schema.decodeUnknownSync(SaveCustomModelProviderInput)({ ...valid, apiKey: "secret" }),
-    ).toHaveProperty("apiKey", "secret");
+  it("strips secrets from public definitions", () => {
     expect(
       Schema.decodeUnknownSync(CustomModelProvider)({ ...valid, apiKey: "secret" }),
     ).not.toHaveProperty("apiKey");

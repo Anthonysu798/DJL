@@ -178,7 +178,7 @@ describe("FirstRunTour", () => {
     await expect.poll(() => router.state.location.pathname).toBe("/settings");
     await expect
       .poll(() => (router.state.location.search as Record<string, unknown>).section)
-      .toBe("models");
+      .toBe("accounts");
     await expect
       .poll(() => (router.state.location.search as Record<string, unknown>).target)
       .toBe("model-providers");

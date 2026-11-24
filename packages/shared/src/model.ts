@@ -37,6 +37,7 @@ const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> =
   kimi: new Set(MODEL_OPTIONS_BY_PROVIDER.kimi.map((option) => option.slug)),
   iflow: new Set(MODEL_OPTIONS_BY_PROVIDER.iflow.map((option) => option.slug)),
   qwen: new Set(MODEL_OPTIONS_BY_PROVIDER.qwen.map((option) => option.slug)),
+  copilot: new Set(MODEL_OPTIONS_BY_PROVIDER.copilot.map((option) => option.slug)),
   codebuddy: new Set(MODEL_OPTIONS_BY_PROVIDER.codebuddy.map((option) => option.slug)),
   djlCloud: new Set(MODEL_OPTIONS_BY_PROVIDER.djlCloud.map((option) => option.slug)),
   droid: new Set(MODEL_OPTIONS_BY_PROVIDER.droid.map((option) => option.slug)),

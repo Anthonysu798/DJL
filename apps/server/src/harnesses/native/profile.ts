@@ -20,6 +20,10 @@ export function nativeProfileOptions(
       return { iflow: { binaryPath: settings.providers.iflow.binaryPath.trim() || "iflow" } };
     case "qwen":
       return { qwen: { binaryPath: settings.providers.qwen.binaryPath.trim() || "qwen" } };
+    case "copilot":
+      return {
+        copilot: { binaryPath: settings.providers.copilot.binaryPath.trim() || "copilot" },
+      };
     case "gemini":
       return { gemini: { binaryPath: settings.providers.gemini.binaryPath.trim() || "gemini" } };
     case "codebuddy":

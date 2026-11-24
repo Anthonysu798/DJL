@@ -149,6 +149,8 @@ export const IFlowModelOptions = Schema.Struct({});
 export type IFlowModelOptions = typeof IFlowModelOptions.Type;
 export const QwenModelOptions = Schema.Struct({});
 export type QwenModelOptions = typeof QwenModelOptions.Type;
+export const CopilotModelOptions = Schema.Struct({});
+export type CopilotModelOptions = typeof CopilotModelOptions.Type;
 export const CodeBuddyModelOptions = Schema.Struct({});
 export type CodeBuddyModelOptions = typeof CodeBuddyModelOptions.Type;
 export const DjlCloudModelOptions = Schema.Struct({});
@@ -172,6 +174,7 @@ export const ProviderModelOptions = Schema.Struct({
   kimi: Schema.optional(KimiModelOptions),
   iflow: Schema.optional(IFlowModelOptions),
   qwen: Schema.optional(QwenModelOptions),
+  copilot: Schema.optional(CopilotModelOptions),
   codebuddy: Schema.optional(CodeBuddyModelOptions),
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
@@ -497,6 +500,21 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     {
       slug: "qwen3-coder-plus",
       name: "Qwen3 Coder Plus",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  // GitHub Copilot CLI advertises the account's live catalog over ACP; Auto is
+  // only shown until discovery completes.
+  copilot: [
+    {
+      slug: "auto",
+      name: "Auto",
       capabilities: {
         reasoningEffortLevels: [],
         supportsFastMode: false,
@@ -1020,6 +1038,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSl
   kimi: "kimi-code/kimi-for-coding",
   iflow: "glm-4.7",
   qwen: "qwen3-coder-plus",
+  copilot: "auto",
   codebuddy: "default-model",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
@@ -1042,6 +1061,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
   kimi: {},
   iflow: {},
   qwen: {},
+  copilot: {},
   codebuddy: {},
   codex: {
     "5.5": "gpt-5.5",
@@ -1189,6 +1209,7 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   kimi: "Kimi Code",
   iflow: "iFlow",
   qwen: "Qwen Code",
+  copilot: "GitHub Copilot",
   codebuddy: "CodeBuddy Code",
   codex: "Codex",
   claudeAgent: "Claude",

@@ -1,5 +1,8 @@
 import type { HookCallback } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { withDjlThreadId } from "./driverEnv";
 import type { PermissionMode, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { bounded, object, string } from "./protocol";
@@ -13,6 +16,22 @@ import {
 } from "@djl/shared/model";
 import { claudeContextUsage } from "./usage";
 import { CLAUDE_CODE_EFFORT_OPTIONS, effectiveRuntimeMode } from "@djl/contracts";
+import {
+  type ClaudeBackendEnv,
+  describeClaudeBackendError,
+  type ModelBackend,
+  parseModelBackend,
+} from "../../codingPlans/backend";
+
+/** Builds the per-session env for a coding plan or Ollama model; undefined keeps the default. */
+export type ClaudeBackendResolver = (
+  backend: ModelBackend,
+) => Promise<ClaudeBackendEnv | undefined>;
+
+const defaultBackendOnly: ClaudeBackendResolver = async (backend) => {
+  if (backend.kind === "default") return undefined;
+  throw new Error("Coding plans and local models are not available for this Claude session");
+};
 
 const compactTokens = (value: string | undefined) =>
   value === "200k" ? 200_000 : value === "1m" ? 1_000_000 : null;
@@ -36,8 +55,13 @@ const askForGroupTools: HookCallback = async (hook) =>
     ? { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "ask" } }
     : {};
 
-export const createClaudeDriver: NativeDriverFactory = (input, sink, workTools, plugins) =>
-  startClaudeDriver(input, sink, workTools, plugins, false);
+export const createClaudeDriverWithBackends =
+  (resolveBackend: ClaudeBackendResolver): NativeDriverFactory =>
+  (input, sink, workTools, plugins) =>
+    startClaudeDriver(input, sink, workTools, plugins, false, resolveBackend);
+
+export const createClaudeDriver: NativeDriverFactory =
+  createClaudeDriverWithBackends(defaultBackendOnly);
 
 /** A Multi agents member: the group policy answers every file and shell call. */
 export const createGroupMemberClaudeDriver: NativeDriverFactory = (
@@ -45,7 +69,7 @@ export const createGroupMemberClaudeDriver: NativeDriverFactory = (
   sink,
   workTools,
   plugins,
-) => startClaudeDriver(input, sink, workTools, plugins, true);
+) => startClaudeDriver(input, sink, workTools, plugins, true, defaultBackendOnly);
 
 const startClaudeDriver = async (
   input: Parameters<NativeDriverFactory>[0],
@@ -53,6 +77,7 @@ const startClaudeDriver = async (
   workTools: Parameters<NativeDriverFactory>[2],
   plugins: Parameters<NativeDriverFactory>[3],
   groupMember: boolean,
+  resolveBackend: ClaudeBackendResolver,
 ): ReturnType<NativeDriverFactory> => {
   if (input.approvalPolicy)
     throw new Error(
@@ -69,6 +94,10 @@ const startClaudeDriver = async (
     (value) => value === (selection?.options?.effort ?? getDefaultEffort(caps)),
   );
   const apiEffort = getEffectiveClaudeCodeEffort(effort);
+  // Plan and Ollama models carry a backend prefix in their slug; the SDK gets the bare id and
+  // this session alone gets the backend's env. Switching backends needs a new session.
+  const backend = parseModelBackend(selection?.model);
+  const backendEnv = await resolveBackend(backend);
 
   let autoCompactWindow = compactTokens(
     selection?.options?.autoCompactWindow ??
@@ -78,6 +107,7 @@ const startClaudeDriver = async (
   );
   let lastCallUsage: Record<string, unknown> | undefined;
   let activeModel = selection?.model;
+  let turnModel = selection?.model;
   let contextLimit = caps.contextWindowTokens;
   const emitUsage = () => {
     const usage = claudeContextUsage(lastCallUsage, contextLimit);
@@ -135,6 +165,23 @@ const startClaudeDriver = async (
     },
   };
   const abort = new AbortController();
+  const flagSettings = {
+    ultracode: effort === "ultracode",
+    fastMode: selection?.options?.fastMode === true,
+    ...(selection?.options?.thinking !== undefined
+      ? { alwaysThinkingEnabled: selection.options.thinking }
+      : {}),
+    ...(autoCompactWindow !== null ? { autoCompactWindow } : {}),
+    // Flag settings outrank an `env` block in the user's ~/.claude/settings.json.
+    ...(backendEnv ? { env: backendEnv.settingsEnv } : {}),
+  };
+  // The SDK hands inline settings to Claude Code as `--settings <json>`, which any local process
+  // can read through `ps`. A backend's env carries its key, so it goes to an owner-only file in a
+  // private temp directory instead, and only that path is on the command line.
+  const settingsDir = backendEnv ? await mkdtemp(join(tmpdir(), "djl-claude-settings-")) : null;
+  const settings = settingsDir ? join(settingsDir, "settings.json") : flagSettings;
+  if (typeof settings === "string")
+    await writeFile(settings, JSON.stringify(flagSettings), { mode: 0o600 });
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const runtime = query({
     prompt,
@@ -174,25 +221,20 @@ const startClaudeDriver = async (
           }
         : {}),
       cwd: input.cwd!,
-      ...(input.modelSelection ? { model: input.modelSelection.model } : {}),
+      ...(input.modelSelection
+        ? { model: backend.kind === "default" ? input.modelSelection.model : backend.model }
+        : {}),
       ...(input.resumeCursor === undefined ? { sessionId: id } : { resume: id }),
       pathToClaudeCodeExecutable: executable,
       ...(apiEffort ? { effort: apiEffort } : {}),
-      settings: {
-        ultracode: effort === "ultracode",
-        fastMode: selection?.options?.fastMode === true,
-        ...(selection?.options?.thinking !== undefined
-          ? { alwaysThinkingEnabled: selection.options.thinking }
-          : {}),
-        ...(autoCompactWindow !== null ? { autoCompactWindow } : {}),
-      },
+      settings,
       permissionMode,
       ...(permissionMode === "bypassPermissions" ? { allowDangerouslySkipPermissions: true } : {}),
       abortController: abort,
       includePartialMessages: true,
       settingSources: ["user", "project", "local"],
       ...(groupMember ? { hooks: { PreToolUse: [{ hooks: [askForGroupTools] }] } } : {}),
-      env: withDjlThreadId(process.env, input.threadId),
+      env: withDjlThreadId(backendEnv?.env ?? process.env, input.threadId),
       canUseTool: async (tool, args, context) => {
         // Required user interaction still reaches this callback in native bypass mode.
         if (tool === "AskUserQuestion") {
@@ -339,9 +381,14 @@ const startClaudeDriver = async (
           if (message.is_error || message.subtype !== "success")
             fail?.(
               new Error(
-                "errors" in message
-                  ? message.errors.join("; ")
-                  : message.result || "Claude turn failed",
+                describeClaudeBackendError(
+                  parseModelBackend(turnModel),
+                  "errors" in message
+                    ? message.errors.join("; ")
+                    : message.result || "Claude turn failed",
+                  // The window was measured for the session's first model only.
+                  turnModel === selection?.model ? backendEnv?.ollamaWindow : undefined,
+                ),
               ),
             );
           else finish?.();
@@ -365,6 +412,7 @@ const startClaudeDriver = async (
     fail?.(new Error("Claude session stopped"));
     abort.abort();
     runtime.close();
+    if (settingsDir) void rm(settingsDir, { recursive: true, force: true });
   };
   try {
     await bounded(runtime.initializationResult());
@@ -399,7 +447,13 @@ const startClaudeDriver = async (
             turn.modelSelection.model,
           ).contextWindowTokens;
         }
-        await bounded(runtime.setModel(turn.modelSelection.model));
+        const turnBackend = parseModelBackend(turn.modelSelection.model);
+        turnModel = turn.modelSelection.model;
+        await bounded(
+          runtime.setModel(
+            turnBackend.kind === "default" ? turn.modelSelection.model : turnBackend.model,
+          ),
+        );
       }
       expectedPermissionMode = turn.interactionMode === "plan" ? "plan" : permissionMode;
       await bounded(runtime.setPermissionMode(expectedPermissionMode));

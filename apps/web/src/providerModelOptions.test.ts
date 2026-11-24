@@ -67,6 +67,24 @@ describe("formatProviderModelOptionName", () => {
     ).toBe("GPT-5");
   });
 
+  it("names local and coding-plan models without their routing prefix", () => {
+    expect(
+      formatProviderModelOptionName({ provider: "claudeAgent", slug: "ollama/qwen2.5-coder:0.5b" }),
+    ).toBe("qwen2.5-coder:0.5b");
+    expect(
+      formatProviderModelOptionName({ provider: "codex", slug: "ollama/hf.co/org/model:q4" }),
+    ).toBe("hf.co/org/model:q4");
+    expect(
+      formatProviderModelOptionName({
+        provider: "claudeAgent",
+        slug: "plan/zai-coding-plan/glm-5.3",
+      }),
+    ).toBe("GLM-5.3");
+    expect(
+      formatProviderModelOptionName({ provider: "claudeAgent", slug: "plan/kimi-for-coding/k9" }),
+    ).toBe("k9");
+  });
+
   it("leaves non-OpenCode unknown slugs unchanged", () => {
     expect(
       formatProviderModelOptionName({

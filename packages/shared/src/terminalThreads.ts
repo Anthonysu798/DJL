@@ -13,6 +13,7 @@ export type TerminalCliKind =
   | "grok"
   | "iflow"
   | "qwen"
+  | "copilot"
   | "codebuddy"
   | "pi"
   | "gemini";
@@ -26,6 +27,7 @@ export type TerminalIconKey =
   | "grok"
   | "iflow"
   | "qwen"
+  | "copilot"
   | "codebuddy"
   | "pi"
   | "gemini";
@@ -43,6 +45,7 @@ export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, 
   grok: "grok",
   iflow: "iflow",
   qwen: "qwen",
+  copilot: "copilot",
   gemini: "gemini",
   codebuddy: "codebuddy",
   pi: "pi",
@@ -57,6 +60,7 @@ const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
   grok: "Grok",
   iflow: "iFlow CLI",
   qwen: "Qwen Code",
+  copilot: "GitHub Copilot",
   gemini: "Gemini CLI",
   codebuddy: "CodeBuddy Code",
   pi: "Pi",

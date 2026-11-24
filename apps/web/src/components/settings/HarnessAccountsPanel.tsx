@@ -1,5 +1,5 @@
 import { HarnessToolsPanel, harnessToolsQueryOptions } from "./HarnessToolsPanel";
-import { SubscriptionPlansPanel, SUBSCRIPTION_PLANS } from "./SubscriptionPlansPanel";
+import { SubscriptionPlansPanel } from "./SubscriptionPlansPanel";
 import type {
   HarnessAccount,
   HarnessId,
@@ -40,6 +40,11 @@ const HARNESSES: { id: HarnessId; label: string; docs: string }[] = [
   { id: "iflow", label: "iFlow CLI", docs: "https://github.com/iflow-ai/iflow-cli" },
   { id: "qwen", label: "Qwen Code", docs: "https://github.com/QwenLM/qwen-code" },
   {
+    id: "copilot",
+    label: "GitHub Copilot",
+    docs: "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli",
+  },
+  {
     id: "codebuddy",
     label: "CodeBuddy Code",
     docs: "https://www.codebuddy.ai/docs/cli/quickstart",
@@ -55,7 +60,7 @@ const STATUS_DOT_CLASS_NAME: Partial<Record<HarnessAccount["status"], string>> =
   incompatible: "bg-destructive",
 };
 
-export function HarnessAccountsPanel() {
+export function HarnessAccountsPanel({ revealPlans = false }: { revealPlans?: boolean } = {}) {
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const { settings, updateSettings } = useAppSettings();
@@ -447,26 +452,7 @@ export function HarnessAccountsPanel() {
         />
       ) : null}
       <HarnessToolsPanel disabled={connect.isPending || install.isPending || signIn !== null} />
-      <SubscriptionPlansPanel
-        enabled={
-          accounts.data?.accounts.some(
-            (account) =>
-              account.id === "opencode" &&
-              account.installed &&
-              account.enabled &&
-              account.status !== "incompatible",
-          ) ?? false
-        }
-        disabled={connect.isPending || signIn !== null || finish.isPending}
-        onConnect={(request) =>
-          startSignIn(
-            request,
-            SUBSCRIPTION_PLANS.find((plan) => plan.id === request.modelProviderId)?.name ??
-              HARNESSES.find((harness) => harness.id === request.harness)?.label ??
-              request.harness,
-          )
-        }
-      />
+      <SubscriptionPlansPanel {...(revealPlans ? { reveal: true } : {})} />
     </div>
   );
 }

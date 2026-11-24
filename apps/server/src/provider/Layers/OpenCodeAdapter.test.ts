@@ -1569,53 +1569,6 @@ describe("flattenOpenCodeModels", () => {
 });
 
 describe("OpenCodeAdapter runtime lifecycle", () => {
-  it("writes and removes API keys through OpenCode without returning the secret", async () => {
-    const runtime = createMockOpenCodeRuntime({
-      authMethods: { openai: [{ type: "api", label: "API key" }] },
-      inventory: {
-        providerList: {
-          connected: [],
-          default: {},
-          all: [makeProvider({ id: "openai", name: "OpenAI" })],
-        },
-        agents: [],
-        consoleState: null,
-      },
-    });
-    const layer = makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
-      Layer.provideMerge(
-        ServerConfig.layerTest(process.cwd(), {
-          prefix: "opencode-auth-test-",
-        }),
-      ),
-      Layer.provideMerge(NodeServices.layer),
-    );
-
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const adapter = yield* OpenCodeAdapter;
-        const saved = yield* adapter.setApiKey({
-          providerId: "openai",
-          apiKey: "secret-value",
-        });
-        const removed = yield* adapter.removeCredential({
-          providerId: "openai",
-        });
-        return { saved, removed };
-      }).pipe(Effect.provide(layer)),
-    );
-
-    expect(result).toEqual({
-      saved: { providerId: "openai", connected: true },
-      removed: { providerId: "openai", connected: false },
-    });
-    expect(JSON.stringify(result)).not.toContain("secret-value");
-    expect(runtime.authSetCalls).toEqual([
-      { providerID: "openai", auth: { type: "api", key: "secret-value" } },
-    ]);
-    expect(runtime.authRemoveCalls).toEqual([{ providerID: "openai" }]);
-  });
-
   it("lists only credential-backed OpenCode inventory models", async () => {
     const runtime = createMockOpenCodeRuntime({
       cliModels: [

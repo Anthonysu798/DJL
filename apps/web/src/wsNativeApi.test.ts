@@ -304,6 +304,7 @@ describe("wsNativeApi", () => {
           kimi: { region: "existing", enabled: true, binaryPath: "kimi", customModels: [] },
           iflow: { enabled: true, binaryPath: "iflow", customModels: [] },
           qwen: { enabled: true, binaryPath: "qwen", customModels: [] },
+          copilot: { enabled: true, binaryPath: "copilot", customModels: [] },
           codebuddy: { enabled: true, binaryPath: "codebuddy", customModels: [] },
           droid: { enabled: true, binaryPath: "droid", customModels: [] },
           kilo: {
@@ -325,6 +326,7 @@ describe("wsNativeApi", () => {
           djlCloud: { enabled: true, region: "auto" },
         },
         skills: { disabled: [] },
+        localModels: { harnesses: { claudeAgent: true, codex: true, opencode: true } },
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);

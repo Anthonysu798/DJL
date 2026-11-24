@@ -23,6 +23,7 @@ const SIGN_IN_GUIDE: Record<HarnessId, SignInGuide> = {
   gemini: "pick",
   iflow: "pick",
   qwen: "pick",
+  copilot: "browser",
   opencode: "pick",
   codebuddy: "slashLogin",
   pi: "slashLogin",

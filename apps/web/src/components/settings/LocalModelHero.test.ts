@@ -6,7 +6,13 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import { hardwareProfileFixture } from "../../test/localModelsFixture";
-import { buildLocalModelCardViewModels } from "./LocalModelHero";
+import {
+  buildLocalModelCardViewModels,
+  codingToolsSupport,
+  localModelFit,
+  setupCardModel,
+  setupStepIndex,
+} from "./LocalModelHero";
 
 const GIB = 1024 ** 3;
 
@@ -141,6 +147,19 @@ describe("buildLocalModelCardViewModels", () => {
     ).toEqual(enabled);
   });
 
+  it("blocks a model that fits in total but not in the memory free right now", () => {
+    const cards = buildLocalModelCardViewModels(
+      snapshot({ fittingRecommendationIds: ["qwen3-1.7b", "qwen3.5-2b"] }),
+    );
+    const action = (id: string) =>
+      cards.find(({ recommendation }) => recommendation.id === id)?.action;
+    expect(action("qwen3.5-2b")).toBe("setup");
+    expect(action("qwen3-1.7b")).toBe("setup");
+    expect(action("granite-4.1-3b")).toBe("blocked_free_memory");
+    // Too large in total still says so.
+    expect(action("gpt-oss-20b")).toBe("blocked_memory");
+  });
+
   it("maps Ollama runtime state to the one-click action", () => {
     expect(buildLocalModelCardViewModels(snapshot({}, "not_installed"))[0]?.action).toBe("setup");
     expect(buildLocalModelCardViewModels(snapshot({}, "stopped"))[0]?.action).toBe("start");
@@ -218,5 +237,85 @@ describe("buildLocalModelCardViewModels", () => {
     const lowDisk = buildLocalModelCardViewModels(snapshot({ freeDiskBytes: 1024 }, "running"));
     expect(lowDisk[0]?.action).toBe("blocked_disk");
     expect(lowDisk[0]?.requiredDiskBytes).toBeGreaterThan(3.8 * GIB);
+  });
+
+  it("picks the best match for the chosen task, and keeps an install in progress in front", () => {
+    const byTask = snapshot({
+      recommendedModelIdsByUseCase: {
+        general: "qwen3.5-2b",
+        document: "granite-4.1-3b",
+        reasoning: "qwen3.5-2b",
+        coding: "granite-4.1-3b",
+      },
+    });
+    expect(
+      setupCardModel(buildLocalModelCardViewModels(byTask, "general"))?.recommendation.id,
+    ).toBe("qwen3.5-2b");
+    const coding = buildLocalModelCardViewModels(byTask, "coding");
+    expect(coding[0]).toMatchObject({ isBestFit: true, recommendation: { id: "granite-4.1-3b" } });
+    expect(setupCardModel(coding)?.recommendation.id).toBe("granite-4.1-3b");
+
+    const installing = buildLocalModelCardViewModels(
+      {
+        ...byTask,
+        setupJobs: [
+          {
+            id: "setup-active",
+            runtime: "ollama",
+            recommendationId: "qwen3-1.7b",
+            modelId: "qwen3:1.7b",
+            state: "verifying",
+            downloadedBytes: 0,
+            totalBytes: null,
+            message: null,
+            startedAt: "2026-07-27T00:00:00.000Z",
+            finishedAt: null,
+          },
+        ],
+      },
+      "coding",
+    );
+    expect(setupCardModel(installing)?.recommendation.id).toBe("qwen3-1.7b");
+  });
+
+  it("maps setup states onto four plain steps", () => {
+    expect(
+      (["detecting", "installing_runtime", "starting_runtime"] as const).map(setupStepIndex),
+    ).toEqual([0, 0, 0]);
+    expect(setupStepIndex("downloading_model")).toBe(1);
+    expect((["verifying", "synchronizing"] as const).map(setupStepIndex)).toEqual([2, 2]);
+    expect(setupStepIndex("ready")).toBe(3);
+  });
+
+  it("labels each model by whether it suits this computer", () => {
+    const fits = (overrides: Partial<LocalModelsSnapshot>) =>
+      Object.fromEntries(
+        buildLocalModelCardViewModels(snapshot(overrides, "running")).map((card) => [
+          card.recommendation.id,
+          localModelFit(card),
+        ]),
+      );
+    expect(fits({ fittingRecommendationIds: ["qwen3-1.7b", "qwen3.5-2b"] })).toEqual({
+      "qwen3.5-2b": "runsWell",
+      "qwen3-1.7b": "runsWell",
+      "granite-4.1-3b": "lowFreeMemory",
+      "gpt-oss-20b": "tooBig",
+      "qwen3-coder-30b": "tooBig",
+    });
+    expect(fits({ freeDiskBytes: 1024 })["qwen3.5-2b"]).toBe("lowDisk");
+  });
+});
+
+describe("codingToolsSupport", () => {
+  const base = recommendations[1]!;
+  it("needs tool calls and a 64k window for Claude Code and Codex", () => {
+    expect(codingToolsSupport({ ...base, contextWindowTokens: 131_072 })).toBe("works");
+    expect(codingToolsSupport({ ...base, contextWindowTokens: 65_536 })).toBe("works");
+    expect(codingToolsSupport({ ...base, contextWindowTokens: 32_768 })).toBe("tooShort");
+    expect(
+      codingToolsSupport({ ...base, supportsToolCalls: false, contextWindowTokens: 262_144 }),
+    ).toBeNull();
+    // Older servers do not send a window yet.
+    expect(codingToolsSupport(base)).toBeNull();
   });
 });

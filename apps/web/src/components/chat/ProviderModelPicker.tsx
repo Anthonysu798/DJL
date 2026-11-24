@@ -95,6 +95,12 @@ function resolveLiveProviderAvailability(provider: ServerProviderStatus | undefi
   };
 }
 
+// Coding-plan and local Ollama models route Claude Code / Codex to another backend, so they
+// work without the harness's own sign-in.
+function isRoutedModelSlug(slug: string): boolean {
+  return slug.startsWith("plan/") || slug.startsWith("ollama/");
+}
+
 export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
 const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
 
@@ -361,7 +367,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     ],
   );
 
-  const renderModelRadioGroup = (provider: ProviderKind) => {
+  const renderModelRadioGroup = (provider: ProviderKind, routedOnly = false) => {
     if (props.loadingModelProviders?.[provider]) {
       return (
         <div className="space-y-2 px-2 py-2" aria-label={t("model.loading", { ns: "chat" })}>
@@ -387,13 +393,15 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
           : [],
       ),
     );
-    const providerOptions =
-      provider === "opencode"
+    // Local Ollama models share the `ollama/<id>` slug under OpenCode, Claude Code, and Codex.
+    const providerOptions = (
+      provider === "opencode" || provider === "claudeAgent" || provider === "codex"
         ? props.modelOptionsByProvider[provider].map((option) => {
             const capabilityTier = measuredCapabilityTierBySlug.get(option.slug);
             return capabilityTier ? { ...option, capabilityTier } : option;
           })
-        : props.modelOptionsByProvider[provider];
+        : props.modelOptionsByProvider[provider]
+    ).filter((option) => !routedOnly || isRoutedModelSlug(option.slug));
     const shouldShowSearch =
       (provider === "kilo" ||
         provider === "opencode" ||
@@ -505,7 +513,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       return (
         <MenuItem
           onClick={() => {
-            window.location.assign("/settings?section=models");
+            window.location.assign("/settings?section=accounts");
           }}
         >
           <span>{t("model.configure", { ns: "chat" })}</span>
@@ -524,7 +532,14 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
         const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
         const liveProvider = props.providers?.find((entry) => entry.provider === option.value);
         const availability = resolveLiveProviderAvailability(liveProvider);
-        if (availability.disabled) {
+        // Signed out of Claude Code / Codex: plan and local models still work, so list only those.
+        const routedOnly =
+          availability.disabled &&
+          liveProvider?.available === true &&
+          liveProvider.authStatus === "unauthenticated" &&
+          (option.value === "claudeAgent" || option.value === "codex") &&
+          props.modelOptionsByProvider[option.value].some((model) => isRoutedModelSlug(model.slug));
+        if (availability.disabled && !routedOnly) {
           return (
             <MenuItem key={option.value} disabled>
               <OptionIcon
@@ -560,7 +575,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
                 COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME,
               )}
             >
-              {renderModelRadioGroup(option.value)}
+              {renderModelRadioGroup(option.value, routedOnly)}
             </ComposerPickerMenuSubPopup>
           </MenuSub>
         );

@@ -832,6 +832,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.iflow?.binaryPath);
     case "qwen":
       return normalizeCustomBinaryPath(providerOptions?.qwen?.binaryPath);
+    case "copilot":
+      return normalizeCustomBinaryPath(providerOptions?.copilot?.binaryPath);
     case "codebuddy":
       return normalizeCustomBinaryPath(providerOptions?.codebuddy?.binaryPath);
     case "droid":
@@ -2164,6 +2166,7 @@ export default function ChatView({
       kimi: resolveHint("kimi"),
       iflow: resolveHint("iflow"),
       qwen: resolveHint("qwen"),
+      copilot: resolveHint("copilot"),
       codebuddy: resolveHint("codebuddy"),
       droid: resolveHint("droid"),
       kilo: resolveHint("kilo"),
@@ -2267,6 +2270,14 @@ export default function ChatView({
       binaryPath: settings.qwenBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
       enabled: selectedProvider === "qwen" || isModelPickerOpen,
+    }),
+  );
+  const copilotDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "copilot",
+      binaryPath: settings.copilotBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "copilot" || isModelPickerOpen,
     }),
   );
   const codebuddyDynamicModelsQuery = useQuery(
@@ -2433,6 +2444,11 @@ export default function ChatView({
         customModelsByProvider.qwen,
         composerModelHintByProvider.qwen,
       ),
+      copilot: getAppModelOptions(
+        "copilot",
+        customModelsByProvider.copilot,
+        composerModelHintByProvider.copilot,
+      ),
       codebuddy: getAppModelOptions(
         "codebuddy",
         customModelsByProvider.codebuddy,
@@ -2470,6 +2486,7 @@ export default function ChatView({
       kimi: kimiDynamicModelsQuery.data,
       iflow: iflowDynamicModelsQuery.data,
       qwen: qwenDynamicModelsQuery.data,
+      copilot: copilotDynamicModelsQuery.data,
       codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
@@ -2488,6 +2505,7 @@ export default function ChatView({
       "kimi",
       "iflow",
       "qwen",
+      "copilot",
       "codebuddy",
       "droid",
       "kilo",
@@ -2522,6 +2540,7 @@ export default function ChatView({
     kimiDynamicModelsQuery.data,
     iflowDynamicModelsQuery.data,
     qwenDynamicModelsQuery.data,
+    copilotDynamicModelsQuery.data,
     codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
@@ -2546,6 +2565,7 @@ export default function ChatView({
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
       iflow: iflowDynamicModelsQuery.data?.models ?? [],
       qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      copilot: copilotDynamicModelsQuery.data?.models ?? [],
       codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
@@ -2564,6 +2584,7 @@ export default function ChatView({
       kimiDynamicModelsQuery.data?.models,
       iflowDynamicModelsQuery.data?.models,
       qwenDynamicModelsQuery.data?.models,
+      copilotDynamicModelsQuery.data?.models,
       codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
@@ -2580,6 +2601,7 @@ export default function ChatView({
     kimi: kimiDynamicModelsQuery,
     iflow: iflowDynamicModelsQuery,
     qwen: qwenDynamicModelsQuery,
+    copilot: copilotDynamicModelsQuery,
     codebuddy: codebuddyDynamicModelsQuery,
     droid: droidDynamicModelsQuery,
     kilo: kiloDynamicModelsQuery,
@@ -8076,7 +8098,7 @@ export default function ChatView({
       if (isElectron && isZeroConfigEntry && (queuedTurn || composerSendState.hasSendableContent)) {
         await prepareLocalAiAndResume(true);
       } else if (!isElectron || !isZeroConfigEntry) {
-        window.location.assign("/settings?section=models");
+        window.location.assign("/settings?section=accounts");
       }
       return false;
     }

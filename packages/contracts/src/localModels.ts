@@ -85,6 +85,11 @@ export const LocalModelRecommendationSource = Schema.Struct({
 });
 export type LocalModelRecommendationSource = typeof LocalModelRecommendationSource.Type;
 
+// Claude Code and Codex need at least this much: Ollama's guides ask for 64k for both
+// (verified 2026-11-23: https://docs.ollama.com/integrations/claude-code,
+// https://docs.ollama.com/integrations/codex). Claude Code's own instructions take about 22k.
+export const CODING_HARNESS_MIN_CONTEXT_TOKENS = 65_536;
+
 export const LocalModelRecommendation = Schema.Struct({
   id: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   // Established by running real tool calls against the tier, not inferred from parameter count.
@@ -92,6 +97,8 @@ export const LocalModelRecommendation = Schema.Struct({
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   description: BoundedDetail,
   minimumMemoryBytes: NonNegativeInt,
+  // The model's own trained window. Optional while older browser and desktop caches age out.
+  contextWindowTokens: Schema.optional(PositiveInt),
   sources: Schema.Array(LocalModelRecommendationSource).check(Schema.isMaxLength(2)),
 });
 export type LocalModelRecommendation = typeof LocalModelRecommendation.Type;
@@ -252,6 +259,13 @@ export const LocalModelsSnapshot = Schema.Struct({
   recommendedModelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
   // Optional while v1 browser and desktop caches age out. The legacy recommendation stays general.
   recommendedModelIdsByUseCase: Schema.optional(LocalModelRecommendationsByUseCase),
+  // Recommendations this computer can take right now, judged by the same check setup enforces.
+  // Optional while older browser and desktop caches age out.
+  fittingRecommendationIds: Schema.optional(
+    Schema.Array(TrimmedNonEmptyString.check(Schema.isMaxLength(128))).check(
+      Schema.isMaxLength(16),
+    ),
+  ),
   runtimes: Schema.Array(LocalModelRuntimeStatus).check(Schema.isMaxLength(2)),
   recommendations: Schema.Array(LocalModelRecommendation).check(Schema.isMaxLength(16)),
   installedModels: Schema.Array(LocalInstalledModel).check(Schema.isMaxLength(1_024)),

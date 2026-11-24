@@ -109,6 +109,7 @@ type CustomModelSettingsKey =
   | "customKimiModels"
   | "customIflowModels"
   | "customQwenModels"
+  | "customCopilotModels"
   | "customCodebuddyModels"
   | "customDroidModels"
   | "customKiloModels"
@@ -132,6 +133,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   kimi: new Set(getModelOptions("kimi").map((option) => option.slug)),
   iflow: new Set(getModelOptions("iflow").map((option) => option.slug)),
   qwen: new Set(getModelOptions("qwen").map((option) => option.slug)),
+  copilot: new Set(getModelOptions("copilot").map((option) => option.slug)),
   codebuddy: new Set(getModelOptions("codebuddy").map((option) => option.slug)),
   droid: new Set(getModelOptions("droid").map((option) => option.slug)),
   kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
@@ -182,6 +184,7 @@ export const AppSettingsSchema = Schema.Struct({
   kimiBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   iflowBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   qwenBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  copilotBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codebuddyBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   droidBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -260,6 +263,7 @@ export const AppSettingsSchema = Schema.Struct({
   customKimiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customIflowModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customQwenModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customCopilotModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customCodebuddyModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customDroidModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customKiloModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -359,6 +363,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<
     defaultSettingsKey: "customQwenModels",
     title: "Qwen Code",
     example: "qwen3-coder-next",
+  },
+  copilot: {
+    provider: "copilot",
+    settingsKey: "customCopilotModels",
+    defaultSettingsKey: "customCopilotModels",
+    title: "GitHub Copilot",
+    example: "gpt-5",
   },
   codebuddy: {
     provider: "codebuddy",
@@ -557,6 +568,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     kimiBinaryPath: normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath),
     iflowBinaryPath: normalizeProviderBinaryPathOverride("iflow", settings.iflowBinaryPath),
     qwenBinaryPath: normalizeProviderBinaryPathOverride("qwen", settings.qwenBinaryPath),
+    copilotBinaryPath: normalizeProviderBinaryPathOverride("copilot", settings.copilotBinaryPath),
     codebuddyBinaryPath: normalizeProviderBinaryPathOverride(
       "codebuddy",
       settings.codebuddyBinaryPath,
@@ -579,6 +591,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customKimiModels: normalizeCustomModelSlugs(settings.customKimiModels, "kimi"),
     customIflowModels: normalizeCustomModelSlugs(settings.customIflowModels, "iflow"),
     customQwenModels: normalizeCustomModelSlugs(settings.customQwenModels, "qwen"),
+    customCopilotModels: normalizeCustomModelSlugs(settings.customCopilotModels, "copilot"),
     customCodebuddyModels: normalizeCustomModelSlugs(settings.customCodebuddyModels, "codebuddy"),
     customDroidModels: normalizeCustomModelSlugs(settings.customDroidModels, "droid"),
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
@@ -607,6 +620,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     kimiRegion: settings.providers.kimi.region,
     iflowBinaryPath: settings.providers.iflow.binaryPath,
     qwenBinaryPath: settings.providers.qwen.binaryPath,
+    copilotBinaryPath: settings.providers.copilot.binaryPath,
     codebuddyBinaryPath: settings.providers.codebuddy.binaryPath,
     droidBinaryPath: settings.providers.droid.binaryPath,
     kiloBinaryPath: settings.providers.kilo.binaryPath,
@@ -626,6 +640,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customKimiModels: settings.providers.kimi.customModels,
     customIflowModels: settings.providers.iflow.customModels,
     customQwenModels: settings.providers.qwen.customModels,
+    customCopilotModels: settings.providers.copilot.customModels,
     customCodebuddyModels: settings.providers.codebuddy.customModels,
     customDroidModels: settings.providers.droid.customModels,
     customKiloModels: settings.providers.kilo.customModels,
@@ -763,6 +778,14 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       ...(hasOwn(patch, "customQwenModels") ? { customModels: patch.customQwenModels ?? [] } : {}),
     };
   }
+  if (hasOwn(patch, "copilotBinaryPath") || hasOwn(patch, "customCopilotModels")) {
+    providers.copilot = {
+      ...(hasOwn(patch, "copilotBinaryPath") ? { binaryPath: patch.copilotBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customCopilotModels")
+        ? { customModels: patch.customCopilotModels ?? [] }
+        : {}),
+    };
+  }
   if (hasOwn(patch, "codebuddyBinaryPath") || hasOwn(patch, "customCodebuddyModels")) {
     providers.codebuddy = {
       ...(hasOwn(patch, "codebuddyBinaryPath")
@@ -861,6 +884,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "kimiRegion",
     "iflowBinaryPath",
     "qwenBinaryPath",
+    "copilotBinaryPath",
     "codebuddyBinaryPath",
     "droidBinaryPath",
     "kiloBinaryPath",
@@ -889,6 +913,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "customKimiModels",
     "customIflowModels",
     "customQwenModels",
+    "customCopilotModels",
     "customCodebuddyModels",
     "customDroidModels",
     "customKiloModels",
@@ -945,6 +970,7 @@ export function getCustomModelsByProvider(
     kimi: getCustomModelsForProvider(settings, "kimi"),
     iflow: getCustomModelsForProvider(settings, "iflow"),
     qwen: getCustomModelsForProvider(settings, "qwen"),
+    copilot: getCustomModelsForProvider(settings, "copilot"),
     codebuddy: getCustomModelsForProvider(settings, "codebuddy"),
     droid: getCustomModelsForProvider(settings, "droid"),
     kilo: getCustomModelsForProvider(settings, "kilo"),
@@ -1096,6 +1122,7 @@ export function getCustomModelOptionsByProvider(
     kimi: getAppModelOptions("kimi", customModelsByProvider.kimi),
     iflow: getAppModelOptions("iflow", customModelsByProvider.iflow),
     qwen: getAppModelOptions("qwen", customModelsByProvider.qwen),
+    copilot: getAppModelOptions("copilot", customModelsByProvider.copilot),
     codebuddy: getAppModelOptions("codebuddy", customModelsByProvider.codebuddy),
     droid: getAppModelOptions("droid", customModelsByProvider.droid),
     kilo: getAppModelOptions("kilo", customModelsByProvider.kilo),
@@ -1119,6 +1146,7 @@ export function getProviderStartOptions(
     | "kimiBinaryPath"
     | "iflowBinaryPath"
     | "qwenBinaryPath"
+    | "copilotBinaryPath"
     | "codebuddyBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
@@ -1142,6 +1170,10 @@ export function getProviderStartOptions(
   const kimiBinaryPath = normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath);
   const iflowBinaryPath = normalizeProviderBinaryPathOverride("iflow", settings.iflowBinaryPath);
   const qwenBinaryPath = normalizeProviderBinaryPathOverride("qwen", settings.qwenBinaryPath);
+  const copilotBinaryPath = normalizeProviderBinaryPathOverride(
+    "copilot",
+    settings.copilotBinaryPath,
+  );
   const codebuddyBinaryPath = normalizeProviderBinaryPathOverride(
     "codebuddy",
     settings.codebuddyBinaryPath,
@@ -1153,6 +1185,7 @@ export function getProviderStartOptions(
     ...(kimiBinaryPath ? { kimi: { binaryPath: kimiBinaryPath } } : {}),
     ...(iflowBinaryPath ? { iflow: { binaryPath: iflowBinaryPath } } : {}),
     ...(qwenBinaryPath ? { qwen: { binaryPath: qwenBinaryPath } } : {}),
+    ...(copilotBinaryPath ? { copilot: { binaryPath: copilotBinaryPath } } : {}),
     ...(codebuddyBinaryPath ? { codebuddy: { binaryPath: codebuddyBinaryPath } } : {}),
     ...(codexBinaryPath || homePath
       ? {
@@ -1199,6 +1232,7 @@ export function getCustomBinaryPathForProvider(
     | "kimiBinaryPath"
     | "iflowBinaryPath"
     | "qwenBinaryPath"
+    | "copilotBinaryPath"
     | "codebuddyBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
@@ -1224,6 +1258,8 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.iflowBinaryPath);
     case "qwen":
       return normalizeProviderBinaryPathOverride(provider, settings.qwenBinaryPath);
+    case "copilot":
+      return normalizeProviderBinaryPathOverride(provider, settings.copilotBinaryPath);
     case "codebuddy":
       return normalizeProviderBinaryPathOverride(provider, settings.codebuddyBinaryPath);
     case "droid":

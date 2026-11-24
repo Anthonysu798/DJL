@@ -12,6 +12,7 @@ import {
   KimiModelOptions,
   OpenCodeModelOptions,
   QwenModelOptions,
+  CopilotModelOptions,
   CodeBuddyModelOptions,
   PiModelOptions,
   DjlCloudModelOptions,
@@ -74,6 +75,7 @@ export const ProviderKind = Schema.Literals([
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "droid",
   "kilo",
@@ -154,6 +156,13 @@ export const QwenModelSelection = Schema.Struct({
 });
 export type QwenModelSelection = typeof QwenModelSelection.Type;
 
+export const CopilotModelSelection = Schema.Struct({
+  provider: Schema.Literal("copilot"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(CopilotModelOptions),
+});
+export type CopilotModelSelection = typeof CopilotModelSelection.Type;
+
 export const CodeBuddyModelSelection = Schema.Struct({
   provider: Schema.Literal("codebuddy"),
   model: TrimmedNonEmptyString,
@@ -213,6 +222,7 @@ export const ModelSelection = Schema.Union([
   KimiModelSelection,
   IFlowModelSelection,
   QwenModelSelection,
+  CopilotModelSelection,
   CodeBuddyModelSelection,
   DroidModelSelection,
   KiloModelSelection,
@@ -273,6 +283,10 @@ export const QwenProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const CopilotProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const CodeBuddyProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
@@ -314,6 +328,7 @@ export const ProviderStartOptions = Schema.Struct({
   kimi: Schema.optional(KimiProviderStartOptions),
   iflow: Schema.optional(IFlowProviderStartOptions),
   qwen: Schema.optional(QwenProviderStartOptions),
+  copilot: Schema.optional(CopilotProviderStartOptions),
   codebuddy: Schema.optional(CodeBuddyProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),

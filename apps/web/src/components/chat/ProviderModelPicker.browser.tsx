@@ -34,6 +34,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
   ],
   iflow: [{ slug: "glm-5", name: "GLM-5" }],
   qwen: [{ slug: "qwen3-coder-plus", name: "Qwen3 Coder Plus" }],
+  copilot: [{ slug: "auto", name: "Auto" }],
   codebuddy: [{ slug: "default-model", name: "Auto" }],
   droid: [
     {
@@ -630,6 +631,151 @@ describe("ProviderModelPicker", () => {
       await vi.waitFor(() => {
         const text = document.body.textContent ?? "";
         expect(text).toContain("Configure a model");
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  const CLAUDE_WITH_PLAN_AND_LOCAL = [
+    ...MODEL_OPTIONS_BY_PROVIDER.claudeAgent,
+    {
+      slug: "plan/zai-coding-plan/glm-5.3",
+      name: "GLM-5.3",
+      upstreamProviderId: "zai-coding-plan",
+      upstreamProviderName: "Z.AI Coding Plan",
+      supportsToolCalls: true,
+    },
+    {
+      slug: "ollama/qwen2.5-coder:7b",
+      name: "qwen2.5-coder:7b",
+      upstreamProviderId: "ollama",
+      upstreamProviderName: "Local (Ollama)",
+      supportsToolCalls: true,
+    },
+    {
+      slug: "ollama/qwen2.5-coder:1.5b",
+      name: "qwen2.5-coder:1.5b",
+      upstreamProviderId: "ollama",
+      upstreamProviderName: "Local (Ollama)",
+      supportsToolCalls: false,
+    },
+  ] as const;
+
+  it("routes a connected coding plan and local Ollama models through Claude Code, in their own groups", async () => {
+    const mounted = await mountPicker({
+      provider: "claudeAgent",
+      model: "claude-opus-4-6",
+      lockedProvider: "claudeAgent",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        claudeAgent: CLAUDE_WITH_PLAN_AND_LOCAL,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain("Z.AI Coding Plan");
+        expect(text).toContain("Local (Ollama)");
+      });
+      // Three or more groups collapse; each plan and the local runtime is its own section.
+      await page.getByRole("button", { name: "Local (Ollama)" }).click();
+      await page.getByRole("button", { name: "Z.AI Coding Plan" }).click();
+      // A model measured unable to call tools is marked, not hidden.
+      await expect
+        .element(page.getByRole("menuitemradio", { name: /qwen2\.5-coder:1\.5b/ }))
+        .toHaveTextContent("Chat only");
+      await expect
+        .element(page.getByRole("menuitemradio", { name: /qwen2\.5-coder:7b/ }))
+        .not.toHaveTextContent("Chat only");
+
+      await page.getByRole("menuitemradio", { name: /GLM-5\.3/ }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith(
+        "claudeAgent",
+        "plan/zai-coding-plan/glm-5.3",
+      );
+      expect(mounted.onProviderModelChange).not.toHaveBeenCalledWith("opencode", expect.anything());
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("lists local Ollama models under Codex only when Codex has them", async () => {
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: "codex",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        codex: [
+          ...MODEL_OPTIONS_BY_PROVIDER.codex,
+          {
+            slug: "ollama/qwen2.5-coder:7b",
+            name: "qwen2.5-coder:7b",
+            upstreamProviderId: "ollama",
+            upstreamProviderName: "Local (Ollama)",
+          },
+        ],
+      },
+    });
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitemradio", { name: /qwen2\.5-coder:7b/ }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith(
+        "codex",
+        "ollama/qwen2.5-coder:7b",
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+
+    // Disconnecting the plan or removing the model drops it from the next model list.
+    const removed = await mountPicker({
+      provider: "claudeAgent",
+      model: "claude-opus-4-6",
+      lockedProvider: "claudeAgent",
+    });
+    try {
+      await page.getByRole("button").click();
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain("Claude Sonnet 4.6");
+        expect(text).not.toContain("Z.AI Coding Plan");
+        expect(text).not.toContain("Local (Ollama)");
+      });
+    } finally {
+      await removed.cleanup();
+    }
+  });
+
+  it("keeps plan and local models selectable under a signed-out Claude Code, hiding Anthropic models", async () => {
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "claudeAgent",
+          status: "ready",
+          available: true,
+          authStatus: "unauthenticated",
+          checkedAt: "2026-11-23T00:00:00.000Z",
+        },
+      ],
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        claudeAgent: CLAUDE_WITH_PLAN_AND_LOCAL,
+      },
+    });
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Claude Code", exact: true }).hover();
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain("Z.AI Coding Plan");
+        expect(text).not.toContain("Claude Sonnet 4.6");
       });
     } finally {
       await mounted.cleanup();

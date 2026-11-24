@@ -49,6 +49,12 @@ import {
   HarnessEndLoginInput,
 } from "./harnessAccounts";
 import {
+  CodingPlanConnectInput,
+  CodingPlanConnectResult,
+  CodingPlanIdInput,
+  CodingPlansListResult,
+} from "./codingPlans";
+import {
   CloudAccountStatus,
   CloudBrowserSignInCompleteInput,
   CloudBrowserSignInStartResult,
@@ -209,15 +215,8 @@ import {
   ProviderSkillsCatalogResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
-  OpenCodeCredentialMutationResult,
   OpenCodeListModelProvidersInput,
   OpenCodeListModelProvidersResult,
-  OpenCodeRemoveCredentialInput,
-  OpenCodeSetApiKeyInput,
-  SaveCustomModelProviderInput,
-  RemoveCustomModelProviderInput,
-  FetchCustomModelsInput,
-  FetchCustomModelsResult,
 } from "./providerDiscovery";
 import {
   ProjectCreateLocalFilePreviewGrantInput,
@@ -1329,39 +1328,32 @@ export const WsHarnessStartLoginRpc = Rpc.make(WS_METHODS.harnessStartLogin, {
   success: HarnessLoginResult,
   error: WsRpcError,
 });
+export const WsCodingPlansListRpc = Rpc.make(WS_METHODS.codingPlansList, {
+  payload: Schema.Struct({}),
+  success: CodingPlansListResult,
+  error: WsRpcError,
+});
+export const WsCodingPlansConnectRpc = Rpc.make(WS_METHODS.codingPlansConnect, {
+  payload: CodingPlanConnectInput,
+  success: CodingPlanConnectResult,
+  error: WsRpcError,
+});
+export const WsCodingPlansDisconnectRpc = Rpc.make(WS_METHODS.codingPlansDisconnect, {
+  payload: CodingPlanIdInput,
+  success: CodingPlanConnectResult,
+  error: WsRpcError,
+});
+export const WsCodingPlansImportFromOpenCodeRpc = Rpc.make(
+  WS_METHODS.codingPlansImportFromOpenCode,
+  {
+    payload: CodingPlanIdInput,
+    success: CodingPlanConnectResult,
+    error: WsRpcError,
+  },
+);
 export const WsHarnessEndLoginRpc = Rpc.make(WS_METHODS.harnessEndLogin, {
   payload: HarnessEndLoginInput,
   success: Schema.Void,
-  error: WsRpcError,
-});
-
-export const WsOpenCodeSaveCustomProviderRpc = Rpc.make(WS_METHODS.openCodeSaveCustomProvider, {
-  payload: SaveCustomModelProviderInput,
-  success: OpenCodeCredentialMutationResult,
-  error: WsRpcError,
-});
-
-export const WsOpenCodeRemoveCustomProviderRpc = Rpc.make(WS_METHODS.openCodeRemoveCustomProvider, {
-  payload: RemoveCustomModelProviderInput,
-  success: OpenCodeCredentialMutationResult,
-  error: WsRpcError,
-});
-
-export const WsOpenCodeFetchCustomModelsRpc = Rpc.make(WS_METHODS.openCodeFetchCustomModels, {
-  payload: FetchCustomModelsInput,
-  success: FetchCustomModelsResult,
-  error: WsRpcError,
-});
-
-export const WsOpenCodeSetApiKeyRpc = Rpc.make(WS_METHODS.openCodeSetApiKey, {
-  payload: OpenCodeSetApiKeyInput,
-  success: OpenCodeCredentialMutationResult,
-  error: WsRpcError,
-});
-
-export const WsOpenCodeRemoveCredentialRpc = Rpc.make(WS_METHODS.openCodeRemoveCredential, {
-  payload: OpenCodeRemoveCredentialInput,
-  success: OpenCodeCredentialMutationResult,
   error: WsRpcError,
 });
 
@@ -1809,17 +1801,6 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsWorkGetDocumentRenderRpc,
   WsWorkCancelDocumentRenderRpc,
   WsSubscribeWorkDocumentRenderEventsRpc,
-  WsLocalModelsGetSnapshotRpc,
-  WsLocalModelsRefreshRpc,
-  WsLocalModelsInstallRuntimeRpc,
-  WsLocalModelsStartRuntimeRpc,
-  WsLocalModelsInstallModelRpc,
-  WsLocalModelsCancelInstallRpc,
-  WsLocalModelsStartSetupRpc,
-  WsLocalModelsRetrySetupRpc,
-  WsLocalModelsCancelSetupRpc,
-  WsLocalModelsRerunCapabilityCheckRpc,
-  WsLocalModelsRemoveModelRpc,
   WsSubscribeLocalModelEventsRpc,
   WsProjectMemoryListRpc,
   WsProjectMemorySaveRpc,
@@ -1897,10 +1878,6 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsProviderReadPluginRpc,
   WsProviderListModelsRpc,
   WsOpenCodeListModelProvidersRpc,
-  WsOpenCodeSetApiKeyRpc,
-  WsOpenCodeSaveCustomProviderRpc,
-  WsOpenCodeRemoveCustomProviderRpc,
-  WsOpenCodeFetchCustomModelsRpc,
 
   WsHarnessListToolsRpc,
   WsHarnessMaintainToolRpc,
@@ -1916,7 +1893,6 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsHarnessTransferLegacyOpenCodeCredentialsRpc,
   WsHarnessStartLoginRpc,
   WsHarnessEndLoginRpc,
-  WsOpenCodeRemoveCredentialRpc,
   WsProviderListAgentsRpc,
   WsServersListRpc,
   WsServersCreateRpc,
@@ -1954,7 +1930,8 @@ const WsCoreRpcGroup = RpcGroup.make(
 );
 
 // The core group's inferred type is at the size tsc can still write into a declaration
-// (TS7056), so the plugin calls go in their own group and the export is annotated by group.
+// (TS7056), so the plugin, local-model, and coding-plan calls go in their own groups and the export is
+// annotated by group.
 const WsPluginSourcesRpcGroup = RpcGroup.make(
   WsPluginsGetSnapshotRpc,
   WsPluginsInstallRpc,
@@ -1970,6 +1947,25 @@ const WsPluginSourcesRpcGroup = RpcGroup.make(
   WsPluginsRefreshMarketplaceRpc,
   WsPluginsRemoveMarketplaceRpc,
 );
+const WsModelAccessRpcGroup = RpcGroup.make(
+  WsLocalModelsGetSnapshotRpc,
+  WsLocalModelsRefreshRpc,
+  WsLocalModelsInstallRuntimeRpc,
+  WsLocalModelsStartRuntimeRpc,
+  WsLocalModelsInstallModelRpc,
+  WsLocalModelsCancelInstallRpc,
+  WsLocalModelsStartSetupRpc,
+  WsLocalModelsRetrySetupRpc,
+  WsLocalModelsCancelSetupRpc,
+  WsLocalModelsRerunCapabilityCheckRpc,
+  WsLocalModelsRemoveModelRpc,
+  WsCodingPlansListRpc,
+  WsCodingPlansConnectRpc,
+  WsCodingPlansDisconnectRpc,
+  WsCodingPlansImportFromOpenCodeRpc,
+);
 export const WsRpcGroup: RpcGroup.RpcGroup<
-  RpcGroup.Rpcs<typeof WsCoreRpcGroup> | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
-> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup);
+  | RpcGroup.Rpcs<typeof WsCoreRpcGroup>
+  | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
+  | RpcGroup.Rpcs<typeof WsModelAccessRpcGroup>
+> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup, WsModelAccessRpcGroup);

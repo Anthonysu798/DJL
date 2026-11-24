@@ -6,6 +6,7 @@ import type {
 import { withDjlThreadId } from "./driverEnv";
 import { bounded, NativeRpc, object, string } from "./protocol";
 import type { NativeDriverFactory } from "./types";
+import { parseModelBackend } from "../../codingPlans/backend";
 import { codexContextUsage } from "./usage";
 import { nativePermissionModes } from "./permissionCapabilities";
 import { execFileSync } from "node:child_process";
@@ -110,6 +111,16 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
   }
   const options = input.providerOptions?.codex;
   const computerQa = process.env.DJL_COMPUTER_QA_PROFILE === "1";
+  // `ollama/<id>` runs this session on Codex's built-in `ollama` provider (local Ollama).
+  // Verified 2026-11-22: https://learn.chatgpt.com/docs/config-file/config-advanced (reserved
+  // `ollama` provider id) and https://docs.ollama.com/integrations/codex.
+  const backend = parseModelBackend(input.modelSelection?.model);
+  if (backend.kind === "plan") throw new Error("Coding plans run through Claude Code, not Codex");
+  const codexModel = (slug: string | undefined) => {
+    const parsed = parseModelBackend(slug);
+    return parsed.kind === "default" ? slug : parsed.model;
+  };
+  const localProvider = backend.kind === "ollama" && !computerQa ? { modelProvider: "ollama" } : {};
   // The QA profile runs with DJL's own tool server only.
   const pluginServers = computerQa ? [] : (plugins?.servers ?? []);
   const permissions = computerQa
@@ -425,8 +436,8 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
       await rpc.request(resume ? "thread/resume" : "thread/start", {
         ...(resume ? { threadId: resume } : {}),
         cwd: input.cwd,
-        model: input.modelSelection?.model,
-        ...(computerQa ? { modelProvider: "openai" } : {}),
+        model: codexModel(input.modelSelection?.model),
+        ...(computerQa ? { modelProvider: "openai" } : localProvider),
         ...permissions,
         ...(workTools || computerQa || pluginServers.length > 0
           ? {
@@ -486,7 +497,7 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
             await rpc.request("thread/resume", {
               threadId: id,
               cwd: input.cwd,
-              ...(computerQa ? { modelProvider: "openai" } : {}),
+              ...(computerQa ? { modelProvider: "openai" } : localProvider),
               ...permissions,
               config: workConfig(),
             }),
@@ -522,7 +533,7 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
             ...(computerQa
               ? { approvalPolicy: "untrusted", sandboxPolicy: { type: "readOnly" } }
               : {}),
-            model: turn.modelSelection?.model,
+            model: codexModel(turn.modelSelection?.model),
             ...(turn.modelSelection?.provider === "codex"
               ? {
                   ...(turn.modelSelection.options?.reasoningEffort
