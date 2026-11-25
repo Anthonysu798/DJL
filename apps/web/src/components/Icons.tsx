@@ -6,6 +6,7 @@ import {
   SiDatagrip,
   SiGoland,
   SiIntellijidea,
+  SiMeta,
   SiOpenai,
   SiPhpstorm,
   SiPycharm,
@@ -483,6 +484,41 @@ export const PiIcon: Icon = (props) => (
       clipRule="evenodd"
     />
     <path fill="currentColor" d="M517.36 400H634.72V634.72H517.36V400Z" />
+  </svg>
+);
+
+// Muse Code: Meta's infinity mark.
+export const MuseIcon = adaptSimpleIcon(SiMeta);
+
+// Doubao: the round-faced character with a tuft, drawn as a simple outline.
+export const DoubaoIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="13" r="8" stroke="currentColor" strokeWidth="2.2" />
+    <path
+      d="M12 5c.4-1.4 1.6-2.2 3-2"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <ellipse cx="9.4" cy="12.6" rx="1.3" ry="1.9" fill="currentColor" />
+    <ellipse cx="14.6" cy="12.6" rx="1.3" ry="1.9" fill="currentColor" />
+  </svg>
+);
+
+// DeepSeek: the whale in DeepSeek's brand blue.
+export const DeepSeekIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="#4D6BFE"
+      d="M2.5 12.5C2.5 8.9 5.8 6 10 6c3.2 0 5.7 1.5 6.9 3.7.6-1 1.6-2.3 3-2.8-.2 1.4-.7 2.6-1.4 3.5.8.4 1.7.6 2.5.6-.7 1.2-1.8 1.8-3 1.8C17.2 16.7 14.1 19 10 19c-4.2 0-7.5-2.9-7.5-6.5Z"
+    />
+    <circle cx="7.5" cy="11" r="1.1" fill="#fff" />
+    <path
+      d="M5.5 14.6c1.6 1.1 3.7 1.4 5.6.8"
+      stroke="#fff"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
   </svg>
 );
 

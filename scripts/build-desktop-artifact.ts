@@ -12,6 +12,11 @@ import {
   multiPostExtraResources,
   verifyMultiPostResources,
 } from "./lib/desktop-multipost-resources.ts";
+import {
+  findPackagedStarterSkillsRoots,
+  starterSkillsExtraResources,
+  verifyStarterSkillsResources,
+} from "./lib/desktop-starter-skills-resources.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -845,6 +850,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   desktopBuildConfig.extraResources = [
     ...(Array.isArray(desktopBuildConfig.extraResources) ? desktopBuildConfig.extraResources : []),
     ...multiPostExtraResources(repoRoot),
+    ...starterSkillsExtraResources(repoRoot),
     // The MIT and upstream licences must travel with every copy of the app.
     { from: path.join(repoRoot, "LICENSE"), to: "legal/LICENSE" },
     { from: path.join(repoRoot, "THIRD_PARTY_NOTICES.md"), to: "legal/THIRD_PARTY_NOTICES.md" },
@@ -1074,6 +1080,25 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     catch: (cause) =>
       new BuildScriptError({
         message: "Packaged MultiPost Skills or licenses are missing or changed.",
+        cause,
+      }),
+  });
+
+  yield* Effect.try({
+    try: () => {
+      const roots = findPackagedStarterSkillsRoots(
+        stageDistDir,
+        computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL",
+      );
+      if (roots.length !== 1)
+        throw new Error(
+          `Expected one packaged starter skills directory, received ${roots.length}.`,
+        );
+      verifyStarterSkillsResources(roots[0]!, repoRoot);
+    },
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Packaged starter skills or their licenses are missing or changed.",
         cause,
       }),
   });

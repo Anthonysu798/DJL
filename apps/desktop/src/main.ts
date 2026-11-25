@@ -2907,6 +2907,10 @@ function backendEnv(): NodeJS.ProcessEnv {
         }
       : {}),
     DJL_HOME: BASE_DIR,
+    // Skills the new-chat topics attach (packaged by build-desktop-artifact.ts).
+    DJL_STARTER_SKILLS_DIR: app.isPackaged
+      ? Path.join(process.resourcesPath, "starter-skills")
+      : Path.join(ROOT_DIR, "packages", "starter-skills", "skills"),
     // bootstrap() awaits syncShellEnvironment before spawning the backend.
     DJL_SHELL_ENV_SYNCED: "1",
     ...(useCuaComputerEngine ? { DJL_COMPUTER_ENGINE: "cua" } : {}),

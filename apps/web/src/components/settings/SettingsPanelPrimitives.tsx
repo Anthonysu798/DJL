@@ -30,7 +30,7 @@ export function SettingsCard({ children }: { children: ReactNode }) {
 export function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
-      <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{title}</h2>
+      <h2 className={cn(SETTINGS_SECTION_LABEL_CLASS_NAME, "[overflow-wrap:anywhere]")}>{title}</h2>
       <SettingsCard>{children}</SettingsCard>
     </section>
   );
@@ -85,8 +85,8 @@ export function SettingsListRow({
     >
       <div
         className={cn(
-          "flex flex-col gap-2.5 sm:flex-row sm:justify-between",
-          align === "start" ? "sm:items-start" : "sm:items-center",
+          "flex flex-col gap-2.5 @md:flex-row @md:justify-between",
+          align === "start" ? "@md:items-start" : "@md:items-center",
         )}
       >
         <div className="min-w-0 flex-1 space-y-0.5">
@@ -96,7 +96,7 @@ export function SettingsListRow({
           ) : null}
         </div>
         {actions != null ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 @md:w-auto @md:justify-end">
             {actions}
           </div>
         ) : null}
@@ -134,7 +134,7 @@ export function SettingsRow({
     >
       <div
         className={cn(
-          "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between",
+          "flex flex-col gap-2.5 @md:flex-row @md:items-center @md:justify-between",
           onClick && "cursor-pointer",
         )}
         onClick={onClick}
@@ -150,7 +150,7 @@ export function SettingsRow({
           {status ? <div className="pt-1 text-[11px] text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 @md:w-auto @md:justify-end">
             {control}
           </div>
         ) : null}
@@ -177,7 +177,7 @@ export function SettingsSectionShell({
   return (
     <section id={id} className={cn(SETTINGS_PANEL_SECTION_CLASS_NAME, id && "scroll-mt-24")}>
       {action != null ? (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{translateTitle ? t(title) : title}</h2>
           {action}
         </div>

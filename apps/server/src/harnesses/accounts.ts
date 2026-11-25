@@ -8,6 +8,7 @@ import { qwenSubscriptionEnvironment, probeQwenSubscriptionAccount } from "./nat
 import { copilotSubscriptionEnvironment, probeCopilotSubscriptionAccount } from "./native/copilot";
 import { probeGeminiSubscriptionAccount } from "./native/gemini";
 import { piSubscriptionEnvironment, probePiSubscriptionAccount } from "./native/pi";
+import { museSubscriptionEnvironment, probeMuseSubscriptionAccount } from "./native/muse";
 import {
   codeBuddySubscriptionEnvironment,
   probeCodeBuddySubscriptionAccount,
@@ -28,6 +29,7 @@ import {
   buildOpenCodeServerProcessEnv,
   resolveDjlOpenCodeBinaryPath,
 } from "../provider/opencodeRuntime";
+import { activeCliAccountDir } from "./cliAccountSelection";
 
 export const NATIVE_HARNESS_IDS = [
   "codex",
@@ -41,6 +43,7 @@ export const NATIVE_HARNESS_IDS = [
   "copilot",
   "codebuddy",
   "pi",
+  "muse",
 ] as const;
 const HARNESS_IDS = [...NATIVE_HARNESS_IDS, "opencode"] as const;
 
@@ -114,6 +117,15 @@ export function buildHarnessInvocation(
       statusArgs: ["--version"],
       env: piSubscriptionEnvironment(env, settings.providers.pi.agentDir),
     };
+  // `muse login` shows a device code and opens the browser itself.
+  if (harness === "muse")
+    return {
+      binary: settings.providers.muse.binaryPath.trim() || "muse",
+      prefixArgs: [] as string[],
+      loginArgs: ["login"],
+      statusArgs: ["--version"],
+      env: museSubscriptionEnvironment(env),
+    };
   if (harness === "grok") {
     return {
       binary: resolveGrokBinaryPath(settings.providers.grok.binaryPath),
@@ -124,7 +136,10 @@ export function buildHarnessInvocation(
     };
   }
   if (harness === "codex") {
-    if (settings.providers.codex.homePath.trim())
+    // The active extra account (Settings → AI accounts) runs Codex from its own folder.
+    const accountDir = activeCliAccountDir(settings, "codex");
+    if (accountDir) env.CODEX_HOME = accountDir;
+    else if (settings.providers.codex.homePath.trim())
       env.CODEX_HOME = settings.providers.codex.homePath.trim();
     return {
       binary: settings.providers.codex.binaryPath.trim() || "codex",
@@ -135,6 +150,8 @@ export function buildHarnessInvocation(
     };
   }
   if (harness === "claudeAgent") {
+    const accountDir = activeCliAccountDir(settings, "claudeAgent");
+    if (accountDir) env.CLAUDE_CONFIG_DIR = accountDir;
     return {
       binary: settings.providers.claudeAgent.binaryPath.trim() || "claude",
       prefixArgs: [] as string[],
@@ -298,6 +315,14 @@ export async function probeHarnessAccount(
         process.cwd(),
         settings.providers.pi.agentDir,
       ),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "muse")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeMuseSubscriptionAccount(invocation.binary, process.cwd()),
       version: version.stdout.trim().slice(0, 100),
     };
   if (harness === "grok")

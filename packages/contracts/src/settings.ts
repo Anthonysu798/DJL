@@ -76,6 +76,29 @@ export const CodeBuddyServerProviderSettings = Schema.Struct({
 });
 export type CodeBuddyServerProviderSettings = typeof CodeBuddyServerProviderSettings.Type;
 
+// Doubao and DeepSeek coding plans run on the Claude Code harness; binaryPath is that `claude`.
+// Their API keys live in the server secret store, never in settings.
+export const DoubaoServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "claude")),
+  region: Schema.Literals(["china", "international"]).pipe(
+    Schema.withDecodingDefault(() => "china"),
+  ),
+});
+export type DoubaoServerProviderSettings = typeof DoubaoServerProviderSettings.Type;
+
+export const DeepSeekServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "claude")),
+});
+export type DeepSeekServerProviderSettings = typeof DeepSeekServerProviderSettings.Type;
+
+export const MuseServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "muse")),
+});
+export type MuseServerProviderSettings = typeof MuseServerProviderSettings.Type;
+
 export const DroidServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "droid")),
@@ -148,6 +171,30 @@ export const LocalModelsServerSettings = Schema.Struct({
 });
 export type LocalModelsServerSettings = typeof LocalModelsServerSettings.Type;
 export type LocalModelHarness = keyof LocalModelsServerSettings["harnesses"];
+// Extra Claude Code / Codex subscription accounts. Each lives in its own CLI config folder
+// (`dir`), so its login stays separate; `active` names the account new chats use for each
+// provider, and an absent entry means the CLI's normal login.
+export const CliAccountProvider = Schema.Literals(["claudeAgent", "codex"]);
+export type CliAccountProvider = typeof CliAccountProvider.Type;
+export const CliAccountId = Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{1,80}$/));
+export const CliAccountSetting = Schema.Struct({
+  id: CliAccountId,
+  provider: CliAccountProvider,
+  name: Schema.String.check(Schema.isMaxLength(80)),
+  dir: Schema.String.check(Schema.isMaxLength(1024)),
+});
+export type CliAccountSetting = typeof CliAccountSetting.Type;
+const CliAccountActive = Schema.Struct({
+  claudeAgent: Schema.optionalKey(CliAccountId),
+  codex: Schema.optionalKey(CliAccountId),
+});
+export const CliAccountsServerSettings = Schema.Struct({
+  accounts: Schema.Array(CliAccountSetting).pipe(Schema.withDecodingDefault(() => [])),
+  active: CliAccountActive.pipe(Schema.withDecodingDefault(() => ({}))),
+  /** When a chat's account hits its usage limit, continue on the account with the most left. */
+  autoSwitch: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+});
+export type CliAccountsServerSettings = typeof CliAccountsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -172,6 +219,9 @@ export const ServerSettings = Schema.Struct({
     qwen: QwenServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     copilot: CopilotServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codebuddy: CodeBuddyServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    doubao: DoubaoServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    deepseek: DeepSeekServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    muse: MuseServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -180,6 +230,7 @@ export const ServerSettings = Schema.Struct({
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   localModels: LocalModelsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  cliAccounts: CliAccountsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type ServerSettings = typeof ServerSettings.Type;
 
@@ -236,6 +287,14 @@ export const ServerSettingsPatch = Schema.Struct({
       qwen: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       copilot: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       codebuddy: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      doubao: Schema.optionalKey(
+        Schema.Struct({
+          ...ProviderSettingsBasePatch,
+          region: Schema.optionalKey(Schema.Literals(["china", "international"])),
+        }),
+      ),
+      deepseek: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      muse: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       kilo: Schema.optionalKey(
         Schema.Struct({
@@ -281,6 +340,13 @@ export const ServerSettingsPatch = Schema.Struct({
           opencode: Schema.optionalKey(Schema.Boolean),
         }),
       ),
+    }),
+  ),
+  cliAccounts: Schema.optionalKey(
+    Schema.Struct({
+      accounts: Schema.optionalKey(Schema.Array(CliAccountSetting)),
+      active: Schema.optionalKey(CliAccountActive),
+      autoSwitch: Schema.optionalKey(Schema.Boolean),
     }),
   ),
 });

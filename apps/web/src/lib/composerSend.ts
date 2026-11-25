@@ -222,6 +222,9 @@ export function resolvePromptEffortFromModelSelection(
     case "qwen":
     case "copilot":
     case "codebuddy":
+    case "doubao":
+    case "deepseek":
+    case "muse":
     case "kilo":
     case "opencode":
     case "djlCloud":

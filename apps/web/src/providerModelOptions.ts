@@ -207,7 +207,8 @@ export function mergeDynamicModelOptions(input: {
       input.provider === "iflow" ||
       input.provider === "qwen" ||
       input.provider === "copilot" ||
-      input.provider === "codebuddy") &&
+      input.provider === "codebuddy" ||
+      input.provider === "muse") &&
     normalizedDynamicOptions.length > 0
       ? []
       : staticBuiltInModels.filter((model) => !dynamicNormalizedSlugs.has(model.slug));
@@ -456,6 +457,9 @@ export function buildModelSelection(
     case "qwen":
     case "copilot":
     case "codebuddy":
+    case "doubao":
+    case "deepseek":
+    case "muse":
     case "djlCloud":
     case "group":
       return { provider, model };

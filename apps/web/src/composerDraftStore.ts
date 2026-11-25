@@ -1243,6 +1243,9 @@ function makeModelSelection(
     case "qwen":
     case "copilot":
     case "codebuddy":
+    case "doubao":
+    case "deepseek":
+    case "muse":
     case "djlCloud":
     case "group":
       return { provider, model };

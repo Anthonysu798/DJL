@@ -14,16 +14,26 @@ import {
   formatComposerSkillChipLabel,
 } from "../composerInlineChip";
 import { InlineChipContent } from "../InlineChip";
+import { ProviderIcon } from "../ProviderIcon";
+import { skillChipProvider } from "~/lib/skillOrigin";
 
 export const InlineSkillChip = memo(function InlineSkillChip(props: { skillName: string }) {
+  const provider = skillChipProvider(props.skillName);
   return (
     <span className={COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME}>
       <InlineChipContent
         icon={
-          <CentralIcon
-            name={COMPOSER_INLINE_SKILL_CHIP_ICON_NAME}
-            className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME}
-          />
+          provider === "claudeAgent" || provider === "codex" ? (
+            <ProviderIcon
+              provider={provider}
+              className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME}
+            />
+          ) : (
+            <CentralIcon
+              name={COMPOSER_INLINE_SKILL_CHIP_ICON_NAME}
+              className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME}
+            />
+          )
         }
         label={formatComposerSkillChipLabel(props.skillName)}
       />

@@ -22,6 +22,8 @@ import type {
   HarnessLoginInput,
   HarnessLoginResult,
   HarnessEndLoginInput,
+  ClaudeCompatibleKeysResult,
+  ClaudeCompatibleSetKeyInput,
 } from "./harnessAccounts";
 import type {
   CodingPlanConnectInput,
@@ -29,6 +31,24 @@ import type {
   CodingPlanIdInput,
   CodingPlansListResult,
 } from "./codingPlans";
+import type {
+  CliAccountAddInput,
+  CliAccountRemoveInput,
+  CliAccountSetActiveInput,
+  CliAccountSummary,
+  CliAccountsListResult,
+  CliAccountsUsageInput,
+  CliAccountsUsageResult,
+} from "./cliAccounts";
+import type {
+  SkillsStoreChangeResult,
+  SkillsStorePreview,
+  SkillsStorePreviewInput,
+  SkillsStoreSearchInput,
+  SkillsStoreSearchResultList,
+  SkillsStoreSkillInput,
+  SkillsStoreSnapshot,
+} from "./skillsStore";
 import type {
   CloudAccountStatus,
   CloudBrowserSignInCompleteInput,
@@ -1015,6 +1035,27 @@ export interface NativeApi {
     transferLegacyOpenCodeCredentials: () => Promise<HarnessLegacyOpenCodeCredentialsResult>;
     startLogin: (input: HarnessLoginInput) => Promise<HarnessLoginResult>;
     endLogin: (input: HarnessEndLoginInput) => Promise<void>;
+    listClaudeCompatibleKeys: () => Promise<ClaudeCompatibleKeysResult>;
+    setClaudeCompatibleKey: (
+      input: ClaudeCompatibleSetKeyInput,
+    ) => Promise<ClaudeCompatibleKeysResult>;
+  };
+  /** Extra Claude Code / Codex subscription accounts. */
+  cliAccounts: {
+    list: () => Promise<CliAccountsListResult>;
+    add: (input: CliAccountAddInput) => Promise<CliAccountSummary>;
+    remove: (input: CliAccountRemoveInput) => Promise<CliAccountsListResult>;
+    setActive: (input: CliAccountSetActiveInput) => Promise<CliAccountsListResult>;
+    usage: (input: CliAccountsUsageInput) => Promise<CliAccountsUsageResult>;
+  };
+  /** The Skills store on the Plugins page. */
+  skillsStore: {
+    snapshot: () => Promise<SkillsStoreSnapshot>;
+    search: (input: SkillsStoreSearchInput) => Promise<SkillsStoreSearchResultList>;
+    preview: (input: SkillsStorePreviewInput) => Promise<SkillsStorePreview>;
+    /** Installs a skill, or updates it when it is already installed. */
+    install: (input: SkillsStoreSkillInput) => Promise<SkillsStoreChangeResult>;
+    remove: (input: SkillsStoreSkillInput) => Promise<SkillsStoreSnapshot>;
   };
   codingPlans: {
     list: () => Promise<CodingPlansListResult>;

@@ -1,6 +1,6 @@
 import { AsyncUserInput } from "./asyncUserInput";
 import { Option, Schema, SchemaIssue, Struct } from "effect";
-import { HarnessId } from "./harnessAccounts";
+import { ClaudeCompatibleProviderId, HarnessId } from "./harnessAccounts";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
@@ -14,6 +14,9 @@ import {
   QwenModelOptions,
   CopilotModelOptions,
   CodeBuddyModelOptions,
+  DoubaoModelOptions,
+  DeepSeekModelOptions,
+  MuseModelOptions,
   PiModelOptions,
   DjlCloudModelOptions,
   GroupModelOptions,
@@ -77,10 +80,13 @@ export const ProviderKind = Schema.Literals([
   "qwen",
   "copilot",
   "codebuddy",
+  "doubao",
+  "deepseek",
   "droid",
   "kilo",
   "opencode",
   "pi",
+  "muse",
   "djlCloud",
   "group",
 ]);
@@ -170,6 +176,29 @@ export const CodeBuddyModelSelection = Schema.Struct({
 });
 export type CodeBuddyModelSelection = typeof CodeBuddyModelSelection.Type;
 
+// Doubao and DeepSeek run the Claude Code harness against the vendor's Anthropic-compatible
+// coding-plan endpoint, so a selection names the vendor model the endpoint serves.
+export const DoubaoModelSelection = Schema.Struct({
+  provider: Schema.Literal("doubao"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(DoubaoModelOptions),
+});
+export type DoubaoModelSelection = typeof DoubaoModelSelection.Type;
+
+export const DeepSeekModelSelection = Schema.Struct({
+  provider: Schema.Literal("deepseek"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(DeepSeekModelOptions),
+});
+export type DeepSeekModelSelection = typeof DeepSeekModelSelection.Type;
+
+export const MuseModelSelection = Schema.Struct({
+  provider: Schema.Literal("muse"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(MuseModelOptions),
+});
+export type MuseModelSelection = typeof MuseModelSelection.Type;
+
 export const DroidModelSelection = Schema.Struct({
   provider: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
@@ -224,10 +253,13 @@ export const ModelSelection = Schema.Union([
   QwenModelSelection,
   CopilotModelSelection,
   CodeBuddyModelSelection,
+  DoubaoModelSelection,
+  DeepSeekModelSelection,
   DroidModelSelection,
   KiloModelSelection,
   OpenCodeModelSelection,
   PiModelSelection,
+  MuseModelSelection,
   DjlCloudModelSelection,
   GroupModelSelection,
 ]);
@@ -238,6 +270,7 @@ export const NewTaskModelSelection = ModelSelection.check(
     (selection) =>
       selection.provider === "djlCloud" ||
       selection.provider === "group" ||
+      Schema.is(ClaudeCompatibleProviderId)(selection.provider) ||
       Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
         message: "This harness does not have an active DJL runtime implementation",
@@ -246,13 +279,21 @@ export const NewTaskModelSelection = ModelSelection.check(
   ),
 );
 
+// The subscription account a chat runs on (Settings → AI accounts id, or "default" for the CLI's
+// normal sign-in). The server resolves it to the account's folder; clients never send folders.
+const ChatCliAccountId = Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{1,80}$/));
+
 export const CodexProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   homePath: Schema.optional(TrimmedNonEmptyString),
+  cliAccountId: Schema.optional(ChatCliAccountId),
 });
 
 export const ClaudeProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
+  /** CLAUDE_CONFIG_DIR for an extra subscription account; absent uses the normal login. */
+  configDir: Schema.optional(TrimmedNonEmptyString),
+  cliAccountId: Schema.optional(ChatCliAccountId),
   permissionMode: Schema.optional(TrimmedNonEmptyString),
   maxThinkingTokens: Schema.optional(NonNegativeInt),
 });
@@ -288,6 +329,23 @@ export const CopilotProviderStartOptions = Schema.Struct({
 });
 
 export const CodeBuddyProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const DoubaoRegion = Schema.Literals(["china", "international"]);
+export type DoubaoRegion = typeof DoubaoRegion.Type;
+
+/** The Claude Code executable that serves the Doubao coding plan, and which Ark region. */
+export const DoubaoProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  region: Schema.optional(DoubaoRegion),
+});
+
+export const DeepSeekProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const MuseProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
@@ -330,6 +388,9 @@ export const ProviderStartOptions = Schema.Struct({
   qwen: Schema.optional(QwenProviderStartOptions),
   copilot: Schema.optional(CopilotProviderStartOptions),
   codebuddy: Schema.optional(CodeBuddyProviderStartOptions),
+  doubao: Schema.optional(DoubaoProviderStartOptions),
+  deepseek: Schema.optional(DeepSeekProviderStartOptions),
+  muse: Schema.optional(MuseProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),
@@ -342,7 +403,10 @@ export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   Schema.makeFilter(
     (options) =>
       Object.keys(options).every(
-        (provider) => provider === "djlCloud" || Schema.is(HarnessId)(provider),
+        (provider) =>
+          provider === "djlCloud" ||
+          Schema.is(ClaudeCompatibleProviderId)(provider) ||
+          Schema.is(HarnessId)(provider),
       ) ||
       new SchemaIssue.InvalidValue(Option.some(options), {
         message: "New turns accept DJL runtime options only",

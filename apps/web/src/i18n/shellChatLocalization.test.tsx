@@ -62,8 +62,10 @@ describe("shell and chat localization", () => {
     expect(english).toContain("Let&#x27;s build");
     expect(english).toContain("raw diagnostic");
     expect(english).toContain("Retry");
-    expect(english).toContain("The task stopped");
-    expect(english).toContain("Retry the task. If it fails again, check provider settings.");
+    expect(english).toContain("This reply stopped");
+    expect(english).toContain(
+      "Send your message again. If it keeps happening, try another AI model.",
+    );
     expect(english).toContain("raw provider exception");
     expect(english).toContain('aria-label="Dismiss error"');
 
@@ -72,8 +74,8 @@ describe("shell and chat localization", () => {
     expect(chinese).toContain('aria-label="搜索聊天和项目"');
     expect(chinese).toContain("2 个话题");
     expect(chinese).toContain("一起开始构建");
-    expect(chinese).toContain("任务已停止");
-    expect(chinese).toContain("重试任务。如果再次失败，请检查提供商设置。");
+    expect(chinese).toContain("这次回复中断了");
+    expect(chinese).toContain("请再发送一次消息。如果反复出现，可以换一个 AI 模型试试。");
     expect(chinese).toContain("raw provider exception");
 
     await instance.changeLanguage("fr");

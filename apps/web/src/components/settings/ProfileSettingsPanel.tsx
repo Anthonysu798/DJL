@@ -90,7 +90,7 @@ function ProfileContent({
     : "—";
 
   return (
-    <div className="flex min-w-0 flex-col gap-7">
+    <div className="@container flex min-w-0 flex-col gap-7">
       {/* Action row */}
       <div className="flex items-center justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
@@ -113,7 +113,9 @@ function ProfileContent({
           textClassName="text-xl"
         />
         <div className="flex flex-col items-center gap-1.5">
-          <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
+          <h2 className="max-w-full text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
+            {name}
+          </h2>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <span>{handle}</span>
             <span aria-hidden>·</span>
@@ -125,7 +127,7 @@ function ProfileContent({
       </header>
 
       {/* Stat tiles */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+      <div className="grid grid-cols-2 divide-x divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/60 @md:grid-cols-3 @2xl:grid-cols-5 @2xl:divide-y-0">
         <StatTile
           label={t("profile.stats.lifetimeTokens")}
           value={
@@ -170,7 +172,7 @@ function ProfileContent({
       </section>
 
       {/* Insights + plugins */}
-      <div className="grid gap-x-12 gap-y-7 md:grid-cols-2">
+      <div className="grid gap-x-12 gap-y-7 @xl:grid-cols-2">
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-medium">{t("profile.activity.title")}</h3>
           <dl className="flex flex-col gap-2.5">
@@ -281,7 +283,7 @@ function StatTile({ label, value }: { label: string; value: string | null }) {
       ) : (
         <span className="text-sm font-normal tabular-nums text-foreground">{value}</span>
       )}
-      <span className="text-sm font-normal text-muted-foreground">{label}</span>
+      <span className="text-center text-sm font-normal text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -290,7 +292,7 @@ function InsightRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="shrink-0 text-sm text-muted-foreground">{label}</dt>
-      <dd className="truncate text-sm font-normal tabular-nums" title={value}>
+      <dd className="min-w-0 truncate text-sm font-normal tabular-nums" title={value}>
         {value}
       </dd>
     </div>
@@ -321,7 +323,7 @@ function ProfileSkeleton() {
       </div>
       <Skeleton className="h-[72px] w-full rounded-2xl" />
       <Skeleton className="h-24 w-full rounded-lg" />
-      <div className="grid w-full gap-7 md:grid-cols-2">
+      <div className="grid w-full gap-7 @xl:grid-cols-2">
         <Skeleton className="h-40 w-full rounded-lg" />
         <Skeleton className="h-40 w-full rounded-lg" />
       </div>

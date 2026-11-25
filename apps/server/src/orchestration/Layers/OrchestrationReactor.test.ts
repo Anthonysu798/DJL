@@ -8,6 +8,7 @@ import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { OrchestrationReactor } from "../Services/OrchestrationReactor.ts";
 import { WorkPreparationQueue } from "../Services/WorkPreparationQueue.ts";
 import { MemoryReactor } from "../Services/MemoryReactor.ts";
+import { AccountFailoverReactor } from "../Services/AccountFailoverReactor.ts";
 import { makeOrchestrationReactor } from "./OrchestrationReactor.ts";
 
 describe("OrchestrationReactor", () => {
@@ -25,6 +26,9 @@ describe("OrchestrationReactor", () => {
 
     runtime = ManagedRuntime.make(
       Layer.effect(OrchestrationReactor, makeOrchestrationReactor).pipe(
+        Layer.provideMerge(
+          Layer.succeed(AccountFailoverReactor, { start: Effect.void, drain: Effect.void }),
+        ),
         Layer.provideMerge(
           Layer.succeed(ProviderRuntimeIngestionService, {
             start: Effect.sync(() => {

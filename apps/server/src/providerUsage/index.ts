@@ -14,6 +14,7 @@ import { Effect } from "effect";
 
 import { ServerConfig } from "../config";
 import { loadLocalProviderUsageLines } from "../providerUsageSnapshot";
+import { makeCliCredentialRefresher } from "./cliRefresh";
 import { errorSnapshot } from "./parse";
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
 import type { ProviderUsageContext } from "./types";
@@ -50,7 +51,7 @@ async function fetchProviderUsageCached(
     return null;
   }
 
-  const cacheKey = `${provider}:${ctx.homeDir}`;
+  const cacheKey = `${provider}:${ctx.homeDir}:${ctx.accountDir ?? ""}`;
   const existing = liveUsageCache.get(cacheKey);
   if (!options.forceRefresh && existing && existing.value && existing.expiresAtMs > ctx.nowMs) {
     return existing.value;
@@ -100,6 +101,32 @@ async function enrichWithLocalUsage(
   return { ...snapshot, usageLines: [...snapshot.usageLines, ...localLines] };
 }
 
+/**
+ * Live usage for one subscription account: the CLI's normal login (`accountDir` absent) or an
+ * extra account's own folder. Never throws.
+ */
+export async function fetchCliAccountUsage(input: {
+  readonly provider: "claudeAgent" | "codex";
+  readonly homeDir: string;
+  readonly accountDir?: string;
+  readonly forceRefresh?: boolean;
+}): Promise<ServerProviderUsageSnapshot | null> {
+  const ctx: ProviderUsageContext = {
+    ...buildContext(),
+    homeDir: input.homeDir,
+    ...(input.accountDir ? { accountDir: input.accountDir } : {}),
+    refreshCliCredentials: makeCliCredentialRefresher({
+      homeDir: input.homeDir,
+      ...(input.accountDir && input.provider === "claudeAgent"
+        ? { claudeConfigDir: input.accountDir }
+        : {}),
+    }),
+  };
+  return fetchProviderUsageCached(input.provider, ctx, {
+    forceRefresh: input.forceRefresh === true,
+  });
+}
+
 /** Plain async batch fetch for supported providers. Never throws. */
 export async function collectProviderUsageSnapshots(
   ctx: ProviderUsageContext,
@@ -128,6 +155,7 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
         {
           ...buildContext(),
           homeDir: serverConfig.homeDir,
+          refreshCliCredentials: makeCliCredentialRefresher({ homeDir: serverConfig.homeDir }),
         },
         {
           forceRefresh: input.forceRefresh === true,

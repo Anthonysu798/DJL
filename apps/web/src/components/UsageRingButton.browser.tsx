@@ -14,7 +14,8 @@ const AT = "2099-04-08T18:00:00.000Z";
 
 const api = vi.hoisted(() => ({
   cloud: { getStatus: vi.fn() },
-  server: { listProviderUsage: vi.fn(), getConfig: vi.fn() },
+  server: { listProviderUsage: vi.fn(), getConfig: vi.fn(), getSettings: vi.fn() },
+  cliAccounts: { usage: vi.fn() },
 }));
 vi.mock("~/nativeApi", () => ({ ensureNativeApi: () => api }));
 
@@ -318,5 +319,39 @@ describe("UsageRingButton", () => {
     setTurn("pi", "ready");
     await expect.poll(() => api.server.listProviderUsage.mock.calls.length).toBe(2);
     expect(pace()).toEqual([60_000]);
+  });
+
+  it("lists every AI account and follows the one new chats use", async () => {
+    api.cloud.getStatus.mockResolvedValue(signedOut);
+    api.server.listProviderUsage.mockResolvedValue([
+      snapshot("claudeAgent", { planName: "Max", limits: [{ window: "5h", usedPercent: 92 }] }),
+    ]);
+    api.server.getConfig.mockResolvedValue({ providers: [providerStatus("claudeAgent")] });
+    api.server.getSettings.mockResolvedValue({
+      cliAccounts: {
+        accounts: [{ id: "claude-work", provider: "claudeAgent", name: "Work", dir: "/x" }],
+        active: { claudeAgent: "claude-work" },
+      },
+    });
+    api.cliAccounts.usage.mockResolvedValue({
+      usage: [
+        {
+          accountId: "claude-work",
+          provider: "claudeAgent",
+          snapshot: snapshot("claudeAgent", { limits: [{ window: "5h", usedPercent: 30 }] }),
+        },
+      ],
+    });
+    const { ring } = renderRing();
+
+    // The main login has 8% left, but new chats use Work, so the ring follows Work.
+    await expect.element(ring).toHaveAttribute("aria-label", "Claude · Work · 5h · 70% left");
+    await ring.click();
+    await expect
+      .element(page.getByRole("region", { name: "Claude · Main account", exact: true }))
+      .toBeVisible();
+    const work = page.getByRole("region", { name: "Claude · Work", exact: true });
+    await expect.element(work.getByText("In use")).toBeVisible();
+    await expect.element(work.getByRole("progressbar", { name: "5h: 70% left" })).toBeVisible();
   });
 });

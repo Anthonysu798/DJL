@@ -23,7 +23,9 @@ import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "~/components/chat/composerPicker
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { buildVisibleToastLayout, shouldHideCollapsedToastContent } from "./toast.logic";
 import {
+  COMPACT_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME,
   COMPACT_NOTIFICATION_SURFACE_CLASS_NAME,
+  EXPANDED_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME,
   EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
   NOTIFICATION_ICON_CLASS_NAME,
 } from "./notificationSurface";
@@ -94,11 +96,15 @@ const ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME = cn(
 const ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME =
   "rounded-sm font-medium text-[var(--info-foreground)] underline-offset-2 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--info-foreground)]/35 disabled:pointer-events-none disabled:opacity-55";
 
-function toastRootClassName(position: ToastPosition, compact: boolean): string {
-  return cn(
-    compact ? COMPACT_NOTIFICATION_SURFACE_CLASS_NAME : EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
-    position.includes("center") ? "mx-auto" : compact ? "" : "w-full",
-  );
+function toastRootClassName(position: ToastPosition, compact: boolean, liquid = false): string {
+  const surface = liquid
+    ? compact
+      ? COMPACT_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME
+      : EXPANDED_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME
+    : compact
+      ? COMPACT_NOTIFICATION_SURFACE_CLASS_NAME
+      : EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME;
+  return cn(surface, position.includes("center") ? "mx-auto" : compact ? "" : "w-full");
 }
 
 function toastIconClassName(type: ToastObject<ThreadToastData>["type"]): string {
@@ -442,9 +448,10 @@ function ThreadNoticeToastSurface({
       )}
       data-slot="toast-thread-notice"
     >
+      <span aria-hidden className="liquid-glass-rim" />
       <button
         type="button"
-        className="flex w-full items-start gap-2.5 py-2.5 pr-10 pl-3.5 text-left transition-colors duration-150 ease-out hover:bg-[var(--notification-fg)]/[0.04] focus-visible:bg-[var(--notification-fg)]/[0.06] focus-visible:outline-none"
+        className="flex w-full items-start gap-2.5 rounded-[inherit] py-2.5 pr-10 pl-3.5 text-left transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[var(--liquid-row-hover)] focus-visible:bg-[var(--liquid-row-hover)] focus-visible:outline-none"
         data-slot="toast-open"
         onClick={() => {
           notice.onOpen();
@@ -455,7 +462,9 @@ function ThreadNoticeToastSurface({
           aria-hidden
           className={cn(
             "mt-[7px] size-1.5 shrink-0 rounded-full",
-            notice.tone === "done" ? "bg-emerald-500" : "bg-amber-500",
+            notice.tone === "done"
+              ? "bg-emerald-400 shadow-[0_0_8px_rgb(52_211_153/0.65)]"
+              : "bg-amber-400 shadow-[0_0_8px_rgb(251_191_36/0.6)]",
           )}
         />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -659,7 +668,7 @@ function Toasts({
                     )
                   : toast.data?.providerUpdate
                     ? "djl-provider-update-toast"
-                    : toastRootClassName(position, compact),
+                    : toastRootClassName(position, compact, Boolean(toast.data?.threadNotice)),
                 // Base positioning using data-position
                 "data-[position*=right]:right-0 data-[position*=right]:left-auto",
                 "data-[position*=left]:right-auto data-[position*=left]:left-0",

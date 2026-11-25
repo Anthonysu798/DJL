@@ -4,6 +4,8 @@
 
 import { useTranslation } from "react-i18next";
 
+import { TechnicalDetailsDisclosure } from "./chat/TechnicalDetailsDisclosure";
+
 export function SplashScreen({
   errorMessage,
   errorDetail,
@@ -37,8 +39,11 @@ export function SplashScreen({
   return (
     <div className="m-auto flex max-w-sm flex-col items-center gap-3 px-6 text-center">
       <span className="text-sm text-muted-foreground/75">{errorMessage}</span>
+      {/* Raw diagnostics stay one click away instead of greeting people with them. */}
       {errorDetail ? (
-        <span className="break-words text-xs text-muted-foreground/60">{errorDetail}</span>
+        <div className="text-muted-foreground/60">
+          <TechnicalDetailsDisclosure detail={errorDetail} />
+        </div>
       ) : null}
       {onRetry ? (
         <button

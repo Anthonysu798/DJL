@@ -42,6 +42,8 @@ import {
   resolveAgentChipColor,
 } from "../composerInlineChip";
 import { AGENT_ROBOT_ICON_NAME, ClockIcon } from "~/lib/icons";
+import { skillChipProvider } from "~/lib/skillOrigin";
+import { ClaudeAI, OpenAI } from "../Icons";
 import type { ComposerSlashCommand } from "~/composerSlashCommands";
 import { InlineLinkChip } from "../InlineLinkChip";
 import { ComposerPendingTerminalContextChip } from "../chat/ComposerPendingTerminalContexts";
@@ -137,13 +139,35 @@ function renderMentionChipDom(
   container.append(icon, label);
 }
 
-function renderSkillChipDom(container: HTMLElement, name: string): void {
-  resetInlineChipContainer(container);
+// Claude and Codex skills keep their maker's logo in the chip, as in the `$` picker.
+const SKILL_CHIP_PROVIDER_ICON_SVG = {
+  claudeAgent: renderToStaticMarkup(
+    <ClaudeAI aria-hidden="true" className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME} />,
+  ),
+  codex: renderToStaticMarkup(
+    <OpenAI aria-hidden="true" className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME} />,
+  ),
+} as const;
 
-  const icon = createCentralIconElement(
+function createSkillChipIconElement(name: string): HTMLElement | null {
+  const provider = skillChipProvider(name);
+  if (provider === "claudeAgent" || provider === "codex") {
+    const icon = document.createElement("span");
+    icon.ariaHidden = "true";
+    icon.className = "inline-flex";
+    icon.innerHTML = SKILL_CHIP_PROVIDER_ICON_SVG[provider];
+    return icon;
+  }
+  return createCentralIconElement(
     COMPOSER_INLINE_SKILL_CHIP_ICON_NAME,
     COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME,
   );
+}
+
+function renderSkillChipDom(container: HTMLElement, name: string): void {
+  resetInlineChipContainer(container);
+
+  const icon = createSkillChipIconElement(name);
 
   const label = document.createElement("span");
   label.className = COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME;

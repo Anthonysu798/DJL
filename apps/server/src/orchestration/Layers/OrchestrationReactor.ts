@@ -10,6 +10,7 @@ import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeInge
 import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { WorkPreparationQueue } from "../Services/WorkPreparationQueue.ts";
 import { MemoryReactor } from "../Services/MemoryReactor.ts";
+import { AccountFailoverReactor } from "../Services/AccountFailoverReactor.ts";
 
 export const makeOrchestrationReactor = Effect.gen(function* () {
   const providerRuntimeIngestion = yield* ProviderRuntimeIngestionService;
@@ -18,6 +19,7 @@ export const makeOrchestrationReactor = Effect.gen(function* () {
   const studioOutputReactor = yield* StudioOutputReactor;
   const workPreparationQueue = yield* WorkPreparationQueue;
   const memoryReactor = yield* MemoryReactor;
+  const accountFailoverReactor = yield* AccountFailoverReactor;
 
   const start: OrchestrationReactorShape["start"] = Effect.gen(function* () {
     yield* providerRuntimeIngestion.start;
@@ -27,6 +29,7 @@ export const makeOrchestrationReactor = Effect.gen(function* () {
     yield* checkpointReactor.start;
     yield* studioOutputReactor.start;
     yield* memoryReactor.start;
+    yield* accountFailoverReactor.start;
 
     // Recovery can inspect a large persisted queue and may publish completed
     // preparation jobs. The provider reactor is already subscribed, so run the

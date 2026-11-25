@@ -16,6 +16,7 @@ export type TerminalCliKind =
   | "copilot"
   | "codebuddy"
   | "pi"
+  | "muse"
   | "gemini";
 export type TerminalIconKey =
   | "terminal"
@@ -30,6 +31,7 @@ export type TerminalIconKey =
   | "copilot"
   | "codebuddy"
   | "pi"
+  | "muse"
   | "gemini";
 export type TerminalActivityState = "running" | "attention" | "review";
 export type TerminalVisualState = "idle" | TerminalActivityState;
@@ -49,6 +51,7 @@ export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, 
   gemini: "gemini",
   codebuddy: "codebuddy",
   pi: "pi",
+  muse: "muse",
 };
 
 const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
@@ -64,6 +67,7 @@ const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
   gemini: "Gemini CLI",
   codebuddy: "CodeBuddy Code",
   pi: "Pi",
+  muse: "Muse Code",
 };
 
 export interface TerminalCommandIdentity {

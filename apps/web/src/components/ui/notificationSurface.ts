@@ -26,4 +26,13 @@ export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(10
 
 export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl ${NOTIFICATION_GLASS_SURFACE_CLASS_NAME}`;
 
+// Task finished / needs attention notices: the clear liquid glass of the avatar and plugin
+// menus (index.css `.liquid-glass-fill`). The toast root already uses ::after for its hover
+// gap, so the specular rim is a `.liquid-glass-rim` child of the content instead.
+const NOTIFICATION_LIQUID_SURFACE_CLASS_NAME = `liquid-glass-fill border-0 ${NOTIFICATION_FOREGROUND_CLASS_NAME} [-webkit-app-region:no-drag]`;
+
+export const COMPACT_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl ${NOTIFICATION_LIQUID_SURFACE_CLASS_NAME}`;
+
+export const EXPANDED_LIQUID_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl ${NOTIFICATION_LIQUID_SURFACE_CLASS_NAME}`;
+
 export const NOTIFICATION_ICON_CLASS_NAME = "text-[var(--notification-fg)]/92";

@@ -113,6 +113,39 @@ describe("RestoreOrCreateChatRoute", () => {
     await expect.poll(() => createFreshChat.mock.calls.length).toBe(2);
   });
 
+  it("retries once without showing an error when only the connection dropped", async () => {
+    const createFreshChat = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          summary: "Unable to prepare a new chat.",
+          detail: "All fibers interrupted without error",
+        },
+      })
+      .mockResolvedValue({ ok: true });
+    const screen = await render(
+      <StrictMode>
+        <RestoreOrCreateChatRoute
+          mode="fresh"
+          resolveRestoreRoute={() => null}
+          createFreshChat={createFreshChat}
+        />
+      </StrictMode>,
+    );
+    let flashed = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes("Unable to prepare a new chat.")) flashed = true;
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    await expect.poll(() => createFreshChat.mock.calls.length, { timeout: 4000 }).toBe(2);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    observer.disconnect();
+    expect(flashed).toBe(false);
+    expect(screen.getByText("Unable to prepare a new chat.").elements()).toHaveLength(0);
+    expect(screen.getByText("All fibers interrupted without error").elements()).toHaveLength(0);
+  });
+
   it("shows restore-mode creation failures after Strict Mode effect replay", async () => {
     window.localStorage.removeItem(SIDEBAR_UI_STATE_STORAGE_KEY);
     const screen = await render(

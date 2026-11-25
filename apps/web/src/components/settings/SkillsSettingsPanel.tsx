@@ -11,6 +11,10 @@ import { useTranslation } from "react-i18next";
 
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { SettingsRow, SettingsSection } from "~/components/settings/SettingsPanelPrimitives";
+import {
+  SETTINGS_PANEL_SECTION_CLASS_NAME,
+  SETTINGS_SECTION_LABEL_CLASS_NAME,
+} from "~/settingsPanelStyles";
 import { Switch } from "~/components/ui/switch";
 import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError";
 import { SkillCubeIcon } from "~/lib/icons";
@@ -112,7 +116,8 @@ export function SkillsSettingsPanel() {
   const djlSkillsDir = catalogQuery.data?.djlSkillsDir;
 
   return (
-    <div className="space-y-8">
+    // Container queries: the settings pane's width, not the window's, decides the layout.
+    <div className="@container space-y-8">
       <SettingsSection title={t("skills.portable.sectionTitle")}>
         <SettingsRow
           title={t("skills.portable.title")}
@@ -152,57 +157,66 @@ export function SkillsSettingsPanel() {
         </SettingsSection>
       ) : null}
 
-      {skillSections.map((section) => {
-        return (
-          <SettingsSection key={section.key} title={section.title}>
+      {skillSections.map((section) => (
+        <section key={section.key} className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
+          <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{section.title}</h2>
+          <ul className="grid grid-cols-1 gap-2.5 @2xl:grid-cols-2">
             {section.groups.map((group) => {
               const enabled = !disabledSkillNames.has(group.key);
               return (
-                <SettingsRow
+                <li
                   key={group.key}
-                  title={
-                    <span className="inline-flex min-w-0 items-center gap-1.5">
-                      <SkillCubeIcon
-                        aria-hidden="true"
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                      />
-                      <span className="truncate">{group.displayName}</span>
-                    </span>
-                  }
-                  description={group.description}
-                  status={
-                    <span className="flex min-w-0 flex-col gap-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <SkillProviderStack providers={group.providers} />
-                        <span className="truncate text-[11px] text-muted-foreground">
-                          {group.sources.map((source) => source.originInfo.label).join(" · ")}
-                        </span>
-                      </span>
-                      {group.sources.map((source) => (
-                        <code
-                          key={source.skill.path}
-                          className="truncate text-[11px] text-muted-foreground"
-                        >
-                          {source.skill.path}
-                        </code>
-                      ))}
-                    </span>
-                  }
-                  control={
+                  className="flex min-w-0 flex-col gap-2 rounded-2xl border border-border/60 bg-card/40 p-3.5 transition-[border-color,background-color,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-border hover:bg-card/70 data-[enabled=false]:opacity-70"
+                  data-enabled={enabled}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
+                        <SkillCubeIcon
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                        />
+                        <span className="truncate">{group.displayName}</span>
+                      </h3>
+                      {group.description ? (
+                        <p className="line-clamp-2 text-[13px] leading-5 text-muted-foreground">
+                          {group.description}
+                        </p>
+                      ) : null}
+                    </div>
                     <Switch
+                      className="mt-0.5 shrink-0"
                       checked={enabled}
                       onCheckedChange={(checked) =>
                         setSkillEnabled(group.primarySkill.name, Boolean(checked))
                       }
                       aria-label={t("skills.enableAriaLabel", { skill: group.displayName })}
                     />
-                  }
-                />
+                  </div>
+                  <div className="mt-auto flex min-w-0 flex-col gap-1 border-t border-border/50 pt-2">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <SkillProviderStack providers={group.providers} />
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {group.sources.map((source) => source.originInfo.label).join(" · ")}
+                      </span>
+                    </span>
+                    {group.sources.map((source) => (
+                      // Long paths trim from the start so the skill's own folder stays visible.
+                      <code
+                        key={source.skill.path}
+                        className="block truncate text-left text-[11px] text-muted-foreground/80 [direction:rtl]"
+                        title={source.skill.path}
+                      >
+                        <bdi>{source.skill.path}</bdi>
+                      </code>
+                    ))}
+                  </div>
+                </li>
               );
             })}
-          </SettingsSection>
-        );
-      })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

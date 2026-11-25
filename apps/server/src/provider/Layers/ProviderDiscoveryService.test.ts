@@ -103,6 +103,8 @@ const runListSkills = (input: {
 
 beforeEach(async () => {
   clearSkillsCatalogCacheForTests();
+  // These tests count the user's own skills; DJL's bundled starter skills are tested elsewhere.
+  vi.stubEnv("DJL_STARTER_SKILLS_DIR", "");
   root = mkdtempSync(path.join(os.tmpdir(), "discovery-service-"));
   homeDir = path.join(root, "home");
   baseDir = path.join(homeDir, ".djl");
@@ -183,7 +185,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
 
 describe("ProviderDiscoveryService.getComposerCapabilities", () => {
   it.each(["codex", "claudeAgent", "cursor"] as const)(
-    "does not advertise skill metadata rejected by fresh %s sends",
+    "keeps skill metadata off but accepts inlined skill references on fresh %s sends",
     async (provider) => {
       await Effect.runPromise(
         Effect.scoped(
@@ -213,15 +215,16 @@ describe("ProviderDiscoveryService.getComposerCapabilities", () => {
             expect(capabilities.supportsRuntimeModelList).toBe(true);
             const threadId = ThreadId.makeUnsafe("skill-contract");
             yield* adapter.startSession({ threadId, cwd, runtimeMode: "approval-required" });
-            const failed = yield* adapter
+            const sent = yield* adapter
               .sendTurn({
                 threadId,
                 input: "hello",
                 skills: [{ name: "review", path: "/tmp/SKILL.md" }],
               })
               .pipe(Effect.result);
-            expect(failed._tag).toBe("Failure");
-            yield* adapter.sendTurn({ threadId, input: "hello without skills" });
+            // The reactor inlines picked skills into the prompt, so the bridge just ignores
+            // the references instead of failing the turn.
+            expect(sent._tag).toBe("Success");
           }),
         ),
       );

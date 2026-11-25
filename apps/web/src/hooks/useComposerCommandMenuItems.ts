@@ -10,7 +10,7 @@ import type {
 } from "@djl/contracts";
 import { getAgentMentionAutocompleteAliases, serverReference } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { composerPluginSuggestions } from "~/lib/composerPluginSuggestions";
 import { pluginsSnapshotQueryOptions } from "~/lib/pluginsReactQuery";
@@ -36,6 +36,12 @@ import {
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "../composerSlashCommands";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
+import {
+  orderSkillsByGroup,
+  rememberSkillChipProviders,
+  resolveSkillOrigin,
+  skillGroupKey,
+} from "~/lib/skillOrigin";
 
 type ComposerPluginSuggestion = {
   plugin: ProviderPluginDescriptor;
@@ -106,6 +112,10 @@ export function useComposerCommandMenuItems(input: {
     surfaceAppSlashCommands,
     dynamicAgents,
   } = input;
+
+  useEffect(() => {
+    rememberSkillChipProviders(providerSkills);
+  }, [providerSkills]);
 
   return useMemo<ComposerCommandItem[]>(() => {
     if (!composerTrigger) return [];
@@ -298,6 +308,7 @@ export function useComposerCommandMenuItems(input: {
         id: `skill:${skill.path}`,
         type: "skill" as const,
         skill,
+        group: skillGroupKey(resolveSkillOrigin(skill), provider),
         label: skill.interface?.displayName ?? skill.name,
         description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
       }));
@@ -306,7 +317,8 @@ export function useComposerCommandMenuItems(input: {
 
     if (composerTrigger.kind === "skill") {
       const query = normalizeProviderDiscoveryText(composerTrigger.query);
-      return rankProviderDiscoveryItems(
+      // The selected provider's own skills lead, then DJL built-ins, Claude, Codex, shared.
+      const items = rankProviderDiscoveryItems(
         [...BUILT_IN_SKILLS, ...providerSkills].filter((skill) => skill.enabled),
         query,
         buildSkillSearchFields,
@@ -314,9 +326,11 @@ export function useComposerCommandMenuItems(input: {
         id: `skill:${skill.path}`,
         type: "skill" as const,
         skill,
+        group: skillGroupKey(resolveSkillOrigin(skill), provider),
         label: skill.interface?.displayName ?? skill.name,
         description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
       }));
+      return orderSkillsByGroup(items, (item) => item.group);
     }
 
     return rankProviderDiscoveryItems(searchableModelOptions, composerTrigger.query, (option) => [

@@ -19,6 +19,9 @@ export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = [
   "copilot",
   "codebuddy",
   "pi",
+  "muse",
+  "doubao",
+  "deepseek",
 ];
 
 const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(DEFAULT_PROVIDER_ORDER);

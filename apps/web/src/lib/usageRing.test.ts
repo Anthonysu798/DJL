@@ -272,6 +272,25 @@ describe("usageRing", () => {
     expect(selectLowestUsageRow(entries)).toBeNull();
   });
 
+  it("trusts the CLI's own sign-in over a usage fetch that could not read its token", () => {
+    const entries = deriveUsageRingEntries({
+      cloud: null,
+      snapshots: [
+        snapshot("claudeAgent", { status: "needs-auth" }),
+        snapshot("cursor", { status: "needs-auth" }),
+      ],
+      providerStatuses: [
+        providerStatus("claudeAgent"),
+        providerStatus("cursor", { authStatus: "unauthenticated" }),
+      ],
+    });
+
+    expect(entries.map((entry) => [entry.provider, entry.status, entry.cliSignedIn])).toEqual([
+      ["claudeAgent", "needs-auth", true],
+      ["cursor", "needs-auth", false],
+    ]);
+  });
+
   it("has nothing to show before any data arrives", () => {
     const entries = deriveUsageRingEntries({
       cloud: undefined,
@@ -307,5 +326,57 @@ describe("runningTurnsKey", () => {
     ]);
     expect(finishedTurnProviders("a:codex", "a:codex|b:gemini")).toEqual([]);
     expect(finishedTurnProviders("", "")).toEqual([]);
+  });
+});
+
+describe("AI accounts in the usage ring", () => {
+  const limit = (usedPercent: number) => ({
+    limits: [{ window: "5h", usedPercent, resetsAt: "2099-04-08T20:00:00.000Z" }],
+  });
+  const aiAccounts = (active: "default" | "claude-work") => ({
+    accounts: [{ id: "claude-work", provider: "claudeAgent" as const, name: "Work" }],
+    active: { claudeAgent: active },
+    usage: [
+      {
+        accountId: "claude-work",
+        provider: "claudeAgent" as const,
+        snapshot: snapshot("claudeAgent", limit(95)),
+      },
+    ],
+    mainLabel: "Main account",
+  });
+
+  it("lists every account of a provider by name and marks the one in use", () => {
+    const entries = deriveUsageRingEntries({
+      snapshots: [snapshot("claudeAgent", limit(20))],
+      providerStatuses: [providerStatus("claudeAgent")],
+      cloud: null,
+      aiAccounts: aiAccounts("claude-work"),
+    });
+    expect(entries.map((entry) => [entry.key, entry.name, entry.inUse])).toEqual([
+      ["claudeAgent", "Claude · Main account", false],
+      ["claudeAgent:claude-work", "Claude · Work", true],
+    ]);
+  });
+
+  it("drives the ring only from accounts in use, not a spare running low", () => {
+    const entries = deriveUsageRingEntries({
+      snapshots: [snapshot("claudeAgent", limit(20))],
+      providerStatuses: [providerStatus("claudeAgent")],
+      cloud: null,
+      aiAccounts: aiAccounts("default"),
+    });
+    // Work has 5% left, but new chats use the main account with 80% left.
+    expect(selectLowestUsageRow(entries)?.entry.key).toBe("claudeAgent");
+    expect(selectLowestUsageRow(entries)?.row.remainingPercent).toBe(80);
+  });
+
+  it("keeps the plain provider name when there are no extra accounts", () => {
+    const entries = deriveUsageRingEntries({
+      snapshots: [snapshot("claudeAgent", limit(20))],
+      providerStatuses: [providerStatus("claudeAgent")],
+      cloud: null,
+    });
+    expect(entries.map((entry) => [entry.name, entry.inUse])).toEqual([["Claude", null]]);
   });
 });

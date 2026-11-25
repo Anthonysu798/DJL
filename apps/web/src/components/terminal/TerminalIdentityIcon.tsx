@@ -20,6 +20,7 @@ import {
   CopilotIcon,
   CodeBuddyIcon,
   PiIcon,
+  MuseIcon,
   Gemini,
 } from "../Icons";
 
@@ -43,6 +44,7 @@ export default function TerminalIdentityIcon({ iconKey, className }: TerminalIde
     gemini: Gemini,
     codebuddy: CodeBuddyIcon,
     pi: PiIcon,
+    muse: MuseIcon,
     terminal: TerminalSquare,
   }[iconKey];
 

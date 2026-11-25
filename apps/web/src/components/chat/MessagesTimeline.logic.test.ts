@@ -907,6 +907,71 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
+  it("keeps an account switch visible above the answer instead of folding it away", () => {
+    const switched = workEntry("switch-1", "2026-01-01T00:00:01Z", "Switched account", "info");
+    if (switched.kind === "work") {
+      switched.entry = {
+        ...switched.entry,
+        accountSwitch: {
+          provider: "codex",
+          fromName: "",
+          toName: "Work",
+          toEmail: "work@example.com",
+          resetsAt: null,
+        },
+      };
+    }
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        switched,
+        workEntry("w1", "2026-01-01T00:00:02Z", "tool 1"),
+        assistantEntry("a1", "2026-01-01T00:00:03Z", {
+          turnId: "t1",
+          text: "ping",
+          completedAt: "2026-01-01T00:00:04Z",
+        }),
+      ],
+    });
+
+    const terminal = messageRow(rows, "a1");
+    expect(collapsedSignature(terminal!)).toEqual(["work:w1"]);
+    expect(terminal!.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["switch-1"]);
+  });
+
+  it("shows only the account switch when it is the turn's sole detail", () => {
+    const switched = workEntry("switch-1", "2026-01-01T00:00:01Z", "Switched account", "info");
+    if (switched.kind === "work") {
+      switched.entry = {
+        ...switched.entry,
+        accountSwitch: {
+          provider: "codex",
+          fromName: "",
+          toName: "Work",
+          toEmail: null,
+          resetsAt: null,
+        },
+      };
+    }
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        switched,
+        assistantEntry("a1", "2026-01-01T00:00:03Z", {
+          turnId: "t1",
+          text: "ping",
+          completedAt: "2026-01-01T00:00:04Z",
+        }),
+      ],
+    });
+
+    const terminal = messageRow(rows, "a1");
+    expect(terminal!.collapsedTurnItems).toBeUndefined();
+    expect(terminal!.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["switch-1"]);
+  });
+
   it("folds settled reasoning traces into the terminal turn disclosure", () => {
     const reasoning = workEntry("reasoning-1", "2026-01-01T00:00:02Z", "Reasoning trace");
     if (reasoning.kind === "work") {

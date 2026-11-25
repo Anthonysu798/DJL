@@ -30,7 +30,7 @@ import {
   requestSettingsTourReplay,
   settingsTourTarget,
 } from "~/onboarding/firstRunTour";
-import { normalizeSettingsSection, SETTINGS_NAV_ITEMS } from "~/settingsNavigation";
+import { normalizeSettingsSection, SETTINGS_PAGE_ITEMS } from "~/settingsNavigation";
 import { useStore } from "~/store";
 import { FirstRunTour } from "./FirstRunTour";
 
@@ -38,7 +38,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 
-const BROWSER_SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter((item) => !item.desktopOnly);
+const BROWSER_SETTINGS_TOUR_ITEMS = SETTINGS_PAGE_ITEMS.filter((item) => !item.desktopOnly);
 
 function settingsCatalogValue(path: string): string {
   let value: unknown = englishCatalog.settings;
@@ -195,10 +195,12 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={createTourRouter()} />);
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Work or Code", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Next" }).click();
-    await expect.element(page.getByText("Project mode", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Projects", exact: true }))
+      .toBeVisible();
 
     await page.getByRole("button", { name: "Next" }).click();
     await expect
@@ -247,9 +249,11 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={createTourRouter("/?localAi=hidden")} />);
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Work or Code", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
-    await expect.element(page.getByText("Project mode", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Projects", exact: true }))
+      .toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
     await expect.element(page.getByText("Settings", { exact: true }).last()).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
@@ -332,7 +336,7 @@ describe("FirstRunTour", () => {
     await page.getByRole("button", { name: "Skip" }).click();
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Work or Code", { exact: true })).toBeVisible();
     await expect.poll(() => router.state.location.pathname).toBe("/");
   });
 });

@@ -15,6 +15,7 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "accounts",
+  "ai-accounts",
   "local-models",
   "servers",
   "plugins",
@@ -25,7 +26,10 @@ export const SETTINGS_SECTION_IDS = [
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
 export type SettingsNavGroupId = "app" | "djl";
-type SettingsNavCatalogItemId = Exclude<SettingsSectionId, "local-models"> | "localModels";
+type SettingsNavCatalogItemId =
+  | Exclude<SettingsSectionId, "local-models" | "ai-accounts">
+  | "localModels"
+  | "aiAccounts";
 type SettingsNavItemTranslationKey =
   `navigation.items.${SettingsNavCatalogItemId}.${"label" | "description" | "eyebrow"}`;
 
@@ -53,6 +57,11 @@ export type SettingsNavItem = {
   icon: string;
   eyebrowKey: SettingsNavItemTranslationKey;
   desktopOnly?: boolean;
+  /**
+   * Shown as a section of this page instead of a page of its own, so the settings list stays
+   * short. Old links and search results for it land on that page, scrolled to the section.
+   */
+  mergedInto?: SettingsSectionId;
 };
 
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
@@ -107,6 +116,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "notifications",
+    mergedInto: "general",
     group: "app",
     labelKey: "navigation.items.notifications.label",
     descriptionKey: "navigation.items.notifications.description",
@@ -124,6 +134,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "behavior",
+    mergedInto: "general",
     group: "app",
     labelKey: "navigation.items.behavior.label",
     descriptionKey: "navigation.items.behavior.description",
@@ -132,6 +143,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "shortcuts",
+    mergedInto: "advanced",
     group: "app",
     labelKey: "navigation.items.shortcuts.label",
     descriptionKey: "navigation.items.shortcuts.description",
@@ -140,6 +152,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "worktrees",
+    mergedInto: "advanced",
     group: "app",
     labelKey: "navigation.items.worktrees.label",
     descriptionKey: "navigation.items.worktrees.description",
@@ -155,6 +168,15 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrowKey: "navigation.items.archived.eyebrow",
   },
   {
+    id: "ai-accounts",
+    mergedInto: "accounts",
+    group: "djl",
+    labelKey: "navigation.items.aiAccounts.label",
+    descriptionKey: "navigation.items.aiAccounts.description",
+    icon: "people-2",
+    eyebrowKey: "navigation.items.aiAccounts.eyebrow",
+  },
+  {
     id: "local-models",
     group: "djl",
     labelKey: "navigation.items.localModels.label",
@@ -165,6 +187,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "servers",
+    mergedInto: "advanced",
     group: "djl",
     labelKey: "navigation.items.servers.label",
     descriptionKey: "navigation.items.servers.description",
@@ -182,6 +205,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "skills",
+    mergedInto: "plugins",
     group: "djl",
     labelKey: "navigation.items.skills.label",
     descriptionKey: "navigation.items.skills.description",
@@ -206,6 +230,16 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
 ] as const;
 
+/** The pages listed in the settings sidebar; merged sections live inside one of them. */
+export const SETTINGS_PAGE_ITEMS: readonly SettingsNavItem[] = SETTINGS_NAV_ITEMS.filter(
+  (item) => item.mergedInto === undefined,
+);
+
+/** DOM id of a merged section inside its page, used to scroll old links to it. */
+export function settingsMergedSectionAnchorId(section: SettingsSectionId): string {
+  return `settings-page-${section}`;
+}
+
 /**
  * Stable DOM id for a settings row. Callers pass a semantic id that never depends on
  * translated display copy. Existing English-slug ids are intentionally retained so saved
@@ -226,5 +260,6 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   // The retired "Models & API keys" page (and its older "providers" alias) now lives in Accounts.
   if (value === "models" || value === "providers") return "accounts";
   const section = SETTINGS_SECTION_IDS.find((candidate) => candidate === value);
-  return section ?? "general";
+  if (!section) return "general";
+  return SETTINGS_NAV_ITEMS.find((item) => item.id === section)?.mergedInto ?? section;
 }

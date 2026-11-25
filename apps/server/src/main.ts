@@ -24,11 +24,12 @@ import {
   type RuntimeMode,
   type ServerConfigShape,
 } from "./config";
-import { fixPath, resolveBaseDir } from "./os-jank";
+import { appendKnownCliDirs, fixPath, resolveBaseDir } from "./os-jank";
 import { Open } from "./open";
 import * as SqlitePersistence from "./persistence/Layers/Sqlite";
 import { makeServerProviderLayer, makeServerRuntimeServicesLayer } from "./serverLayers";
 import { PluginsLive } from "./plugins/PluginsService";
+import { SkillsStoreLive } from "./skillsStore/SkillsStoreService";
 import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
 import { LocalModelsLive } from "./localModels/LocalModelsLive";
 import { CodingPlansLive } from "./codingPlans/CodingPlans";
@@ -97,7 +98,10 @@ export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
       const path = yield* Path.Path;
       return {
         cwd: process.cwd(),
-        fixPath: Effect.sync(fixPath),
+        fixPath: Effect.sync(() => {
+          fixPath();
+          appendKnownCliDirs();
+        }),
         resolveStaticDir: resolveStaticDir().pipe(
           Effect.provideService(FileSystem.FileSystem, fileSystem),
           Effect.provideService(Path.Path, path),
@@ -333,6 +337,7 @@ const LayerLive = (input: CliInput) => {
     // One bridge shared by GroupService (runtime layer) and the group harness (provider layer).
     Layer.provideMerge(GroupDriverBridgeLive),
     Layer.provideMerge(PluginsLive.pipe(Layer.provide(ServerSecretStoreLive))),
+    Layer.provideMerge(SkillsStoreLive),
     Layer.provideMerge(ServerConfigLive(input)),
   );
 };

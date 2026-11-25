@@ -98,3 +98,68 @@ describe("server-authoritative native runtime profiles", () => {
     });
   });
 });
+
+describe("per-chat subscription accounts", () => {
+  it("runs a chat in the account folder it chose, ignores client folders, and never resumes across accounts", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const calls: ProviderSessionStartInput[] = [];
+          const factory: NativeDriverFactory = async (input) => {
+            calls.push(input);
+            return {
+              id: `native-${calls.length}`,
+              send: async () => new Promise<void>(() => {}),
+              close: () => {},
+              interrupt: async () => {},
+              models: async () => ({ models: [{ slug: "native", name: "Native" }] }),
+            };
+          };
+          const adapter = yield* makeConfiguredNativeAdapter("codex", factory);
+          const threadId = ThreadId.makeUnsafe("chat-account");
+          const work = yield* adapter.startSession({
+            threadId,
+            cwd: "/tmp",
+            runtimeMode: "full-access",
+            providerOptions: { codex: { cliAccountId: "codex-work", homePath: "/client/home" } },
+          });
+          expect(calls[0]?.providerOptions?.codex?.homePath).toBe("/accounts/work");
+          yield* adapter.stopSession(threadId);
+
+          // Same account: the saved session resumes.
+          yield* adapter.startSession({
+            threadId,
+            cwd: "/tmp",
+            runtimeMode: "full-access",
+            resumeCursor: work.resumeCursor,
+            providerOptions: { codex: { cliAccountId: "codex-work" } },
+          });
+          expect(calls[1]?.resumeCursor).toBeDefined();
+          yield* adapter.stopSession(threadId);
+
+          // Back to the normal sign-in: a fresh session, never the Work session.
+          yield* adapter.startSession({
+            threadId,
+            cwd: "/tmp",
+            runtimeMode: "full-access",
+            resumeCursor: work.resumeCursor,
+            providerOptions: { codex: { cliAccountId: "default" } },
+          });
+          expect(calls[2]?.resumeCursor).toBeUndefined();
+          expect(calls[2]?.providerOptions?.codex?.homePath).toBe("/normal/codex");
+        }),
+      ).pipe(
+        Effect.provide(
+          ServerSettingsService.layerTest({
+            providers: { codex: { homePath: "/normal/codex" } },
+            cliAccounts: {
+              accounts: [
+                { id: "codex-work", provider: "codex", name: "Work", dir: "/accounts/work" },
+              ],
+            },
+          }),
+        ),
+      ),
+    );
+  });
+});

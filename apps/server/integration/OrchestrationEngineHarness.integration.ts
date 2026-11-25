@@ -71,6 +71,8 @@ import {
   type TestProviderAdapterHarness,
 } from "./TestProviderAdapter.integration.ts";
 import { deriveServerPaths, ServerConfig } from "../src/config.ts";
+import { AccountFailoverReactor } from "../src/orchestration/Services/AccountFailoverReactor.ts";
+import { AccountFailoverReactorLive } from "../src/orchestration/Layers/AccountFailoverReactor.ts";
 
 function runGit(cwd: string, args: ReadonlyArray<string>) {
   return execFileSync("git", args, {
@@ -214,6 +216,8 @@ export interface OrchestrationIntegrationHarness {
 interface MakeOrchestrationIntegrationHarnessOptions {
   readonly provider?: ProviderKind;
   readonly realCodex?: boolean;
+  /** Run the real AccountFailoverReactor (subscription account switching) instead of a no-op. */
+  readonly accountFailover?: boolean;
 }
 
 export const makeOrchestrationIntegrationHarness = (
@@ -342,6 +346,14 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provideMerge(providerCommandReactorLayer),
       Layer.provideMerge(checkpointReactorLayer),
       Layer.provideMerge(studioOutputReactorLayer),
+      Layer.provideMerge(
+        options?.accountFailover
+          ? AccountFailoverReactorLive.pipe(
+              Layer.provideMerge(runtimeServicesLayer),
+              Layer.provideMerge(ServerSettingsService.layerTest()),
+            )
+          : Layer.succeed(AccountFailoverReactor, { start: Effect.void, drain: Effect.void }),
+      ),
     );
     const layer = orchestrationReactorLayer.pipe(
       Layer.provide(persistenceLayer),

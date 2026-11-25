@@ -54,6 +54,7 @@
   "devDependencies": {
     "@djl/contracts": "workspace:*",
     "@djl/shared": "workspace:*",
+    "@djl/starter-skills": "workspace:*",
     "@djl/web-app": "workspace:*",
     "@effect/language-service": "catalog:",
     "@effect/vitest": "catalog:",

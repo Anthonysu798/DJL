@@ -12,7 +12,10 @@ describe("classifyProviderFailure", () => {
     ],
     ["EACCES: permission denied", "permission"],
     ["429 too many requests", "rateLimit"],
+    ["You've hit your usage limit. Try again at 3:40 PM.", "rateLimit"],
     ["socket connection timed out", "connection"],
+    ["All fibers interrupted without error", "connection"],
+    ["Transport disposed", "connection"],
     ["provider exited with code 1", "generic"],
   ] as const)("classifies %s", (detail, expected) => {
     expect(classifyProviderFailure(detail)).toBe(expected);

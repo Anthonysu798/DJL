@@ -103,13 +103,18 @@
       "groups": {
         "agentModels": "Continuer avec un agent",
         "builtIn": "Intégré",
+        "claudeSkills": "Claude Code",
+        "codexSkills": "Codex",
         "local": "Sur cet appareil",
         "mcp": "Serveurs MCP",
+        "otherSkills": "Autres compétences",
         "plugins": "Greffons",
         "provider": "Fournisseur",
         "servers": "Serveurs",
+        "sharedSkills": "Partagées",
         "skills": "Compétences",
-        "subagents": "Sous-agents"
+        "subagents": "Sous-agents",
+        "suggestedSkills": "Pour {{provider}}"
       },
       "handoffReady": "Agent prêt",
       "handoffReadyDescription": "La conversation, les notes et le brouillon sont conservés. Envoyez votre prochaine instruction pour continuer.",
@@ -128,7 +133,11 @@
       },
       "runNativeCommand": "Exécuter une commande native {{provider}}",
       "searchFilesHint": "Saisissez pour rechercher des fichiers",
-      "searchingMentions": "Recherche de mentions..."
+      "searchingMentions": "Recherche de mentions...",
+      "skillOrigin": {
+        "project": "Projet",
+        "shared": "Partagée"
+      }
     },
     "composer": {
       "actions": {
@@ -427,32 +436,32 @@
       "openRepositoryFallback": "Le navigateur in-app ne pouvait pas ouvrir GitHub.",
       "providerFailure": {
         "authentication": {
-          "action": "Connectez-vous ou mettez à jour les identifiants du fournisseur, puis réessayez.",
-          "title": "Connexion au fournisseur requise"
+          "action": "Votre compte IA vous demande de vous reconnecter. Connectez-vous, puis renvoyez votre message.",
+          "title": "Reconnectez-vous pour continuer"
         },
         "commandMissing": {
-          "action": "Installez ou configurez la commande du fournisseur, puis réessayez.",
-          "title": "Commande du fournisseur introuvable"
+          "action": "Installez-le dans les Réglages, puis renvoyez votre message.",
+          "title": "Cet outil d'IA n'est pas encore installé"
         },
         "connection": {
-          "action": "Vérifiez le service du fournisseur ou le réseau, puis réessayez.",
-          "title": "Connexion au fournisseur interrompue"
+          "action": "Vérifiez votre connexion internet, puis renvoyez votre message.",
+          "title": "La connexion a été coupée"
         },
         "generic": {
-          "action": "Réessayez la tâche. Si elle échoue encore, vérifiez les réglages du fournisseur.",
-          "title": "La tâche s’est arrêtée"
+          "action": "Renvoyez votre message. Si cela se reproduit, essayez un autre modèle d'IA.",
+          "title": "Cette réponse s'est arrêtée"
         },
         "permission": {
-          "action": "Vérifiez les autorisations de fichiers du fournisseur, puis réessayez.",
-          "title": "Accès du fournisseur bloqué"
+          "action": "Vérifiez que DJL peut ouvrir ce dossier, puis renvoyez votre message.",
+          "title": "DJL n'a pas pu ouvrir un fichier nécessaire"
         },
         "rateLimit": {
-          "action": "Attendez la réinitialisation de la limite ou changez de fournisseur, puis réessayez.",
-          "title": "Limite du fournisseur atteinte"
+          "action": "Attendez que la limite soit réinitialisée ou passez à un autre compte, puis renvoyez.",
+          "title": "Vous avez atteint la limite de votre forfait"
         },
         "workspaceMissing": {
-          "action": "Choisissez un dossier de projet existant, puis renvoyez votre message.",
-          "title": "Dossier de travail indisponible"
+          "action": "Choisissez un dossier qui existe encore, puis renvoyez votre message.",
+          "title": "Ce dossier est introuvable"
         }
       },
       "renameThreadFailed": "Impossible de renommer le thread",
@@ -584,6 +593,337 @@
       },
       "unavailable": "Le fournisseur {{provider}} n’est pas disponible."
     },
+    "home": {
+      "mascot": "Dites bonjour à DJL",
+      "modeLabel": "Type de tâche",
+      "modes": {
+        "code": "Code",
+        "work": "Travail"
+      },
+      "suggestionsLabel": "Suggestions : {{topic}}",
+      "topics": {
+        "apps": {
+          "label": "Applis",
+          "suggestions": {
+            "s1": {
+              "label": "Créer une appli de suivi d’habitudes",
+              "prompt": "Créez une appli simple de suivi d’habitudes où je peux ajouter des habitudes, les cocher chaque jour et voir mes séries. Gardez un design épuré et enregistrez tout sur cet ordinateur."
+            },
+            "s2": {
+              "label": "Faire un calculateur de budget",
+              "prompt": "Faites un petit calculateur de budget : je saisis mes revenus et mes dépenses mensuels par catégorie, et il m’affiche ce qu’il reste avec un graphique simple. Expliquez-moi comment l’ouvrir une fois terminé."
+            },
+            "s3": {
+              "label": "Créer un quiz pour enfants",
+              "prompt": "Créez un quiz coloré pour les enfants de 8 à 10 ans, avec 10 questions à choix multiples, un score à la fin et un bouton pour rejouer."
+            },
+            "s4": {
+              "label": "Transformer un tableur en appli",
+              "prompt": "Je vais vous transmettre un tableur. Transformez-le en petite appli qui me permet de chercher, filtrer et ajouter des lignes sans ouvrir le tableur."
+            }
+          }
+        },
+        "automation": {
+          "label": "Automatisations",
+          "suggestions": {
+            "s1": {
+              "label": "Renommer un dossier de photos",
+              "prompt": "Renommez toutes les photos d’un dossier de mon choix selon leur date de prise de vue, par exemple 2026-05-14 Plage 01.jpg. Montrez-moi la liste des changements avant de renommer quoi que ce soit."
+            },
+            "s2": {
+              "label": "Ranger mon dossier Téléchargements",
+              "prompt": "Triez mon dossier Téléchargements en sous-dossiers par type de fichier (documents, images, vidéos, programmes d’installation, autres). Dites-moi ce que vous allez déplacer avant de le faire."
+            },
+            "s3": {
+              "label": "Fusionner des tableurs en un seul",
+              "prompt": "Regroupez tous les tableurs d’un dossier dans une seule feuille avec les mêmes colonnes, et ajoutez une colonne indiquant de quel fichier vient chaque ligne."
+            },
+            "s4": {
+              "label": "Créer un script de résumé quotidien",
+              "prompt": "Écrivez un script que je peux lancer chaque matin pour lister les fichiers que j’ai modifiés la veille et rédiger une courte note de résumé. Expliquez-moi simplement comment le lancer."
+            }
+          }
+        },
+        "data": {
+          "label": "Données",
+          "suggestions": {
+            "s1": {
+              "label": "Repérer les tendances de mes ventes",
+              "prompt": "Je vais vous transmettre un tableur de ventes. Trouvez les grandes tendances, les meilleurs et les pires mois, et tout ce qui sort de l’ordinaire, puis résumez le tout en cinq points avec un graphique simple."
+            },
+            "s2": {
+              "label": "Nettoyer un tableur en désordre",
+              "prompt": "Nettoyez le tableur que je vous transmets : harmonisez les dates et les noms, supprimez les lignes en double et listez chaque modification pour que je puisse vérifier."
+            },
+            "s3": {
+              "label": "Créer un tableau de bord simple",
+              "prompt": "Transformez mes données en tableau de bord d’une page avec trois ou quatre chiffres clés et deux graphiques. Si je ne vous ai pas encore transmis de données, utilisez des chiffres d’exemple clairement indiqués."
+            },
+            "s4": {
+              "label": "Comparer deux listes",
+              "prompt": "Comparez les deux listes que je vous transmets et dites-moi quels éléments figurent dans les deux, lesquels sont seulement dans la première et lesquels sont seulement dans la seconde."
+            }
+          }
+        },
+        "docs": {
+          "label": "Docs techniques",
+          "suggestions": {
+            "s1": {
+              "label": "Rédiger un README pour mon projet",
+              "prompt": "Lisez ce projet et rédigez un README clair : ce qu’il fait, comment l’installer, comment le lancer et où trouver de l’aide. Restez bref et chaleureux."
+            },
+            "s2": {
+              "label": "Expliquer ce code simplement",
+              "prompt": "Expliquez en termes simples ce que fait ce projet, pour quelqu’un qui ne code pas, puis listez ses principales parties et à quoi sert chacune."
+            },
+            "s3": {
+              "label": "Documenter une API",
+              "prompt": "Rédigez une documentation simple pour l’API de ce projet : chaque point de terminaison, ce qu’il faut envoyer, ce qui est renvoyé et un exemple pour chacun."
+            },
+            "s4": {
+              "label": "Rédiger les étapes d’installation",
+              "prompt": "Rédigez des instructions d’installation pas à pas qu’un nouveau collègue peut suivre sur un ordinateur neuf, avec ce qu’il faut installer en premier et comment vérifier que tout fonctionne."
+            }
+          }
+        },
+        "documents": {
+          "label": "Documents",
+          "suggestions": {
+            "s1": {
+              "label": "Résumer un long document",
+              "prompt": "Résumez en une page le document que je vous transmets : les points principaux, les décisions ou échéances éventuelles, et trois questions que je devrais poser à son sujet."
+            },
+            "s2": {
+              "label": "Rédiger un rapport hebdo",
+              "prompt": "Rédigez un rapport hebdomadaire à partir de mes notes, en trois courtes parties : ce qui a été fait, ce qui bloque et la suite. Restez sous les 300 mots et signalez tout ce que vous avez dû deviner."
+            },
+            "s3": {
+              "label": "Créer un modèle de compte rendu",
+              "prompt": "Créez un modèle de compte rendu de réunion réutilisable, avec des sections pour les participants, l’ordre du jour, les décisions et les actions à mener avec leurs responsables et leurs échéances."
+            },
+            "s4": {
+              "label": "Relire et améliorer mon texte",
+              "prompt": "Relisez le texte que je vous transmets. Corrigez l’orthographe et la grammaire, rendez-le plus clair et plus concis, tout en gardant mon ton. Montrez-moi les modifications apportées."
+            }
+          }
+        },
+        "email": {
+          "label": "E-mails",
+          "suggestions": {
+            "s1": {
+              "label": "Écrire une relance polie",
+              "prompt": "Rédigez un e-mail de relance poli mais clair pour quelqu’un qui n’a pas répondu depuis une semaine. Ajoutez un objet et laissez des blancs pour les noms et les dates."
+            },
+            "s2": {
+              "label": "Répondre à un message délicat",
+              "prompt": "Aidez-moi à répondre au message que je colle ici. Restez calme et professionnel, reconnaissez son point de vue et proposez une prochaine étape."
+            },
+            "s3": {
+              "label": "Demander un avis sur un brouillon",
+              "prompt": "Rédigez un court e-mail pour demander à un collègue son avis sur mon brouillon avant une date précise, en lui permettant de répondre facilement en quelques commentaires."
+            },
+            "s4": {
+              "label": "Annoncer un changement à l’équipe",
+              "prompt": "Rédigez une annonce chaleureuse pour l’équipe à propos d’un changement que je décris : ce qui change, quand, en quoi c’est utile et à qui poser ses questions."
+            }
+          }
+        },
+        "fixes": {
+          "label": "Corriger un bug",
+          "suggestions": {
+            "s1": {
+              "label": "Comprendre pourquoi un bouton ne fait rien",
+              "prompt": "Un bouton de ce projet ne fait rien quand je clique dessus. Trouvez pourquoi, corrigez le problème et expliquez la cause en une ou deux phrases."
+            },
+            "s2": {
+              "label": "Corriger un message d’erreur",
+              "prompt": "Je vais coller un message d’erreur. Trouvez d’où il vient dans ce projet, corrigez la cause et dites-moi comment vérifier qu’il a disparu."
+            },
+            "s3": {
+              "label": "Accélérer une page lente",
+              "prompt": "Une page de ce projet met du temps à charger. Trouvez ce qui la ralentit, corrigez la cause principale et dites-moi combien de temps elle gagne."
+            },
+            "s4": {
+              "label": "L’adapter aux téléphones",
+              "prompt": "Faites en sorte que ce site s’affiche correctement sur téléphone : vérifiez chaque page sur un petit écran et corrigez tout ce qui dépasse ou qui est trop petit pour être touché du doigt."
+            }
+          }
+        },
+        "planning": {
+          "label": "Organisation",
+          "suggestions": {
+            "s1": {
+              "label": "Planifier un projet",
+              "prompt": "Aidez-moi à planifier un projet. Posez-moi d’abord trois questions rapides, puis établissez un calendrier avec les étapes clés, les responsables et l’étape la plus risquée mise en évidence."
+            },
+            "s2": {
+              "label": "Faire une liste de tâches à partir de notes",
+              "prompt": "Transformez mes notes en vrac en une liste de tâches claire, classée par priorité, avec en haut les trois choses à faire aujourd’hui."
+            },
+            "s3": {
+              "label": "Organiser un événement d’équipe",
+              "prompt": "Organisez un événement d’équipe d’une demi-journée pour environ 15 personnes : un programme, une liste de choses à réserver et un budget approximatif avec des exemples de coûts."
+            },
+            "s4": {
+              "label": "Préparer une réunion",
+              "prompt": "Aidez-moi à préparer une réunion importante : l’objectif, les trois points que je dois faire passer, les questions probables et une réponse courte à chacune."
+            }
+          }
+        },
+        "research": {
+          "label": "Recherche",
+          "suggestions": {
+            "s1": {
+              "label": "Comparer des produits avant d’acheter",
+              "prompt": "Comparez les meilleures options pour un produit que je vous indique. Faites un tableau avec le prix, les principales fonctionnalités, les avantages et les inconvénients, et dites-moi lequel convient au plus grand nombre et pourquoi."
+            },
+            "s2": {
+              "label": "Me renseigner sur un sujet",
+              "prompt": "Faites des recherches sur un sujet que je vous indique et donnez-moi une courte synthèse : les faits essentiels, les principaux points de vue et des liens vers trois sources fiables."
+            },
+            "s3": {
+              "label": "Comprendre une entreprise",
+              "prompt": "Expliquez comment une entreprise que je vous indique gagne de l’argent, qui sont ses principaux concurrents et ce qui évolue sur son marché, en moins de 400 mots."
+            },
+            "s4": {
+              "label": "Vérifier une affirmation",
+              "prompt": "Vérifiez si l’affirmation que je colle ici est vraie. Montrez ce que disent des sources fiables, votre degré de certitude et ce qui reste encore flou."
+            }
+          }
+        },
+        "review": {
+          "label": "Revue de code",
+          "suggestions": {
+            "s1": {
+              "label": "Relire mes derniers changements",
+              "prompt": "Relisez les derniers changements de ce projet à la recherche de bugs, de noms peu clairs et d’erreurs non gérées. Listez d’abord les problèmes les plus importants."
+            },
+            "s2": {
+              "label": "Ajouter des tests à une fonctionnalité",
+              "prompt": "Ajoutez des tests pour la fonctionnalité principale de ce projet, lancez-les et dites-moi simplement ce qu’ils vérifient et s’ils réussissent."
+            },
+            "s3": {
+              "label": "Chercher des failles de sécurité",
+              "prompt": "Passez ce projet en revue à la recherche de problèmes de sécurité courants, comme des secrets dans le code ou des saisies utilisateur non vérifiées, et proposez des correctifs pour les plus graves."
+            },
+            "s4": {
+              "label": "Mettre de l’ordre dans le code",
+              "prompt": "Trouvez la partie la plus désordonnée de ce projet et remettez-la au propre sans changer ce qu’elle fait, puis expliquez ce que vous avez amélioré."
+            }
+          }
+        },
+        "slides": {
+          "label": "Présentations",
+          "suggestions": {
+            "s1": {
+              "label": "Transformer des notes en présentation",
+              "prompt": "Transformez mes notes en une présentation de 6 diapositives, avec une diapositive de titre, une idée par diapositive et un court résumé à la fin."
+            },
+            "s2": {
+              "label": "Préparer le plan d’un pitch",
+              "prompt": "Établissez le plan d’un pitch de 10 diapositives pour une idée que je décris : le problème, la solution, pour qui c’est, comment ça rapporte de l’argent, l’équipe et ce que je demande."
+            },
+            "s3": {
+              "label": "Créer une présentation de formation",
+              "prompt": "Créez une courte présentation de formation qui explique à des débutants un sujet que je vous indique, avec des exemples simples et un quiz de trois questions à la fin."
+            },
+            "s4": {
+              "label": "Faire un point d’avancement",
+              "prompt": "Préparez un point d’avancement de projet en 5 diapositives : les progrès réalisés, les résultats, les problèmes, les prochaines étapes et l’aide dont j’ai besoin."
+            }
+          }
+        },
+        "websites": {
+          "label": "Sites web",
+          "suggestions": {
+            "s1": {
+              "label": "Créer un site personnel",
+              "prompt": "Créez un site personnel simple avec une page d’accueil, une page « À propos » et une section contact. Faites en sorte qu’il s’affiche bien sur téléphone et expliquez-moi comment l’ouvrir."
+            },
+            "s2": {
+              "label": "Créer une page de présentation",
+              "prompt": "Créez une page de présentation pour un produit que je décris, avec un titre clair, trois avantages, une courte FAQ et un bouton d’inscription."
+            },
+            "s3": {
+              "label": "Créer un site pour une petite entreprise",
+              "prompt": "Créez un site de quatre pages pour une petite entreprise : accueil, services, à propos et contact, avec les horaires d’ouverture et un emplacement réservé pour une carte."
+            },
+            "s4": {
+              "label": "Créer une page de liste de tâches",
+              "prompt": "Créez une page web de liste de tâches où je peux ajouter, cocher et supprimer des tâches, et où la liste est toujours là quand je rouvre la page."
+            }
+          }
+        }
+      },
+      "skillsLabel": "Compétences pour cette tâche",
+      "removeSkill": "Retirer {{name}}",
+      "skills": {
+        "docx": {
+          "name": "Documents Word",
+          "description": "Crée et modifie de vrais fichiers Word avec titres, tableaux et mise en page soignés."
+        },
+        "copy-editing": {
+          "name": "Relecture",
+          "description": "Corrige et resserre votre texte en gardant votre ton."
+        },
+        "xlsx": {
+          "name": "Tableurs",
+          "description": "Lit, nettoie et crée des fichiers Excel et CSV avec des formules et graphiques qui marchent."
+        },
+        "build-dashboard": {
+          "name": "Tableaux de bord",
+          "description": "Transforme des données en tableau de bord interactif d'une page, chiffres clés et graphiques."
+        },
+        "pptx": {
+          "name": "Diapositives PowerPoint",
+          "description": "Crée de vraies présentations PowerPoint, nettes et faciles à lire."
+        },
+        "theme-factory": {
+          "name": "Thèmes de diapositives",
+          "description": "Applique un thème de couleurs et de polices cohérent aux diapositives et documents."
+        },
+        "djl-research": {
+          "name": "Recherche",
+          "description": "Cherche dans de vraies sources, compare les options équitablement et cite chaque affirmation."
+        },
+        "djl-email": {
+          "name": "Rédaction d'e-mails",
+          "description": "Écrit des e-mails clairs et aimables, avec une prochaine étape évidente."
+        },
+        "djl-planning": {
+          "name": "Planification",
+          "description": "Découpe un objectif en petites étapes datées, avec responsables, risques et points de contrôle."
+        },
+        "frontend-design": {
+          "name": "Design frontend",
+          "description": "Donne aux pages un style affirmé et réfléchi, loin des modèles tout faits."
+        },
+        "frontend-ui-engineering": {
+          "name": "Écrans d'application",
+          "description": "Crée des écrans accessibles qui s'adaptent à toutes les tailles."
+        },
+        "systematic-debugging": {
+          "name": "Débogage méthodique",
+          "description": "Trouve la cause réelle avant de modifier quoi que ce soit."
+        },
+        "djl-automation": {
+          "name": "Automatisation sûre",
+          "description": "Montre chaque changement d'abord, ne supprime jamais et garde une liste pour annuler."
+        },
+        "code-review-and-quality": {
+          "name": "Revue de code",
+          "description": "Relit le code : exactitude, sécurité, rapidité et lisibilité."
+        },
+        "documentation-and-adrs": {
+          "name": "Documentation technique",
+          "description": "Écrit une doc qui explique le pourquoi et repère celle qui ne correspond plus au code."
+        },
+        "create-readme": {
+          "name": "Rédaction de README",
+          "description": "Écrit un README clair : ce que fait le projet, comment l'installer et le lancer."
+        }
+      }
+    },
     "image": {
       "download": "Télécharger l’image générée",
       "downloadError": "Impossible de télécharger l’image générée",
@@ -659,6 +999,26 @@
       "noPiModels": "Aucun modèle Pi trouvé",
       "search": "Rechercher des modèles ou des fournisseurs",
       "setUpLocalAi": "Configurer l'IA locale…"
+    },
+    "modelPanel": {
+      "aboutEffort": "À propos de l'effort",
+      "addProvider": "Ajouter un fournisseur d'IA",
+      "checking": "Vérification de {{provider}}…",
+      "effortNote": "Plus d'effort signifie plus de réflexion avant de répondre. Ultracode permet aussi à Claude de planifier seul des tâches en plusieurs étapes.",
+      "effortNoteBasic": "Plus d'effort signifie plus de réflexion avant de répondre.",
+      "fastMode": "Mode rapide",
+      "faster": "Plus rapide",
+      "noFavourites": "Ajoutez une étoile à un modèle pour le garder ici.",
+      "recommended": "Recommandé",
+      "searchPlaceholder": "Rechercher des modèles...",
+      "signInTo": "Connectez-vous à {{provider}} pour utiliser ses modèles.",
+      "smarter": "Plus intelligent",
+      "unavailable": "{{provider}} n'est pas disponible pour le moment.",
+      "account": "Compte",
+      "accountLeft": "{{percent}} % restant",
+      "accountDefaultTag": "Par défaut",
+      "accountSignedOut": "Déconnecté",
+      "makeDefault": "Utiliser pour les nouvelles discussions"
     },
     "models": {
       "addFavorite": "Ajouter {{name}} aux favoris",
@@ -983,7 +1343,6 @@
       "library": "Médiathèque",
       "loading": "Chargement des outils de réseaux sociaux…",
       "navigation": "Outils sociaux",
-      "open": "Outils sociaux",
       "product": "Lien produit",
       "publishingHistory": "Historique des publications",
       "results": "Analyse des résultats",
@@ -1512,6 +1871,11 @@
       "unpublish": "Dépublier",
       "unpublishTitle": "Dépublier {{address}} ?",
       "unpublishDescription": "Le site est mis hors ligne immédiatement et son adresse redevient libre pour tout le monde. Les fichiers de votre projet restent sur cet ordinateur."
+    },
+    "accountSwitch": {
+      "switched": "Passé à {{to}} : {{from}} a atteint sa limite d'utilisation.",
+      "resets": "Elle se réinitialise à {{time}}.",
+      "mainAccount": "compte principal"
     }
   },
   "common": {
@@ -1626,7 +1990,25 @@
   },
   "settings": {
     "accounts": {
+      "addAnotherTool": "Ajouter un autre outil d'IA ({{total}})",
       "checking": "Vérification…",
+      "claudeCompatible": {
+        "description": "Les forfaits de programmation Doubao et DeepSeek passent par Claude Code avec la clé API de votre forfait. Installez Claude Code, enregistrez la clé ici, puis choisissez Utiliser pour les nouveaux chats.",
+        "getKey": "Obtenir une clé API",
+        "keyLabel": "Clé API {{provider}}",
+        "keyMissing": "Aucune clé API enregistrée",
+        "keyPlaceholder": "Collez votre clé API",
+        "keySaved": "Clé API enregistrée",
+        "loadError": "Impossible de vérifier les clés API enregistrées.",
+        "region": "Région Doubao",
+        "regionChina": "Chine continentale",
+        "regionInternational": "Hors de Chine (BytePlus)",
+        "remove": "Supprimer",
+        "replacePlaceholder": "Collez une nouvelle clé pour remplacer celle enregistrée",
+        "save": "Enregistrer",
+        "saveError": "Enregistrement impossible. Réessayez.",
+        "title": "Forfaits de programmation"
+      },
       "codingPlansDescription": "Dans la connexion OpenCode, choisissez Z.AI Coding Plan pour GLM, Kimi For Coding ou le fournisseur de votre forfait de programmation MiniMax. Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code et Pi se connectent ci-dessus avec leurs CLI officielles et réutilisent la session déjà ouverte dans ces CLI.",
       "codingPlansTitle": "Modèles chinois et forfaits de programmation",
       "default": "Par défaut pour les nouveaux chats",
@@ -1663,6 +2045,9 @@
       "installNotDetected": "DJL ne trouve pas {{provider}} après l’installation. Consultez le guide de configuration, puis réessayez.",
       "loadError": "Impossible de vérifier les comptes.",
       "loginFor": "Se connecter à {{provider}}",
+      "moreOptions": "Autres façons de se connecter",
+      "moreOptionsDescription": "Clés API des forfaits de code, mises à jour des outils et autres forfaits.",
+      "noneConnected": "Aucun outil d'IA n'est encore connecté. Choisissez-en un ci-dessous et connectez-vous.",
       "openCodeExistingKept": "Connexions existantes du CLI conservées : {{providers}}.",
       "openCodeLegacyAvailable": "Des connexions enregistrées dans DJL peuvent être copiées : {{providers}}. Les connexions existantes du CLI seront conservées, ainsi que les identifiants DJL d’origine dans une sauvegarde.",
       "openCodeSharedLogin": "OpenCode partage la connexion de votre CLI OpenCode installé. Vous connecter ici met aussi à jour la connexion du CLI.",
@@ -1691,6 +2076,33 @@
       "resetAriaLabel": "Rétablir {{label}} par défaut",
       "resetToDefault": "Rétablir la valeur par défaut",
       "restoreDefaults": "Rétablir les valeurs par défaut"
+    },
+    "aiAccounts": {
+      "addAccount": "Ajouter un compte",
+      "addAndSignIn": "Ajouter et se connecter",
+      "cancel": "Annuler",
+      "description": "Ajoutez d'autres abonnements Claude Code et Codex, voyez ce qu'il reste à chacun et choisissez celui des nouvelles discussions.",
+      "error": "Un problème est survenu avec les comptes IA.",
+      "inUse": "Utilisé",
+      "mainAccount": "Compte principal",
+      "nameLabel": "Nom du nouveau compte {{provider}}",
+      "namePlaceholder": "Nommez-le, par exemple Travail ou Perso",
+      "noUsage": "Aucune utilisation pour l'instant",
+      "refresh": "Actualiser l'utilisation",
+      "remove": "Retirer",
+      "removeConfirm": "Retirer {{name}} ? DJL le déconnecte et supprime sa connexion enregistrée.",
+      "signIn": "Se connecter",
+      "signInAgain": "Se reconnecter",
+      "status": {
+        "signedIn": "Connecté",
+        "signedOut": "Non connecté",
+        "unavailable": "Désactivé dans Comptes",
+        "unknown": "Connexion non vérifiée"
+      },
+      "switchNote": "Les nouvelles discussions utilisent le compte marqué Utilisé. Celles déjà commencées gardent leur compte.",
+      "usageUnavailable": "Utilisation indisponible pour le moment",
+      "autoSwitch": "Changer de compte automatiquement",
+      "autoSwitchHint": "Quand le compte d'une discussion atteint sa limite de 5 heures ou hebdomadaire, DJL continue sur le compte connecté qui a le plus d'utilisation restante et l'indique dans la discussion."
     },
     "appearance": {
       "baseFontSize": {
@@ -2274,6 +2686,11 @@
           "description": "Raccourcis, récupération et informations de version.",
           "eyebrow": "Outils système",
           "label": "Avancé"
+        },
+        "aiAccounts": {
+          "description": "Plusieurs abonnements Claude et Codex, et celui que les nouvelles discussions utilisent.",
+          "eyebrow": "Changer de compte",
+          "label": "Comptes IA"
         },
         "appearance": {
           "description": "Langue, thème, typographie et format de l’heure.",
@@ -3424,6 +3841,7 @@
       "working": "En cours…"
     },
     "usage": {
+      "cannotShow": "L'utilisation ne peut pas être affichée pour le moment.",
       "learnMore": "En savoir plus",
       "left": "{{remaining}} restants",
       "loading": "Chargement de l’utilisation…",
@@ -3448,7 +3866,7 @@
           "on-track": "dans les temps"
         }
       },
-      "privacyDescription": "L’utilisation est lue localement dans les identifiants de chaque CLI et récupérée directement auprès du fournisseur. Les fournisseurs OAuth peuvent renouveler leurs jetons via leur point officiel ; si « Non connecté » apparaît, reconnectez-vous avec la CLI.",
+      "privacyDescription": "DJL lit votre utilisation directement auprès de chaque service d'IA, avec la connexion de cet ordinateur. Si un compte indique « Non connecté », reconnectez-vous depuis Comptes.",
       "rateLimits": {
         "current": "Actuel",
         "fiveHours": "5 h",
@@ -3460,14 +3878,16 @@
       },
       "rateLimitsRemaining": "Limites restantes",
       "remainingAriaLabel": "{{label}} : {{remaining}} restants",
+      "signInToSee": "Connectez-vous à {{provider}} pour voir ce qu'il vous reste.",
+      "signedInNoUsage": "Vous êtes connecté à {{provider}}. L'utilisation s'affichera après votre prochaine conversation.",
       "source": "Source d’utilisation : {{source}}",
       "status": {
         "notSignedIn": "Non connecté",
+        "signedIn": "Connecté",
         "unavailable": "Indisponible",
         "unsupported": "Non pris en charge"
       },
-      "title": "Utilisation des fournisseurs",
-      "unavailableWithDetail": "Utilisation indisponible. {{detail}}"
+      "title": "Utilisation des fournisseurs"
     },
     "couldNotCheckPermissions": "Could not check permissions",
     "keyboardFocus": "keyboard focus",
@@ -3618,7 +4038,6 @@
     },
     "multiAgents": {
       "title": "Multi-agents",
-      "beta": "Bêta",
       "newGroup": "Nouveau groupe",
       "groups": "Groupes",
       "emptyTitle": "Réunissez vos agents dans une discussion",
@@ -4042,7 +4461,7 @@
       "settings": {
         "action": "Démarrer le tutoriel",
         "basicTitle": "Tutoriel de base",
-        "description": "Revoir la visite guidée du mode agent, des projets, des recommandations d’IA locale et des paramètres.",
+        "description": "Revoir la visite guidée de Travail et Code, des Projets, des recommandations d’IA locale et des Réglages.",
         "section": "Bien démarrer",
         "title": "Tutoriel pour débutants"
       },
@@ -4061,8 +4480,8 @@
           "title": "Choisir la spécialité de l’IA locale"
         },
         "project-mode": {
-          "description": "Utilisez Projets lorsque le travail appartient à un dossier ou à une base de code et nécessite un contexte continu.",
-          "title": "Mode Projets"
+          "description": "Choisissez un dossier sous la zone de message pour ranger la tâche dans ce projet. Sinon, elle va dans Récents.",
+          "title": "Projets"
         },
         "settings": {
           "description": "Ouvrez les Paramètres ici pour modifier la langue, les modèles, l’apparence et le comportement de l’application.",
@@ -4073,8 +4492,8 @@
           "title": "Revoir les tutoriels à tout moment"
         },
         "work-mode": {
-          "description": "Commencez une tâche, puis saisissez @ pour la poursuivre avec un autre agent en conservant son contexte.",
-          "title": "Mode agent"
+          "description": "Choisissez Travail pour les documents, les recherches et les tâches du quotidien, ou Code pour créer et corriger des logiciels. Choisissez un sujet pour une consigne toute prête.",
+          "title": "Travail ou Code"
         }
       }
     },
@@ -4432,7 +4851,8 @@
         "newThread": "Nouveau fil",
         "newWorkspace": "Nouvel espace de travail",
         "social": "Réseaux sociaux",
-        "socialNeedsChat": "Commencez d’abord un clavardage. Les publications sont conservées avec un clavardage."
+        "socialNeedsChat": "Commencez d’abord un clavardage. Les publications sont conservées avec un clavardage.",
+        "newChat": "Nouvelle discussion"
       },
       "adding": "Ajout...",
       "addProject": "Ajouter un projet",
@@ -4477,7 +4897,7 @@
       "automationCount_other": "Automatisations {{count}}",
       "browse": "Parcourir",
       "cancelAddProject": "Annuler le projet ajouter",
-      "chats": "Discussions",
+      "chats": "Récents",
       "confirm": {
         "archiveThread": "Fil d'archives \"{{title}}\" ?\nLes fils archivés sont cachés dans la barre latérale mais peuvent être restaurés plus tard.",
         "deleteThread": "Supprimer le fil \"{{title}}\" ?\nCela efface définitivement l'historique de la conversation pour ce fil.",
@@ -4820,6 +5240,50 @@
       "spinClockwise": "Tourner dans le sens horaire",
       "spinCounterClockwise": "Tourner dans le sens antihoraire",
       "title": "Coupe du monde 2026"
+    },
+    "skillsStore": {
+      "title": "Compétences",
+      "hint": "Les compétences apprennent à Claude Code et Codex à bien faire un type de tâche. Celles que vous installez apparaissent dans le menu $.",
+      "search": "Rechercher des compétences",
+      "installed": "Installées",
+      "reviewedResults": "Vérifiées par DJL",
+      "liveResults": "Depuis skills.sh",
+      "liveHint": "Non vérifiées par DJL. Regardez ce qu'une compétence fait avant de l'utiliser.",
+      "searching": "Recherche sur skills.sh…",
+      "searchFailed": "Impossible de joindre skills.sh. Réessayez dans un instant.",
+      "noMatches": "Aucune compétence ne correspond.",
+      "builtIn": "Intégrée",
+      "unreviewed": "Non vérifiée",
+      "install": "Installer",
+      "installNamed": "Installer {{name}}",
+      "installing": "Installation…",
+      "working": "En cours…",
+      "update": "Mettre à jour",
+      "remove": "Supprimer",
+      "installedTag": "Installée",
+      "edited": "Vous avez modifié cette compétence après l'avoir installée.",
+      "installs": "{{value}} installations",
+      "notOnGitHub": "Pas sur GitHub",
+      "viewOnGitHub": "Voir sur GitHub",
+      "previewFailed": "Impossible de charger cette compétence.",
+      "scriptsWarning": "Cette compétence contient des scripts que l'agent peut exécuter.",
+      "unreviewedNote": "DJL n'a pas vérifié cette compétence. Regardez ce qu'elle fait avant de l'utiliser.",
+      "builtInNote": "Fournie avec DJL. Choisissez-la dans le menu $ ou via un sujet de l'accueil.",
+      "consentScriptsTitle": "Installer une compétence qui exécute des scripts ?",
+      "consentScriptsBody": "{{name}} contient des fichiers que l'agent peut exécuter sur votre ordinateur. Ne l'installez que si vous faites confiance à {{owner}}.",
+      "consentEditsTitle": "Remplacer vos modifications ?",
+      "consentEditsBody": "Vous avez modifié {{name}} après l'avoir installée. La mise à jour remplace vos modifications.",
+      "installAnyway": "Installer quand même",
+      "replaceChanges": "Remplacer mes modifications",
+      "categories": {
+        "design": "Conception",
+        "coding": "Développement",
+        "documents": "Fichiers bureautiques",
+        "writing": "Rédaction",
+        "research": "Recherche et planification",
+        "data": "Données",
+        "tools": "Outils"
+      }
     }
   },
   "whatsNew": {
@@ -5657,10 +6121,20 @@
       "terminalHint": "Choisissez le compte à partager entre ces terminaux. Utilisez un autre profil pour un second abonnement.",
       "title": "Espaces de travail",
       "useThisAccount": "Utiliser ce compte",
-      "welcomeDescription": "Exécutez vos agents côte à côte. Organisez les terminaux par projet, avec un profil distinct pour chaque abonnement.",
+      "welcomeDescription": "Lancez des agents de code côte à côte dans un dossier de projet. Vos comptes des Réglages fonctionnent ici tout de suite.",
       "welcomeTitle": "Un espace pour vos agents",
       "workspaceHint": "Regroupez les terminaux dans un espace nommé et choisissez leur dossier de travail.",
-      "workspacePlaceholder": "Mon projet"
+      "workspacePlaceholder": "Mon projet",
+      "mainAccount": "Compte principal",
+      "accountsFromSettings": "Les mêmes comptes que Réglages → Comptes. Pas besoin de vous reconnecter.",
+      "startTitle": "Commencer",
+      "startDescription": "Choisissez un compte pour ouvrir un terminal avec lui. Chaque compte garde sa propre connexion.",
+      "startWith": "Lancer {{provider}}",
+      "shellHint": "Terminal simple, n'importe quel outil",
+      "moreOptions": "Plus d'options",
+      "readyAccounts": "Prêts à l'emploi",
+      "mainTag": "Principal",
+      "browseFolderMenu": "Choisir un autre dossier…"
     },
     "branch": {
       "actions": {

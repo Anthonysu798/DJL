@@ -8,6 +8,7 @@ import {
   isWorkspaceTerminalVisible,
 } from "./workspaceTerminalVisibility";
 import { NewTerminalDialog } from "./NewTerminalDialog";
+import { useWorkspaceAccounts, type WorkspaceAccount } from "./workspaceAccounts";
 import { TerminalCloseDialog } from "./TerminalCloseDialog";
 import "@xterm/xterm/css/xterm.css";
 import {
@@ -20,6 +21,11 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { CLI_ACCOUNTS_QUERY_KEY } from "~/lib/cliAccountsQuery";
+import { resolveWorkspaceProfile, terminalProfileId } from "~/lib/workspaceAccountIds";
+import { ProviderIcon } from "~/components/ProviderIcon";
 import {
   type AgentAccountProfile,
   type AgentWorkspace,
@@ -38,6 +44,7 @@ import {
   XIcon,
 } from "~/lib/icons";
 import { Button } from "~/components/ui/button";
+import { Select, SelectItem, SelectPopup, SelectTrigger } from "~/components/ui/select";
 import {
   Dialog,
   DialogPopup,
@@ -60,9 +67,12 @@ const PROVIDERS = {
   cursor: "Cursor",
   opencode: "OpenCode",
 } as const;
-const COLORS = { codex: "#a3bffa", claudeAgent: "#df9775", cursor: "#d4d4d8", opencode: "#b4a5ef" };
-const control =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+const BROWSE_FOLDER = "__browse-folder__";
+const folderName = (path: string) =>
+  path
+    .replace(/[\\/]+$/, "")
+    .split(/[\\/]/)
+    .pop() ?? path;
 
 export const TerminalPane = memo(function TerminalPane({
   workspace,
@@ -103,7 +113,9 @@ export const TerminalPane = memo(function TerminalPane({
     const host = container.current;
     if (!host) return;
     const agentProfile =
-      profileId && provider ? { provider, profileId, action: pane.action } : undefined;
+      profileId && provider
+        ? { provider, profileId: terminalProfileId(profileId), action: pane.action }
+        : undefined;
     const session = workspaceTerminalSessions.ensure({
       threadId: workspace.id,
       terminalId: pane.id,
@@ -207,12 +219,13 @@ export const TerminalPane = memo(function TerminalPane({
                 : "bg-emerald-400",
           )}
         />
-        <TerminalIcon
-          className="size-4 shrink-0"
-          style={profile ? { color: COLORS[profile.provider] } : undefined}
-        />
+        {profile ? (
+          <ProviderIcon provider={profile.provider} className="size-4 shrink-0" />
+        ) : (
+          <TerminalIcon className="size-4 shrink-0 text-muted-foreground" />
+        )}
         <span className="truncate text-sm font-medium">{label}</span>
-        {profile && (
+        {profile?.name && (
           <span
             className="max-w-40 truncate rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
             title={profile.name}
@@ -281,6 +294,18 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
   const { t } = useTranslation("workspace", { keyPrefix: "agents" });
   const state = useAgentWorkspaceStore();
   const projects = useStore((s) => s.projects);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  // The app's own accounts (normal sign-in + Settings → AI accounts), then workspace-only ones.
+  const accounts = useWorkspaceAccounts(state.profiles);
+  const readyAccounts = accounts.filter((account) => account.known?.status === "signedIn");
+  const projectOptions = projects.filter((p) => p.kind === "project");
+  const projectItems = [
+    { value: "", label: t("customFolder") },
+    ...projectOptions.map((p) => ({ value: p.id, label: p.name })),
+    { value: BROWSE_FOLDER, label: t("browseFolderMenu") },
+  ];
+  const [addingAccount, setAddingAccount] = useState(false);
   const visibleWorkspaces = state.workspaces.filter((w) => !projectId || w.projectId === projectId);
   const active = visibleWorkspaces.find((w) => w.id === state.activeId) ?? visibleWorkspaces[0];
   const [dialog, setDialog] = useState<"workspace" | "terminal" | "profile" | null>(null);
@@ -330,8 +355,8 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
     if (focusedPane) terminalRuntimeRegistry.focus(buildTerminalRuntimeKey(activeId, focusedPane));
   }, [activeId]);
   useEffect(() => {
-    workspaceTerminalSessions.sync(state.workspaces, state.profiles);
-  }, [state.workspaces, state.profiles]);
+    workspaceTerminalSessions.sync(state.workspaces, accounts);
+  }, [state.workspaces, accounts]);
   const maximizePane = useCallback(
     (id: string) => {
       if (!maximized && workspaceView) workspaceView.scrollTop = canvasRef.current?.scrollTop ?? 0;
@@ -384,6 +409,20 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
     setEditing(null);
     setDialog("workspace");
   };
+  // The normal sign-in belongs to the CLI itself; extra accounts sign in into their own folder.
+  const signIn = (account: WorkspaceAccount) => {
+    if (account.id.startsWith("default-")) {
+      void navigate({ to: "/settings", search: { section: "ai-accounts" } });
+      return;
+    }
+    setSignInProfile(account);
+  };
+  const startTerminal = (accountId: string | null) => {
+    if (!active) return;
+    if (accountId) state.selectProfile(accountId);
+    state.addTerminals(active.id, accountId, 1, "run");
+    setMaximized(null);
+  };
   const newProfile = () => {
     setReturnToTerminal(false);
     setName("");
@@ -427,11 +466,11 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
   };
   const launch = (action: AgentWorkspacePane["action"] = "run") => {
     if (action === "login") {
-      const profile = state.profiles.find((p) => p.id === profileId);
-      if (profile) {
+      const account = accounts.find((p) => p.id === profileId);
+      if (account) {
         setDialog(null);
         setReturnToTerminal(true);
-        setSignInProfile(profile);
+        signIn(account);
       }
       return;
     }
@@ -443,59 +482,52 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
   };
   return (
     <RouteInsetSurface>
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-4 [app-region:drag]">
+      <header className="workspace-header [app-region:drag]">
         <div className="[app-region:no-drag]">
           <SidebarHeaderNavigationControls />
         </div>
-        <TerminalIcon className="size-4 text-muted-foreground" />
-        <h1 className="text-sm font-medium">{t("title")}</h1>
-        <span className="text-xs text-muted-foreground">
+        <h1 className="text-sm font-semibold tracking-tight">{t("title")}</h1>
+        <span className="workspace-header-count tabular-nums">
           {t("terminalCount", { count: state.workspaces.reduce((n, w) => n + w.panes.length, 0) })}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto [app-region:no-drag]"
-          onClick={newWorkspace}
-        >
+        <Button size="sm" className="ml-auto [app-region:no-drag]" onClick={newWorkspace}>
           <PlusIcon className="size-4" />
           {t("newWorkspace")}
         </Button>
       </header>
       <div className="flex min-h-0 flex-1 overflow-hidden max-xl:flex-col">
-        <aside
-          className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-muted/10 max-xl:max-h-44 max-xl:w-full max-xl:border-b"
-          aria-label={t("organization")}
-        >
-          <div className="flex items-center justify-between px-4 pb-2 pt-5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        <aside className="workspace-sidebar" aria-label={t("organization")}>
+          <div className="workspace-section-title">
             <span>{t("title")}</span>
-            <button aria-label={t("newWorkspace")} onClick={newWorkspace}>
+            <button
+              className="workspace-icon-button"
+              aria-label={t("newWorkspace")}
+              onClick={newWorkspace}
+            >
               <PlusIcon className="size-3.5" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2">
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
             {visibleWorkspaces.map((w) => (
               <div
                 key={w.id}
-                className={cn(
-                  "group mb-1 flex items-center rounded-lg",
-                  active?.id === w.id && "bg-muted",
-                )}
+                className="workspace-list-row group"
+                data-active={active?.id === w.id || undefined}
               >
                 <button
-                  className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-3 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left"
                   onClick={() => state.selectWorkspace(w.id)}
                 >
                   <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium">{w.name}</span>
-                    <span className="mt-1 block text-[10px] text-muted-foreground">
+                    <span className="block truncate text-[13px] font-medium">{w.name}</span>
+                    <span className="block text-[11px] text-muted-foreground tabular-nums">
                       {t("terminalCount", { count: w.panes.length })}
                     </span>
                   </span>
                 </button>
                 <button
-                  className="mr-2 text-muted-foreground opacity-0 focus:opacity-100 group-hover:opacity-100"
+                  className="workspace-icon-button mr-1.5 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label={t("closeWorkspace", { name: w.name })}
                   onClick={() => setConfirmation({ workspace: w })}
                 >
@@ -504,60 +536,66 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
               </div>
             ))}
             {visibleWorkspaces.length === 0 && (
-              <p className="px-2 py-3 text-xs leading-relaxed text-muted-foreground">
+              <p className="px-2.5 py-2 text-xs leading-relaxed text-muted-foreground text-pretty">
                 {t("workspaceHint")}
               </p>
             )}
           </div>
-          <div className="max-h-[45%] shrink-0 overflow-y-auto border-t border-border/60 px-3 pb-4 pt-3 max-xl:hidden">
-            <div className="mb-3 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          <section className="workspace-accounts liquid-glass" aria-label={t("accounts")}>
+            <div className="workspace-section-title px-1 pt-0">
               <span>{t("accounts")}</span>
-              <div className="flex items-center gap-2">
-                {state.profiles.length > 0 && <RefreshWorkspaceAccounts />}
-                <button aria-label={t("addAccount")} onClick={newProfile}>
+              <span className="flex items-center gap-0.5">
+                <RefreshWorkspaceAccounts />
+                <button
+                  className="workspace-icon-button"
+                  aria-label={t("addAccount")}
+                  onClick={newProfile}
+                >
                   <PlusIcon className="size-3.5" />
                 </button>
-              </div>
+              </span>
             </div>
-            {state.profiles.map((p) => {
-              const used = state.workspaces.reduce(
-                (n, w) => n + w.panes.filter((pane) => pane.profileId === p.id).length,
-                0,
-              );
-              return (
-                <WorkspaceAccountRow
-                  key={p.id}
-                  profile={p}
-                  providerLabel={PROVIDERS[p.provider]}
-                  used={used}
-                  selected={state.selectedProfileId === p.id}
-                  onSelect={() => {
-                    state.selectProfile(p.id);
-                    setProfileId(p.id);
-                  }}
-                  onSignIn={() => {
-                    setReturnToTerminal(false);
-                    setSignInProfile(p);
-                  }}
-                  onEdit={() => {
-                    setEditing({ kind: "profile", id: p.id });
-                    setName(p.name);
-                    setProvider(p.provider);
-                    setDialog("profile");
-                  }}
-                />
-              );
-            })}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full text-xs"
-              onClick={newProfile}
-            >
-              <PlusIcon className="size-3" />
-              {t("addAccount")}
-            </Button>
-          </div>
+            <div className="workspace-accounts-list">
+              {accounts.map((account) => {
+                const used = state.workspaces.reduce(
+                  (n, w) => n + w.panes.filter((pane) => pane.profileId === account.id).length,
+                  0,
+                );
+                return (
+                  <WorkspaceAccountRow
+                    key={account.id}
+                    profile={account}
+                    providerLabel={PROVIDERS[account.provider]}
+                    used={used}
+                    {...(account.known ? { known: account.known } : {})}
+                    {...(account.id.startsWith("default-") ? { mainLabel: t("mainTag") } : {})}
+                    selected={state.selectedProfileId === account.id}
+                    onSelect={() => {
+                      state.selectProfile(account.id);
+                      setProfileId(account.id);
+                    }}
+                    onSignIn={() => {
+                      setReturnToTerminal(false);
+                      signIn(account);
+                    }}
+                    {...(account.fromApp
+                      ? {}
+                      : {
+                          onEdit: () => {
+                            setEditing({ kind: "profile", id: account.id });
+                            setName(account.name);
+                            setProvider(account.provider);
+                            setDialog("profile");
+                          },
+                        })}
+                  />
+                );
+              })}
+            </div>
+            <p className="px-1 pt-1 text-[11px] leading-4 text-muted-foreground text-pretty">
+              {t("accountsFromSettings")}
+            </p>
+          </section>
         </aside>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {error && (
@@ -573,10 +611,10 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
           )}
           {active ? (
             <>
-              <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 border-b border-border/60 px-5 py-3">
+              <div className="workspace-toolbar">
                 <div className="min-w-0 flex-1">
                   <button
-                    className="max-w-full truncate text-sm font-medium"
+                    className="max-w-full truncate text-sm font-semibold"
                     title={t("renameWorkspace")}
                     onClick={() => {
                       setEditing({ kind: "workspace", id: active.id });
@@ -590,68 +628,112 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
                     {active.cwd}
                   </p>
                 </div>
-                <div className="flex rounded-lg border border-border p-0.5">
-                  <Button
-                    variant={active.layout === "split" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => {
-                      state.setLayout(active.id, "split");
-                      setMaximized(null);
-                    }}
-                  >
-                    {t("split")}
-                  </Button>
-                  <Button
-                    variant={active.layout === "grid" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => {
-                      state.setLayout(active.id, "grid");
-                      setMaximized(null);
-                    }}
-                  >
-                    {t("grid")}
-                  </Button>
-                </div>
+                {active.panes.length > 1 && (
+                  <div className="workspace-segmented" role="group">
+                    <button
+                      data-active={active.layout === "split" || undefined}
+                      onClick={() => {
+                        state.setLayout(active.id, "split");
+                        setMaximized(null);
+                      }}
+                    >
+                      {t("split")}
+                    </button>
+                    <button
+                      data-active={active.layout === "grid" || undefined}
+                      onClick={() => {
+                        state.setLayout(active.id, "grid");
+                        setMaximized(null);
+                      }}
+                    >
+                      {t("grid")}
+                    </button>
+                  </div>
+                )}
                 <Button variant="outline" size="sm" onClick={newTerminal}>
                   <PlusIcon className="size-3.5" />
                   {t("newTerminal")}
                 </Button>
               </div>
               {active.panes.length === 0 && (
-                <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-                  <TerminalIcon className="mb-5 size-9 text-muted-foreground/50" />
-                  <h2 className="text-xl font-medium tracking-tight">{t("emptyTitle")}</h2>
-                  <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                    {t("emptyDescription")}
+                <div className="workspace-empty">
+                  <h2 className="text-xl font-semibold tracking-tight text-balance">
+                    {t("startTitle")}
+                  </h2>
+                  <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground text-pretty">
+                    {t("startDescription")}
                   </p>
-                  <div className="mt-6 flex gap-2">
-                    <Button onClick={newTerminal}>
-                      <PlusIcon className="size-4" />
-                      {t("newTerminal")}
-                    </Button>
-                    <Button variant="outline" onClick={newProfile}>
-                      {t("addAccount")}
-                    </Button>
-                  </div>
-                  <div className="mt-8 flex gap-5 text-xs text-muted-foreground">
-                    {Object.values(PROVIDERS).map((p) => (
-                      <span key={p}>{p}</span>
+                  <div className="workspace-start-grid">
+                    {readyAccounts.map((account, index) => (
+                      <button
+                        key={account.id}
+                        className="workspace-start-card liquid-glass"
+                        style={{ animationDelay: `${index * 60}ms` }}
+                        onClick={() => startTerminal(account.id)}
+                      >
+                        <ProviderIcon provider={account.provider} className="size-5" />
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block text-[13px] font-medium">
+                            {t("startWith", { provider: PROVIDERS[account.provider] })}
+                          </span>
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            {account.known?.email ?? account.name}
+                          </span>
+                        </span>
+                      </button>
                     ))}
+                    <button
+                      className="workspace-start-card liquid-glass"
+                      style={{ animationDelay: `${readyAccounts.length * 60}ms` }}
+                      onClick={() => startTerminal(null)}
+                    >
+                      <TerminalIcon className="size-5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block text-[13px] font-medium">{t("shell")}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {t("shellHint")}
+                        </span>
+                      </span>
+                    </button>
                   </div>
+                  <button className="workspace-text-button mt-5" onClick={newTerminal}>
+                    {t("moreOptions")}
+                  </button>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-              <TerminalIcon className="mb-5 size-10 text-muted-foreground/40" />
-              <h2 className="text-2xl font-medium tracking-tight">{t("welcomeTitle")}</h2>
-              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+            <div className="workspace-empty">
+              <span className="workspace-hero-icon liquid-glass">
+                <TerminalIcon className="size-6" />
+              </span>
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight text-balance">
+                {t("welcomeTitle")}
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground text-pretty">
                 {t("welcomeDescription")}
               </p>
               <Button className="mt-6" onClick={newWorkspace}>
                 <PlusIcon className="size-4" />
                 {t("newWorkspace")}
               </Button>
+              {readyAccounts.length > 0 && (
+                <div className="mt-8 flex flex-col items-center gap-2.5">
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {t("readyAccounts")}
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {readyAccounts.map((account) => (
+                      <span key={account.id} className="workspace-ready-chip">
+                        <ProviderIcon provider={account.provider} className="size-3.5" />
+                        <span className="max-w-48 truncate">
+                          {account.known?.email ?? PROVIDERS[account.provider]}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {state.workspaces.map(
@@ -689,7 +771,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
                       <TerminalPane
                         workspace={w}
                         pane={pane}
-                        profile={state.profiles.find((p) => p.id === pane.profileId)}
+                        profile={resolveWorkspaceProfile(pane.profileId, accounts)}
                         maximized={maximized === pane.id}
                         workspaceVisible={w.id === activeId}
                         onMaximize={maximizePane}
@@ -710,6 +792,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
           providerLabel={PROVIDERS[signInProfile.provider]}
           onClose={() => {
             setSignInProfile(null);
+            void queryClient.invalidateQueries({ queryKey: CLI_ACCOUNTS_QUERY_KEY });
             if (returnToTerminal) {
               setProfileId(state.selectedProfileId ?? "");
               setDialog("terminal");
@@ -717,6 +800,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
             setReturnToTerminal(false);
           }}
           onUseAccount={() => {
+            void queryClient.invalidateQueries({ queryKey: CLI_ACCOUNTS_QUERY_KEY });
             state.selectProfile(signInProfile.id);
             setProfileId(signInProfile.id);
             setSignInProfile(null);
@@ -730,7 +814,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
         onOpenChange={(open) => {
           if (!open && dialog === "terminal") setDialog(null);
         }}
-        profiles={state.profiles}
+        profiles={accounts}
         profileId={profileId}
         onProfileChange={setProfileId}
         count={count}
@@ -774,9 +858,25 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
             onSubmit={(event) => {
               event.preventDefault();
               if (dialog === "profile" && !editing) {
-                const count = state.profiles.filter((p) => p.provider === provider).length;
-                const label =
-                  name.trim() || `${PROVIDERS[provider]}${count ? ` ${count + 1}` : ""}`;
+                const count = accounts.filter((p) => p.provider === provider).length;
+                const label = name.trim() || `${PROVIDERS[provider]} ${count + 1}`;
+                if (provider === "codex" || provider === "claudeAgent") {
+                  const appProvider = provider;
+                  // Claude Code and Codex accounts live in Settings → AI accounts, so chats and
+                  // workspaces share one sign-in.
+                  setAddingAccount(true);
+                  void ensureNativeApi()
+                    .cliAccounts.add({ provider: appProvider, name: label })
+                    .then(async (account) => {
+                      await queryClient.invalidateQueries({ queryKey: CLI_ACCOUNTS_QUERY_KEY });
+                      setProfileId(account.id);
+                      setDialog(null);
+                      setSignInProfile({ id: account.id, provider, name: label });
+                    })
+                    .catch((cause: unknown) => setError(String(cause)))
+                    .finally(() => setAddingAccount(false));
+                  return;
+                }
                 const id = state.addProfile(provider, label);
                 setProfileId(id);
                 setDialog(null);
@@ -798,22 +898,26 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
             }}
           >
             <>
-              {dialog === "profile" && (
-                <label className="block space-y-2 text-xs">
-                  <span>{t("provider")}</span>
-                  <select
-                    className={control}
-                    value={provider}
-                    disabled={!!editing}
-                    onChange={(e) => setProvider(e.target.value as AgentAccountProfile["provider"])}
-                  >
-                    {Object.entries(PROVIDERS).map(([id, label]) => (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {dialog === "profile" && !editing && (
+                <div
+                  role="radiogroup"
+                  aria-label={t("provider")}
+                  className="workspace-provider-grid"
+                >
+                  {(Object.keys(PROVIDERS) as AgentAccountProfile["provider"][]).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={provider === id}
+                      className="workspace-provider-tile"
+                      onClick={() => setProvider(id)}
+                    >
+                      <ProviderIcon provider={id} className="size-5" />
+                      <span>{PROVIDERS[id]}</span>
+                    </button>
+                  ))}
+                </div>
               )}
               <label className="block space-y-2 text-xs">
                 <span>{t(dialog === "profile" && !editing ? "accountLabelOptional" : "name")}</span>
@@ -821,7 +925,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
                   autoFocus
                   required={dialog !== "profile" || !!editing}
                   maxLength={80}
-                  className={control}
+                  className="workspace-text-field"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={
@@ -831,37 +935,75 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
               </label>
               {dialog === "workspace" && !editing && (
                 <>
-                  <label className="block space-y-2 text-xs">
+                  <div className="block space-y-2 text-xs">
                     <span>{t("project")}</span>
-                    <select
-                      className={control}
+                    <Select
+                      items={projectItems}
                       value={selectedProject}
-                      onChange={(e) => {
-                        const p = projects.find((p) => p.id === e.target.value);
-                        setSelectedProject(e.target.value);
+                      onValueChange={(value) => {
+                        if (value === BROWSE_FOLDER) {
+                          void pickWorkingFolder();
+                          return;
+                        }
+                        const p = projects.find((project) => project.id === value);
+                        setSelectedProject(value ?? "");
                         if (p) {
                           setCwd(p.cwd);
                           setName((current) => (current.trim() ? current : p.name));
                         }
                       }}
                     >
-                      <option value="">{t("customFolder")}</option>
-                      {projects
-                        .filter((p) => p.kind === "project")
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
+                      <SelectTrigger className="workspace-select-trigger" aria-label={t("project")}>
+                        <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-[13px] font-medium">
+                            {projects.find((p) => p.id === selectedProject)?.name ??
+                              (cwd.trim() ? folderName(cwd) : t("customFolder"))}
+                          </span>
+                          {cwd.trim() && (
+                            <span className="block truncate text-[11px] text-muted-foreground">
+                              {cwd}
+                            </span>
+                          )}
+                        </span>
+                      </SelectTrigger>
+                      <SelectPopup
+                        alignItemWithTrigger={false}
+                        sideOffset={6}
+                        surface="settings"
+                        shellClassName="terminal-launch-menu workspace-select-menu"
+                      >
+                        {projectOptions.map((p) => (
+                          <SelectItem key={p.id} value={p.id} className="workspace-select-option">
+                            <span className="workspace-select-option-row">
+                              <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13px] font-medium">
+                                  {p.name}
+                                </span>
+                                <span className="block truncate text-[11px] text-muted-foreground">
+                                  {p.cwd}
+                                </span>
+                              </span>
+                            </span>
+                          </SelectItem>
                         ))}
-                    </select>
-                  </label>
+                        <SelectItem value={BROWSE_FOLDER} className="workspace-select-option">
+                          <span className="workspace-select-option-row">
+                            <FolderOpenIcon className="size-4 shrink-0 text-muted-foreground" />
+                            <span className="text-[13px] font-medium">{t("browseFolderMenu")}</span>
+                          </span>
+                        </SelectItem>
+                      </SelectPopup>
+                    </Select>
+                  </div>
                   <label className="block space-y-2 text-xs">
                     <span>{t("folder")}</span>
-                    <div className="flex items-center gap-2">
+                    <div className="workspace-path-field">
                       <input
                         required
                         aria-label={t("folder")}
-                        className={control}
+                        className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
                         value={cwd}
                         onChange={(e) => {
                           setCwd(e.target.value);
@@ -872,18 +1014,16 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
                         }}
                         placeholder="/path/to/project"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-10 shrink-0"
+                        className="workspace-icon-button"
                         aria-label={t("browseFolder")}
                         title={t("browseFolder")}
                         disabled={pickingFolder}
                         onClick={() => void pickWorkingFolder()}
                       >
                         <FolderOpenIcon className="size-4" />
-                      </Button>
+                      </button>
                     </div>
                     {folderError && (
                       <span role="alert" className="text-destructive">
@@ -919,6 +1059,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
                 type="submit"
                 disabled={
                   pickingFolder ||
+                  addingAccount ||
                   ((dialog !== "profile" || !!editing) && !name.trim()) ||
                   (dialog === "workspace" && !editing && !cwd.trim())
                 }

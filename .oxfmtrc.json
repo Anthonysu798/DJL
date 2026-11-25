@@ -14,6 +14,7 @@
     "cloud/infra/vps/.secrets",
     "cloud/infra/vps/backups",
     "packages/multipost/vendor",
+    "packages/starter-skills/skills",
     "packages/multipost/src/generated.json",
     "packages/multipost/src/turndown.json",
     "**/__screenshots__"

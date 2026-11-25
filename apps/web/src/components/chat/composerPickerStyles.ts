@@ -238,6 +238,14 @@ export const COMPOSER_COMMAND_MENU_INLINE_WRAPPER_CLASS_NAME =
 export const COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME =
   "flex cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-1 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] data-highlighted:bg-[var(--color-background-button-secondary-hover)]";
 
+/** Composer command menu row: no fill of its own; the gliding highlight sits behind it. */
+export const COMPOSER_COMMAND_MENU_GLIDING_ITEM_CLASS_NAME =
+  "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-1";
+
+/** The one highlight pill that glides between composer command menu rows. */
+export const COMPOSER_COMMAND_MENU_HIGHLIGHT_CLASS_NAME =
+  "command-menu-highlight pointer-events-none absolute inset-x-0 top-0 rounded-md bg-[var(--color-background-button-secondary)]";
+
 /** Active command menu row — keyboard-selected pill fill. */
 export const COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME =
   "bg-[var(--color-background-button-secondary)] text-[var(--color-text-foreground)]";

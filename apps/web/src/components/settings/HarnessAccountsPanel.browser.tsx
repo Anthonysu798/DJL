@@ -8,7 +8,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { HarnessAccountsPanel } from "./HarnessAccountsPanel";
 
 const appSettings = vi.hoisted(() => ({
-  settings: { defaultProvider: "opencode", kimiRegion: "existing" },
+  settings: { defaultProvider: "opencode", kimiRegion: "existing", doubaoRegion: "china" },
   updateSettings: vi.fn(),
 }));
 
@@ -32,6 +32,18 @@ const api = vi.hoisted(() => ({
     maintainTool: vi.fn<() => Promise<HarnessTool>>(),
     startLogin: vi.fn<() => Promise<HarnessLoginResult>>(),
     endLogin: vi.fn(async () => undefined),
+    listClaudeCompatibleKeys: vi.fn(async () => ({
+      keys: [
+        { provider: "doubao", configured: false },
+        { provider: "deepseek", configured: false },
+      ],
+    })),
+    setClaudeCompatibleKey: vi.fn(async (input: { provider: string; apiKey: string }) => ({
+      keys: [
+        { provider: "doubao", configured: input.provider === "doubao" && input.apiKey !== "" },
+        { provider: "deepseek", configured: input.provider !== "deepseek" || input.apiKey !== "" },
+      ],
+    })),
   },
   server: {
     updateSettings: vi.fn(),
@@ -70,6 +82,11 @@ vi.mock("../terminal/terminalRuntimeRegistry", () => ({
   terminalRuntimeRegistry: { attach: vi.fn(), dispose: vi.fn() },
   buildTerminalRuntimeKey: (threadId: string) => threadId,
 }));
+
+// Plans, tool updates and the OpenCode login sit behind "More ways to connect".
+async function openMoreOptions() {
+  await page.getByRole("button", { name: /More ways to connect/ }).click();
+}
 
 async function mount() {
   return render(
@@ -265,6 +282,9 @@ describe("HarnessAccountsPanel guided sign-in", () => {
     });
     await mount();
     await expect.element(page.getByText("Default for new chats")).toBeVisible();
+    // Signed-in tools come first; the others fold away once something is connected.
+    expect(page.getByRole("button", { name: "Sign in", exact: true }).elements()).toHaveLength(0);
+    await page.getByRole("button", { name: "Add another AI tool (", exact: false }).click();
     expect(page.getByRole("button", { name: "Sign in again" }).elements()).toHaveLength(2);
     // Codex is the default already and Cursor is not signed in, so neither offers it.
     expect(page.getByRole("button", { name: "Use for new chats" }).elements()).toHaveLength(2);
@@ -430,6 +450,7 @@ describe("HarnessAccountsPanel install and sign in", () => {
     });
     await mount();
     await expect.element(page.getByText("Official CLI not installed")).toBeVisible();
+    await openMoreOptions();
     await expect.poll(() => api.harnesses.listTools.mock.calls.length).toBeGreaterThan(0);
     // The tools panel below renders the same list, so its rows show the tools have loaded.
     await expect
@@ -445,6 +466,7 @@ it("requires an explicit click to copy saved OpenCode logins", async () => {
     accounts: [{ id: "opencode", installed: true, enabled: true, status: "required" }],
   });
   await mount();
+  await openMoreOptions();
   const transfer = page.getByRole("button", {
     name: "Copy saved DJL logins to OpenCode",
     exact: true,
@@ -456,4 +478,33 @@ it("requires an explicit click to copy saved OpenCode logins", async () => {
   await expect
     .poll(() => api.harnesses.transferLegacyOpenCodeCredentials.mock.calls.length)
     .toBe(1);
+});
+
+it("saves and removes a coding-plan key without showing it again", async () => {
+  api.harnesses.listClaudeCompatibleKeys.mockResolvedValueOnce({
+    keys: [
+      { provider: "doubao", configured: false },
+      { provider: "deepseek", configured: true },
+    ],
+  });
+  await mount();
+  await openMoreOptions();
+  // A plan with a saved key can be chosen for new chats, like the CLI harnesses.
+  await expect
+    .element(page.getByRole("button", { name: "Use for new chats", exact: true }).last())
+    .toBeEnabled();
+  const doubaoKey = page.getByRole("textbox", { name: "Doubao API key" });
+  await expect.element(doubaoKey).toBeVisible();
+  await expect.element(page.getByText("API key saved", { exact: true })).toBeVisible();
+  await doubaoKey.fill("ark-secret");
+  await page.getByRole("button", { name: "Save" }).first().click();
+  await expect
+    .poll(() => api.harnesses.setClaudeCompatibleKey.mock.calls[0]?.[0])
+    .toEqual({ provider: "doubao", apiKey: "ark-secret" });
+  await expect.element(doubaoKey).toHaveValue("");
+  expect(page.getByText("ark-secret").elements()).toHaveLength(0);
+  await page.getByRole("button", { name: "Remove" }).first().click();
+  await expect
+    .poll(() => api.harnesses.setClaudeCompatibleKey.mock.calls[1]?.[0])
+    .toEqual({ provider: "doubao", apiKey: "" });
 });

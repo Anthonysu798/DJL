@@ -25,7 +25,8 @@ import {
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
-import { mergeNativeProfile } from "./profile";
+import { fakeUsageLimitError } from "./devFakeUsageLimit";
+import { mergeNativeProfile, profileAccountDir } from "./profile";
 import { nativeQuestions, nativeApprovalDetail } from "./requests";
 import { bounded } from "./protocol";
 import type { NativeDriver, NativeDriverFactory, NativeProvider, NativeSink } from "./types";
@@ -84,6 +85,10 @@ export const makeNativeAdapter = (
   readProfile: () => Promise<ProviderStartOptions> = async () => ({}),
   /** Extra picker models (connected coding plans, local Ollama) appended to the live list. */
   extraModels: () => Promise<ReadonlyArray<ProviderModelDescriptor>> = async () => [],
+  // Resolves the account a chat chose into its folder (server-owned; see applyChatAccount).
+  applyAccount: (options: ProviderStartOptions) => Promise<ProviderStartOptions> = async (
+    options,
+  ) => options,
 ) =>
   Effect.gen(function* () {
     const queue = yield* Queue.unbounded<ProviderRuntimeEvent>();
@@ -154,10 +159,11 @@ export const makeNativeAdapter = (
       });
     const validateTurn = (input: ProviderSendTurnInput, state: SessionState) => {
       if (!input.input?.trim()) throw new Error("A text prompt is required");
-      // Groups pass attachment paths and skills to members as text; other bridges cannot.
+      // Groups pass attachment paths to members as text; other bridges cannot. Skills are
+      // already inlined into the prompt text upstream, so bridges may ignore the references.
       const acceptsFiles = provider === "group";
       if (
-        (!acceptsFiles && (input.attachments?.length || input.skills?.length)) ||
+        (!acceptsFiles && input.attachments?.length) ||
         input.mentions?.length ||
         input.workTurnPolicy
       )
@@ -180,7 +186,9 @@ export const makeNativeAdapter = (
         updatedAt: new Date().toISOString(),
       };
       emit(state, { type: "turn.started", payload: {} });
-      void state.driver!.send(input).then(
+      const fakeLimit = fakeUsageLimitError(provider, state.profileOptions);
+      const sent = fakeLimit ? Promise.reject(new Error(fakeLimit)) : state.driver!.send(input);
+      void sent.then(
         () => complete(state, "completed"),
         (error: unknown) => {
           if (!state.stopped) {
@@ -265,13 +273,21 @@ export const makeNativeAdapter = (
             );
           const approvalPolicy = input.approvalPolicy ?? saved?.approvalPolicy;
           const sandboxMode = input.sandboxMode ?? saved?.sandboxMode;
-          const providerOptions = mergeNativeProfile(
-            provider,
-            saved?.providerOptions ?? configured,
-            input.providerOptions,
+          const providerOptions = await applyAccount(
+            mergeNativeProfile(
+              provider,
+              saved?.providerOptions ?? configured,
+              input.providerOptions,
+            ),
           );
+          // A session lives in its account's folder: never resume it under a different account.
+          const accountChanged =
+            saved !== undefined &&
+            profileAccountDir(provider, saved.providerOptions) !==
+              profileAccountDir(provider, providerOptions);
+          const { resumeCursor: _savedCursor, ...inputWithoutResume } = input;
           const effectiveInput = {
-            ...input,
+            ...(accountChanged ? inputWithoutResume : input),
             providerOptions,
             ...(approvalPolicy !== undefined ? { approvalPolicy } : {}),
             ...(sandboxMode !== undefined ? { sandboxMode } : {}),

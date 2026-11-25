@@ -107,7 +107,8 @@ export function createHarnessLoginController(input: {
         request.harness === "iflow" ||
         request.harness === "qwen" ||
         request.harness === "copilot" ||
-        request.harness === "codebuddy"
+        request.harness === "codebuddy" ||
+        request.harness === "muse"
           ? Object.keys(process.env).filter((key) => invocation.env[key] === undefined)
           : [];
       try {

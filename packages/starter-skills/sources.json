@@ -1,0 +1,86 @@
+{
+  "docx": {
+    "repo": "anthropics/skills",
+    "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+    "path": "skills/docx",
+    "license": "Apache-2.0",
+    "sha256": "14178e41a478135a42d7c47c9ce7efa48023f53f60e8da6295c5f8a25290e0bf"
+  },
+  "xlsx": {
+    "repo": "anthropics/skills",
+    "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+    "path": "skills/xlsx",
+    "license": "Apache-2.0",
+    "sha256": "79f109c5af3fe6f0a7e80e23e0b909e1a8f046360500cb5a596242d03e953d9f"
+  },
+  "pptx": {
+    "repo": "anthropics/skills",
+    "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+    "path": "skills/pptx",
+    "license": "Apache-2.0",
+    "sha256": "a56a33d52eb63a58f913d045fe6cf4b90e41cbe3f0703ba4aa447413ae37c00a"
+  },
+  "theme-factory": {
+    "repo": "anthropics/skills",
+    "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+    "path": "skills/theme-factory",
+    "license": "Apache-2.0",
+    "sha256": "50bc5c8d91691c22c80aa3a77d437243398121a724531737530f4ed30cddf879"
+  },
+  "frontend-design": {
+    "repo": "anthropics/skills",
+    "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+    "path": "skills/frontend-design",
+    "license": "Apache-2.0",
+    "sha256": "7e9c2af00fd5b3144f49ce6fb1b16037b392ab9c2f049423b0b6114d99381ba2"
+  },
+  "build-dashboard": {
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "5e504ae11498f2b8daa30d86b7dab97b2ecd8092",
+    "path": "data/skills/build-dashboard",
+    "license": "Apache-2.0",
+    "sha256": "b40797445cb5b690b96e67326b8fe1ad20739c768f53027a1a809ca9b57f85ca"
+  },
+  "copy-editing": {
+    "repo": "coreyhaines31/marketingskills",
+    "commit": "8fd2fcade2fd6629026e9dfe6d133b55b36968b9",
+    "path": "skills/copy-editing",
+    "license": "MIT",
+    "sha256": "ad836af8bbc05f69383c41642b7c1b0d1cafbe91052ba51b61d643944df7a570"
+  },
+  "frontend-ui-engineering": {
+    "repo": "addyosmani/agent-skills",
+    "commit": "e997ac5b9a74eab332d5e9793bb38a38c8cfdd74",
+    "path": "skills/frontend-ui-engineering",
+    "license": "MIT",
+    "sha256": "166e1a39e7811651105f3aa6f4cce17e2467b16dd8cb44272f03aa4ae7c74785"
+  },
+  "code-review-and-quality": {
+    "repo": "addyosmani/agent-skills",
+    "commit": "e997ac5b9a74eab332d5e9793bb38a38c8cfdd74",
+    "path": "skills/code-review-and-quality",
+    "license": "MIT",
+    "sha256": "127c4ec5900c57c0b814051eade35dc8cf09583af6e3dd9dea384400e56d97dc"
+  },
+  "documentation-and-adrs": {
+    "repo": "addyosmani/agent-skills",
+    "commit": "e997ac5b9a74eab332d5e9793bb38a38c8cfdd74",
+    "path": "skills/documentation-and-adrs",
+    "license": "MIT",
+    "sha256": "1fc89cc46a1b79a74aca53c94ace8be590ec6fb9b243d4f10e55bac2deb68b86"
+  },
+  "systematic-debugging": {
+    "repo": "obra/superpowers",
+    "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+    "path": "skills/systematic-debugging",
+    "license": "MIT",
+    "sha256": "69ca30f929696fe4628185e76e46a5bcb229d067de575f36b8ae1737d954b085"
+  },
+  "create-readme": {
+    "repo": "github/awesome-copilot",
+    "commit": "f10fdb8b2660ce85c98f220b2f1ca24653768a5c",
+    "path": "skills/create-readme",
+    "license": "MIT",
+    "sha256": "b939a98cd57b834ed126d23a2bbea6b8b04cdb06915b5499e3bc3cd60752f52f"
+  }
+}

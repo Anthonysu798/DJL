@@ -19,10 +19,13 @@ const ProviderDiscoveryKind = Schema.Literals([
   "qwen",
   "copilot",
   "codebuddy",
+  "doubao",
+  "deepseek",
   "droid",
   "kilo",
   "opencode",
   "pi",
+  "muse",
   "djlCloud",
   "group",
 ]);
@@ -110,6 +113,8 @@ export const ProviderSkillDescriptor = Schema.Struct({
   path: TrimmedNonEmptyString,
   enabled: Schema.Boolean,
   scope: Schema.optional(TrimmedNonEmptyString),
+  /** The Claude Code plugin that ships this skill; its name is then `plugin:skill`. */
+  plugin: Schema.optional(TrimmedNonEmptyString),
   interface: Schema.optional(ProviderSkillInterface),
   dependencies: Schema.optional(Schema.Unknown),
 });

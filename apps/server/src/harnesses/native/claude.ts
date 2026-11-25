@@ -63,6 +63,32 @@ export const createClaudeDriverWithBackends =
 export const createClaudeDriver: NativeDriverFactory =
   createClaudeDriverWithBackends(defaultBackendOnly);
 
+/**
+ * A coding plan served through Claude Code: the vendor's Anthropic-compatible endpoint and
+ * key replace the Claude login, and the vendor's model list replaces Claude's.
+ */
+export interface ClaudeCompatibleRuntime {
+  readonly provider: "doubao" | "deepseek";
+  readonly env: Record<string, string>;
+  readonly models: ReadonlyArray<{ slug: string; name: string }>;
+}
+
+export const createClaudeCompatibleDriver =
+  (
+    resolveRuntime: (input: Parameters<NativeDriverFactory>[0]) => Promise<ClaudeCompatibleRuntime>,
+  ): NativeDriverFactory =>
+  async (input, sink, workTools, plugins) =>
+    startClaudeDriver(
+      input,
+      sink,
+      workTools,
+      plugins,
+      false,
+      defaultBackendOnly,
+      false,
+      await resolveRuntime(input),
+    );
+
 /** A Multi agents member: the group policy answers every file and shell call. */
 export const createGroupMemberClaudeDriver: NativeDriverFactory = (
   input,
@@ -86,7 +112,9 @@ const startClaudeDriver = async (
   groupMember: boolean,
   resolveBackend: ClaudeBackendResolver,
   lent = false,
+  profile?: ClaudeCompatibleRuntime,
 ): ReturnType<NativeDriverFactory> => {
+  const capsProvider = profile?.provider ?? "claudeAgent";
   if (input.approvalPolicy)
     throw new Error(
       "Claude SDK does not expose the requested Codex approval policy; use native permission modes",
@@ -94,10 +122,16 @@ const startClaudeDriver = async (
   if (input.sandboxMode && input.sandboxMode !== "danger-full-access")
     throw new Error("Claude native bridge does not implement the requested OS sandbox");
   const configured = input.providerOptions?.claudeAgent;
-  const executable = await resolveClaudeExecutable(configured?.binaryPath || "claude");
+  const executable = await resolveClaudeExecutable(
+    (profile ? input.providerOptions?.[profile.provider]?.binaryPath : configured?.binaryPath) ||
+      "claude",
+  );
   const selection =
     input.modelSelection?.provider === "claudeAgent" ? input.modelSelection : undefined;
-  const caps = getModelCapabilities("claudeAgent", selection?.model);
+  const caps = getModelCapabilities(
+    capsProvider,
+    profile ? input.modelSelection?.model : selection?.model,
+  );
   const effort = CLAUDE_CODE_EFFORT_OPTIONS.find(
     (value) => value === (selection?.options?.effort ?? getDefaultEffort(caps)),
   );
@@ -181,12 +215,13 @@ const startClaudeDriver = async (
       : {}),
     ...(autoCompactWindow !== null ? { autoCompactWindow } : {}),
     // Flag settings outrank an `env` block in the user's ~/.claude/settings.json.
-    ...(backendEnv ? { env: backendEnv.settingsEnv } : {}),
+    ...(backendEnv ? { env: backendEnv.settingsEnv } : profile ? { env: profile.env } : {}),
   };
   // The SDK hands inline settings to Claude Code as `--settings <json>`, which any local process
   // can read through `ps`. A backend's env carries its key, so it goes to an owner-only file in a
   // private temp directory instead, and only that path is on the command line.
-  const settingsDir = backendEnv ? await mkdtemp(join(tmpdir(), "djl-claude-settings-")) : null;
+  const settingsDir =
+    backendEnv || profile ? await mkdtemp(join(tmpdir(), "djl-claude-settings-")) : null;
   const settings = settingsDir ? join(settingsDir, "settings.json") : flagSettings;
   if (typeof settings === "string")
     await writeFile(settings, JSON.stringify(flagSettings), { mode: 0o600 });
@@ -244,7 +279,12 @@ const startClaudeDriver = async (
         ? { tools: [], settingSources: [], strictMcpConfig: true }
         : { settingSources: ["user", "project", "local"] as const }),
       ...(groupMember ? { hooks: { PreToolUse: [{ hooks: [askForGroupTools] }] } } : {}),
-      env: withDjlThreadId(backendEnv?.env ?? process.env, input.threadId),
+      env: {
+        ...withDjlThreadId(backendEnv?.env ?? process.env, input.threadId),
+        // An extra Claude subscription account keeps its login in its own config folder.
+        ...(!profile && configured?.configDir ? { CLAUDE_CONFIG_DIR: configured.configDir } : {}),
+        ...profile?.env,
+      },
       canUseTool: async (tool, args, context) => {
         // Required user interaction still reaches this callback in native bypass mode.
         if (tool === "AskUserQuestion") {
@@ -441,7 +481,7 @@ const startClaudeDriver = async (
               turn.modelSelection.options?.autoCompactWindow ??
                 turn.modelSelection.options?.contextWindow ??
                 getDefaultAutoCompactWindow(
-                  getModelCapabilities("claudeAgent", turn.modelSelection.model),
+                  getModelCapabilities(capsProvider, turn.modelSelection.model),
                 ) ??
                 undefined,
             )
@@ -453,7 +493,7 @@ const startClaudeDriver = async (
       if (turn.modelSelection?.model) {
         if (turn.modelSelection.model !== activeModel) {
           contextLimit = getModelCapabilities(
-            "claudeAgent",
+            capsProvider,
             turn.modelSelection.model,
           ).contextWindowTokens;
         }
@@ -494,6 +534,8 @@ const startClaudeDriver = async (
     },
     close,
     async models() {
+      if (profile)
+        return { models: [...profile.models], source: `${profile.provider}.claude-code` };
       return {
         models: (await bounded(runtime.supportedModels())).map((model) =>
           Object.assign(

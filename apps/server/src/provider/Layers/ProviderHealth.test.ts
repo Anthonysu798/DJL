@@ -151,6 +151,9 @@ const allProvidersDisabledSettings = {
     kilo: { enabled: false },
     opencode: { enabled: false },
     pi: { enabled: false },
+    muse: { enabled: false },
+    doubao: { enabled: false },
+    deepseek: { enabled: false },
     djlCloud: { enabled: false, region: "auto" },
   },
 } as const;
@@ -172,6 +175,9 @@ const allProvidersDisabledServerSettings = {
     kilo: { ...DEFAULT_SERVER_SETTINGS.providers.kilo, enabled: false },
     opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: false },
     pi: { ...DEFAULT_SERVER_SETTINGS.providers.pi, enabled: false },
+    muse: { ...DEFAULT_SERVER_SETTINGS.providers.muse, enabled: false },
+    doubao: { ...DEFAULT_SERVER_SETTINGS.providers.doubao, enabled: false },
+    deepseek: { ...DEFAULT_SERVER_SETTINGS.providers.deepseek, enabled: false },
     djlCloud: { ...DEFAULT_SERVER_SETTINGS.providers.djlCloud, enabled: false },
   },
 } satisfies typeof DEFAULT_SERVER_SETTINGS;
@@ -283,6 +289,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           "copilot",
           "codebuddy",
           "pi",
+          "muse",
           "djlCloud",
         ]),
       );
@@ -437,6 +444,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             "copilot",
             "codebuddy",
             "pi",
+            "muse",
             "djlCloud",
           ]),
         );

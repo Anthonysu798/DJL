@@ -14,8 +14,30 @@ export const HarnessId = Schema.Literals([
   "copilot",
   "codebuddy",
   "pi",
+  "muse",
 ]);
 export type HarnessId = typeof HarnessId.Type;
+
+// Coding plans served through the Claude Code harness with the vendor's API key: no CLI of
+// their own to sign in to, so they are not harnesses.
+export const ClaudeCompatibleProviderId = Schema.Literals(["doubao", "deepseek"]);
+export type ClaudeCompatibleProviderId = typeof ClaudeCompatibleProviderId.Type;
+
+export const ClaudeCompatibleKeyStatus = Schema.Struct({
+  provider: ClaudeCompatibleProviderId,
+  configured: Schema.Boolean,
+});
+export type ClaudeCompatibleKeyStatus = typeof ClaudeCompatibleKeyStatus.Type;
+export const ClaudeCompatibleKeysResult = Schema.Struct({
+  keys: Schema.Array(ClaudeCompatibleKeyStatus),
+});
+export type ClaudeCompatibleKeysResult = typeof ClaudeCompatibleKeysResult.Type;
+export const ClaudeCompatibleSetKeyInput = Schema.Struct({
+  provider: ClaudeCompatibleProviderId,
+  // Empty removes the stored key.
+  apiKey: Schema.String.check(Schema.isMaxLength(512)),
+});
+export type ClaudeCompatibleSetKeyInput = typeof ClaudeCompatibleSetKeyInput.Type;
 
 export const HarnessAccount = Schema.Struct({
   id: HarnessId,

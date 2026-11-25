@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/select";
 import { Button } from "~/components/ui/button";
 import "./newTerminalDialog.css";
+import { appAccountProvider } from "~/lib/workspaceAccountIds";
 
 gsap.registerPlugin(useGSAP);
 const PROVIDERS = {
@@ -167,7 +168,8 @@ function TerminalLaunchForm(props: NewTerminalDialogProps) {
           <IconPlus size={14} stroke={1.7} aria-hidden="true" />
           {t("addAccount")}
         </Button>
-        {props.profileId && (
+        {/* The app's own accounts are already signed in through Settings. */}
+        {props.profileId && !appAccountProvider(props.profileId) && (
           <div className="terminal-launch-signin-actions">
             <Button
               type="button"

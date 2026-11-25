@@ -6,6 +6,7 @@ import { CentralIcon } from "~/lib/central-icons";
 import { DjlAccountEntry } from "./DjlAccountEntry";
 import { UsageRingButton } from "./UsageRingButton";
 import { SidebarModeMenu } from "./SidebarModeMenu";
+import { DjlLogo } from "./DjlLogo";
 import { DesktopShellChrome } from "./DesktopShellChrome";
 import {
   ArchiveIcon,
@@ -22,7 +23,6 @@ import {
   FolderOpenIcon,
   GitMergedSimpleIcon,
   GitPullRequestIcon,
-  BrainIcon,
   type LucideIcon,
   NewThreadIcon,
   PencilIcon,
@@ -291,7 +291,6 @@ import {
   findWorkspaceRootMatch,
   getFallbackThreadIdAfterDelete,
   getPinnedThreadsForSidebar,
-  getUnpinnedThreadsForSidebar,
   orderPinnedProjectsForSidebar,
   getNextVisibleSidebarThreadId,
   getSidebarThreadIdsToPrewarm,
@@ -422,7 +421,6 @@ const SIDEBAR_VIEW_LABEL_KEYS: Record<SidebarView, string> = {
 };
 /** Snap the optimistic segment selection back if the navigation never lands. */
 const SIDEBAR_SEGMENT_PENDING_RESET_MS = 2000;
-const EMPTY_PROJECT_SIDEBAR_DATA: ReadonlyMap<ProjectId, SidebarDerivedProjectData> = new Map();
 const DebugFeatureFlagsMenu = import.meta.env.DEV
   ? lazy(() =>
       import("./DebugFeatureFlagsMenu").then((module) => ({
@@ -1881,16 +1879,14 @@ export default function Sidebar() {
       chatWorkspaceRoot,
       studioWorkspaceRoot,
     });
-  // Only one segment's pinned threads are ever rendered at a time, so derive a single
-  // memo from the already-partitioned active list instead of computing both segments'
-  // pinned lists on every render (hooks can't be conditional, but the inputs can be).
+  // One sidebar for every kind of thread: pinned covers chats, projects and Work tasks alike.
   const pinnedThreads = useMemo(
     () =>
       getPinnedThreadsForSidebar(
-        isOnStudio ? studioSidebarDisplayThreads : nonStudioSidebarDisplayThreads,
+        [...nonStudioSidebarDisplayThreads, ...studioSidebarDisplayThreads],
         pinnedThreadIds,
       ),
-    [isOnStudio, nonStudioSidebarDisplayThreads, pinnedThreadIds, studioSidebarDisplayThreads],
+    [nonStudioSidebarDisplayThreads, pinnedThreadIds, studioSidebarDisplayThreads],
   );
   useEffect(() => {
     sidebarThreadSummaryByIdRef.current = sidebarThreadSummaryById;
@@ -2653,12 +2649,14 @@ export default function Sidebar() {
 
   // Opens a fresh home-chat draft directly on the draft thread route so the first send
   // does not need a second route swap from "/" to "/$threadId".
+  // A new chat keeps the mode you are in: from a Work task it opens a fresh Work draft.
   const handleCreateHomeChat = useCallback(async () => {
+    if (isOnStudio) {
+      await handleNewStudioChat({ fresh: true });
+      return;
+    }
     await handleNewChat({ fresh: true });
-  }, [handleNewChat]);
-  const handleCreateStudioChat = useCallback(async () => {
-    await handleNewStudioChat({ fresh: true });
-  }, [handleNewStudioChat]);
+  }, [handleNewChat, handleNewStudioChat, isOnStudio]);
 
   const beginWorkspaceRename = useCallback((workspaceId: string, title: string) => {
     setRenamingWorkspaceId(workspaceId);
@@ -2891,12 +2889,13 @@ export default function Sidebar() {
       return;
     }
 
-    handleStartAddProject();
+    // Outside a project, start a fresh chat on the "What should we work on?" home.
+    void handleCreateHomeChat();
   }, [
     appSettings.defaultThreadEnvMode,
     currentProjectShortcutTargetId,
+    handleCreateHomeChat,
     handleNewThread,
-    handleStartAddProject,
   ]);
 
   const handleImportThread = useCallback(
@@ -4418,9 +4417,12 @@ export default function Sidebar() {
     if (!chatSectionExpanded) {
       return [];
     }
+    // Recents: chats and Work tasks that are not in a project folder, newest first.
     return buildProjectThreadTree({
       threads: sortThreadsForSidebar(
-        chatProjects.flatMap((project) => sortedSidebarThreadsByProjectId.get(project.id) ?? []),
+        [...chatProjects, ...studioProjects].flatMap(
+          (project) => sortedSidebarThreadsByProjectId.get(project.id) ?? [],
+        ),
         appSettings.sidebarThreadSortOrder,
       ),
       expandedParentThreadIds: expandedSubagentParentIds,
@@ -4431,42 +4433,11 @@ export default function Sidebar() {
     chatProjects,
     expandedSubagentParentIds,
     sortedSidebarThreadsByProjectId,
+    studioProjects,
   ]);
   const visibleChatThreadIds = useMemo(
     () => visibleChatThreadRows.map((row) => row.thread.id),
     [visibleChatThreadRows],
-  );
-  // Studio threads, flattened the same way the home Chats list is. Skipped entirely while the
-  // Studio surface is not showing so thread updates on Projects don't pay for an unused sort.
-  // Pinned threads are hidden here the same way `deriveSidebarProjectData` hides them from
-  // per-project lists, so a pinned Studio chat only ever renders once, inside the Pinned block.
-  const studioChatThreadRows = useMemo(() => {
-    if (!isOnStudio) {
-      return [];
-    }
-    return buildProjectThreadTree({
-      threads: sortThreadsForSidebar(
-        getUnpinnedThreadsForSidebar(
-          studioProjects.flatMap(
-            (project) => sortedSidebarThreadsByProjectId.get(project.id) ?? [],
-          ),
-          pinnedThreadIds,
-        ),
-        appSettings.sidebarThreadSortOrder,
-      ),
-      expandedParentThreadIds: expandedSubagentParentIds,
-    });
-  }, [
-    appSettings.sidebarThreadSortOrder,
-    expandedSubagentParentIds,
-    isOnStudio,
-    pinnedThreadIds,
-    sortedSidebarThreadsByProjectId,
-    studioProjects,
-  ]);
-  const studioChatThreadIds = useMemo(
-    () => studioChatThreadRows.map((row) => row.thread.id),
-    [studioChatThreadRows],
   );
   const visibleChatPreviewEntries = useMemo(
     () =>
@@ -4697,42 +4668,8 @@ export default function Sidebar() {
       resolveThreadStatusForSidebar,
     ],
   );
-  const studioProjectSidebarDataById = useMemo<
-    ReadonlyMap<ProjectId, SidebarDerivedProjectData>
-  >(() => {
-    // Off-Studio this map is unused (surfaceProjectSidebarDataById picks the
-    // standard one), so skip the derivation instead of recomputing it on every
-    // Projects-side store change. Mirrors the isOnStudio gate on
-    // studioChatThreadRows.
-    if (!isOnStudio) {
-      return EMPTY_PROJECT_SIDEBAR_DATA;
-    }
-    return deriveSidebarProjectData({
-      projects: studioProjects,
-      sortedSidebarThreadsByProjectId,
-      pinnedThreadIds,
-      expandedParentThreadIds: expandedSubagentParentIds,
-      threadListExtraPagesByProjectCwd,
-      normalizeProjectCwd: normalizeSidebarProjectThreadListCwd,
-      activeSidebarThreadId: activeSidebarThreadId ?? undefined,
-      previewLimit: THREAD_PREVIEW_LIMIT,
-      previewPageSize: THREAD_PREVIEW_PAGE_SIZE,
-      resolveThreadStatus: resolveThreadStatusForSidebar,
-    });
-  }, [
-    activeSidebarThreadId,
-    expandedSubagentParentIds,
-    isOnStudio,
-    threadListExtraPagesByProjectCwd,
-    pinnedThreadIds,
-    sortedSidebarThreadsByProjectId,
-    studioProjects,
-    resolveThreadStatusForSidebar,
-  ]);
-  const surfaceProjects = isOnStudio ? studioProjects : standardProjects;
-  const surfaceProjectSidebarDataById = isOnStudio
-    ? studioProjectSidebarDataById
-    : standardProjectSidebarDataById;
+  const surfaceProjects = standardProjects;
+  const surfaceProjectSidebarDataById = standardProjectSidebarDataById;
   const allProjectsExpanded = useMemo(
     () => standardProjects.length > 0 && standardProjects.every((project) => project.expanded),
     [standardProjects],
@@ -4963,19 +4900,11 @@ export default function Sidebar() {
       }
     }
 
-    // The Studio surface's primary list is the flat studio tree, not project rows, so its
-    // rendered rows must join the visible ids too — otherwise jump shortcuts and detail
-    // prewarming would cover nothing but pinned rows on Studio. studioChatThreadIds is already
-    // empty off-Studio and in render order (pinned rows excluded, they were added above).
-    for (const threadId of studioChatThreadIds) {
-      addVisibleThreadId(threadId);
-    }
-
     return [...visibleThreadIdSet];
-  }, [pinnedThreads, studioChatThreadIds, surfaceProjectSidebarDataById, surfaceProjects]);
+  }, [pinnedThreads, surfaceProjectSidebarDataById, surfaceProjects]);
   const visibleSidebarThreadIdSet = useMemo(
-    () => new Set([...visibleSidebarThreadIds, ...visibleChatThreadIds, ...studioChatThreadIds]),
-    [studioChatThreadIds, visibleChatThreadIds, visibleSidebarThreadIds],
+    () => new Set([...visibleSidebarThreadIds, ...visibleChatThreadIds]),
+    [visibleChatThreadIds, visibleSidebarThreadIds],
   );
   const visibleSidebarThreads = useMemo(
     () => sidebarDisplayThreads.filter((thread) => visibleSidebarThreadIdSet.has(thread.id)),
@@ -5830,19 +5759,6 @@ export default function Sidebar() {
     return renderThreadRow(
       row.thread,
       visibleChatThreadIds,
-      row.depth,
-      row.childCount,
-      row.isExpanded,
-      true,
-    );
-  }
-
-  function renderStudioChatItem(row: (typeof studioChatThreadRows)[number]) {
-    // Studio rows are a flat top-level list like home Chats: the indented column
-    // is reserved for project-nested threads.
-    return renderThreadRow(
-      row.thread,
-      studioChatThreadIds,
       row.depth,
       row.childCount,
       row.isExpanded,
@@ -6782,6 +6698,23 @@ export default function Sidebar() {
   const projectContextMenuServer = projectContextMenuProject
     ? (projectRunServerByProjectId.get(projectContextMenuProject.id) ?? null)
     : null;
+  // Once a chat's first message is sent, its tab shows that chat's provider logo. Tabs follow the
+  // route, not the optimistic sidebar pick: that one changes before the URL does, which would
+  // write the next chat's title onto the tab being left.
+  const activeChatTabSummary =
+    routeActiveSidebarThreadId &&
+    !isOnPlugins &&
+    !isOnSettings &&
+    !isOnMultiAgents &&
+    !isOnSocial &&
+    !isOnAutomations &&
+    !isOnKanban &&
+    !isOnWorkspace
+      ? sidebarThreadSummaryById[routeActiveSidebarThreadId]
+      : undefined;
+  const activeChatTabProvider = activeChatTabSummary?.latestUserMessageAt
+    ? (activeChatTabSummary.session?.provider ?? activeChatTabSummary.modelSelection.provider)
+    : null;
   const projectContextMenuHasOpenServer =
     projectContextMenuServer !== null && firstLocalServerUrl(projectContextMenuServer) !== null;
 
@@ -6805,14 +6738,11 @@ export default function Sidebar() {
                           ? t("sidebar.actions.kanban", { ns: "shell" })
                           : isOnWorkspace
                             ? t("sidebar.views.workspace", { ns: "shell" })
-                            : ((activeSidebarThreadId
-                                ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
-                                : undefined) ??
-                              t("sidebar.actions.newChat", {
-                                ns: "shell",
-                                defaultValue: "New chat",
-                              }))
+                            : ((routeActiveSidebarThreadId
+                                ? sidebarThreadSummaryById[routeActiveSidebarThreadId]?.title
+                                : undefined) ?? t("sidebar.actions.newChat", { ns: "shell" }))
             }
+            titleProvider={activeChatTabProvider}
             newChatLabel={t("sidebar.actions.newThread", { ns: "shell" })}
             onNewChat={handlePrimaryNewThread}
             items={[
@@ -6835,21 +6765,9 @@ export default function Sidebar() {
                   }
                 },
               },
-              ...(studioSectionVisible
-                ? [
-                    {
-                      label: t(SIDEBAR_VIEW_LABEL_KEYS.studio),
-                      icon: "chat-bubble-7",
-                      onboardingTarget: "work-mode",
-                      active: isOnStudio,
-                      onClick: () => handleSidebarViewChange("studio"),
-                    },
-                  ]
-                : []),
               {
                 label: t("multiAgents.title", { ns: "shell" }),
                 icon: "group-1",
-                badge: t("multiAgents.beta", { ns: "shell" }),
                 active: isOnMultiAgents,
                 onClick: () => {
                   void navigate({ to: "/multi-agents" });
@@ -6937,15 +6855,17 @@ export default function Sidebar() {
           />
           {!isOnSettings && (
             <SidebarHeader className="djl-desktop-sidebar-heading">
-              <SidebarModeMenu
-                views={[
-                  ...(studioSectionVisible ? ["studio" as const] : []),
-                  "threads",
-                  ...(workspaceSectionVisible ? ["workspace" as const] : []),
-                ]}
-                activeView={isOnStudio ? "studio" : isOnWorkspace ? "workspace" : "threads"}
-                onSelectView={handleSidebarViewChange}
-              />
+              {/* Work and Code are picked on the new-chat screen, so the switch only remains
+                  when Workspaces gives it something to choose. */}
+              {workspaceSectionVisible ? (
+                <SidebarModeMenu
+                  views={["threads", "workspace"]}
+                  activeView={isOnWorkspace ? "workspace" : "threads"}
+                  onSelectView={handleSidebarViewChange}
+                />
+              ) : (
+                <DjlLogo aria-label={t("a11y.djlLogo", { ns: "chat" })} className="ms-2 size-5" />
+              )}
               <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"
@@ -7020,14 +6940,10 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            {!isElectron && (
+            {!isElectron && workspaceSectionVisible && (
               <SidebarSegmentedPicker
-                views={[
-                  ...(studioSectionVisible ? (["studio"] as const) : []),
-                  "threads",
-                  ...(workspaceSectionVisible ? (["workspace"] as const) : []),
-                ]}
-                activeView={isOnStudio ? "studio" : isOnWorkspace ? "workspace" : "threads"}
+                views={["threads", "workspace"]}
+                activeView={isOnWorkspace ? "workspace" : "threads"}
                 onSelectView={handleSidebarViewChange}
                 onPrewarmView={prewarmSidebarViewTarget}
               />
@@ -7036,10 +6952,7 @@ export default function Sidebar() {
                 Workspace) remounts the content with a short enter animation
                 instead of a hard cut. The picker above stays outside the key so
                 its thumb can glide across the switch. */}
-            <div
-              key={isOnWorkspace ? "workspace" : isOnStudio ? "studio" : "threads"}
-              className="sidebar-surface-enter"
-            >
+            <div key={isOnWorkspace ? "workspace" : "threads"} className="sidebar-surface-enter">
               {/* Primary sidebar actions stay limited to features we currently ship. */}
               <SidebarGroup className="px-1.5 pt-1 pb-1.5">
                 <SidebarMenu className="gap-0.5">
@@ -7049,37 +6962,6 @@ export default function Sidebar() {
                       label={t("sidebar.actions.newWorkspace", { ns: "shell" })}
                       onClick={handleCreateWorkspace}
                     />
-                  ) : isOnStudio ? (
-                    <>
-                      <SidebarPrimaryAction
-                        icon={NewThreadIcon}
-                        label={t("sidebar.actions.newTask", { ns: "shell" })}
-                        onClick={handleCreateStudioChat}
-                      />
-                      <SidebarPrimaryAction
-                        icon={BrainIcon}
-                        label={t("aiDetector.nav", { ns: "work" })}
-                        active={pathname === "/work/ai-writing-check"}
-                        onClick={() => {
-                          void navigate({ to: "/work/ai-writing-check" });
-                        }}
-                      />
-                      <SidebarPrimaryAction
-                        icon={SearchIcon}
-                        label={t("actions.search", { ns: "common" })}
-                        active={searchPaletteOpen}
-                        onClick={() => {
-                          setSearchPaletteOpen(true);
-                        }}
-                        shortcutLabel={searchShortcutLabel}
-                      />
-                      <SidebarPrimaryAction
-                        icon={ShoppingBagIcon}
-                        label={t("sidebar.actions.shop", { ns: "shell" })}
-                        secondaryLabel={t("sidebar.actions.shopWindow", { ns: "shell" })}
-                        onClick={handleOpenShop}
-                      />
-                    </>
                   ) : (
                     <>
                       <SidebarPrimaryAction
@@ -7252,41 +7134,6 @@ export default function Sidebar() {
                     </SidebarMenu>
                   </DndContext>
                 </SidebarGroup>
-              ) : isOnStudio ? (
-                // Studio is "just chats": a labeled Studio block holding a flat list of threads
-                // rooted at the Studio workspace (no project-folder chrome).
-                <SidebarGroup className="px-1.5 py-1.5">
-                  {renderPinnedThreadsSection()}
-                  {renderListSectionHeader(
-                    t("sidebar.views.work"),
-                    <>
-                      <SidebarIconButton
-                        icon={NewThreadIcon}
-                        label={t("sidebar.actions.newTask", { ns: "shell" })}
-                        tooltip={t("sidebar.actions.newTask", { ns: "shell" })}
-                        tooltipSide="top"
-                        onClick={handleCreateStudioChat}
-                      />
-                      <ChatSortMenu
-                        threadSortOrder={appSettings.sidebarThreadSortOrder}
-                        onThreadSortOrderChange={(sortOrder) => {
-                          updateSettings({ sidebarThreadSortOrder: sortOrder });
-                        }}
-                      />
-                    </>,
-                  )}
-                  <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
-                    {studioChatThreadRows.length > 0 ? (
-                      studioChatThreadRows.map((row) => renderStudioChatItem(row))
-                    ) : (
-                      <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
-                        {threadsHydrated
-                          ? t("sidebar.studio.noTasks")
-                          : t("sidebar.studio.loading")}
-                      </div>
-                    )}
-                  </SidebarMenu>
-                </SidebarGroup>
               ) : (
                 <SidebarGroup className="px-1.5 py-1.5">
                   {renderPinnedThreadsSection()}
@@ -7363,14 +7210,17 @@ export default function Sidebar() {
                                   : t("sidebar.browse")}
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]"
-                            onClick={() => setShowManualPathInput(true)}
-                          >
-                            <SidebarGlyph icon={TbCursorText} variant="chrome" />
-                            {t("sidebar.typePath", { ns: "shell" })}
-                          </button>
+                          {/* The desktop app picks folders with Browse; the browser has no picker. */}
+                          {!isElectron && (
+                            <button
+                              type="button"
+                              className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]"
+                              onClick={() => setShowManualPathInput(true)}
+                            >
+                              <SidebarGlyph icon={TbCursorText} variant="chrome" />
+                              {t("sidebar.typePath", { ns: "shell" })}
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div
@@ -7481,7 +7331,7 @@ export default function Sidebar() {
             </div>
           </>
         )}
-        {!isOnSettings && !isOnStudio && chatsSectionVisible ? (
+        {!isOnSettings && chatsSectionVisible ? (
           // sidebar-surface-enter: mounts on the Studio -> Projects switch, so it
           // animates in step with the keyed surface wrapper above.
           <SidebarGroup className="sidebar-surface-enter px-1.5 pt-1 pb-2">
@@ -7987,11 +7837,7 @@ export default function Sidebar() {
           actions={searchPaletteActions}
           projects={searchPaletteProjects}
           projectById={projectById}
-          onCreateChat={() =>
-            // Segment-aware, matching the sidebar's + action: "New chat" from the palette while
-            // on the Studio segment opens a Studio chat, not a home draft.
-            void (isOnStudio ? handleCreateStudioChat() : handleCreateHomeChat())
-          }
+          onCreateChat={() => void handleCreateHomeChat()}
           onCreateThread={handlePrimaryNewThread}
           onAddProjectPath={addProjectFromPath}
           homeDir={homeDir}

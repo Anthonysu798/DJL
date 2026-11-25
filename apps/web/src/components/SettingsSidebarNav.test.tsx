@@ -21,8 +21,12 @@ import japaneseCatalog from "../i18n/locales/ja.json";
 import koreanCatalog from "../i18n/locales/ko.json";
 import latinAmericanSpanishCatalog from "../i18n/locales/es-419.json";
 import frenchCatalog from "../i18n/locales/fr.json";
-import { resolveSettingsSearchEntry } from "../settingsSearchIndex";
-import { SETTINGS_NAV_ITEMS, normalizeSettingsSection } from "../settingsNavigation";
+import { resolveSettingsSearchEntry, settingsSectionLabel } from "../settingsSearchIndex";
+import {
+  normalizeSettingsSection,
+  SETTINGS_NAV_ITEMS,
+  SETTINGS_PAGE_ITEMS,
+} from "../settingsNavigation";
 
 describe("rankSettingsSearchEntries", () => {
   it("returns nothing for an empty query", () => {
@@ -167,6 +171,37 @@ describe("rankSettingsSearchEntries", () => {
         expect(resolved.keywords.trim()).not.toBe("");
       }
     }
+  });
+});
+
+describe("merged settings pages", () => {
+  it("keeps the settings list short and sends old links to the page that holds them", () => {
+    expect(SETTINGS_PAGE_ITEMS.map((item) => item.id)).toEqual([
+      "computer",
+      "accounts",
+      "general",
+      "profile",
+      "appearance",
+      "remote",
+      "archived",
+      "local-models",
+      "plugins",
+      "usage",
+      "advanced",
+    ]);
+    expect(normalizeSettingsSection("ai-accounts")).toBe("accounts");
+    expect(normalizeSettingsSection("notifications")).toBe("general");
+    expect(normalizeSettingsSection("behavior")).toBe("general");
+    expect(normalizeSettingsSection("skills")).toBe("plugins");
+    expect(normalizeSettingsSection("local-models")).toBe("local-models");
+    expect(normalizeSettingsSection("shortcuts")).toBe("advanced");
+    expect(normalizeSettingsSection("worktrees")).toBe("advanced");
+    expect(normalizeSettingsSection("servers")).toBe("advanced");
+  });
+
+  it("names the page a merged section now lives on in search results", () => {
+    expect(settingsSectionLabel("behavior")).toBe("General");
+    expect(settingsSectionLabel("skills")).toBe("Plugins");
   });
 });
 

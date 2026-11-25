@@ -41,6 +41,8 @@ export function pickLimitSwitchTarget(input: {
   const targets = resolveAvailableHandoffTargetProviders(input.current);
   let best: { entry: UsageRingEntry; remaining: number } | null = null;
   for (const entry of input.entries) {
+    // A spare AI account is not something the chat can switch to.
+    if (entry.inUse === false) continue;
     if (entry.status !== "ok" || !targets.includes(entry.provider)) continue;
     const status = input.providerStatuses.find(
       (candidate) => candidate.provider === entry.provider,

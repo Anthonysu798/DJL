@@ -3,7 +3,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { fixPath } from "./os-jank";
+import { appendKnownCliDirs, fixPath } from "./os-jank";
 
 describe("fixPath", () => {
   it("hydrates PATH on linux using the resolved login shell", () => {
@@ -85,5 +85,27 @@ describe("fixPath", () => {
 
     expect(readPath).not.toHaveBeenCalled();
     expect(env.PATH).toBe("C:/Windows/System32");
+  });
+});
+
+describe("appendKnownCliDirs", () => {
+  it("appends installed CLI folders after the user's PATH without reordering it", () => {
+    const env: NodeJS.ProcessEnv = { PATH: "/usr/bin:/opt/homebrew/bin" };
+    const existing = new Set(["/Users/test/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]);
+
+    appendKnownCliDirs({
+      env,
+      platform: "darwin",
+      homeDir: "/Users/test",
+      exists: (path) => existing.has(path),
+    });
+
+    expect(env.PATH).toBe("/usr/bin:/opt/homebrew/bin:/Users/test/.local/bin:/usr/local/bin");
+  });
+
+  it("leaves Windows PATH alone", () => {
+    const env: NodeJS.ProcessEnv = { PATH: "C:\\Windows" };
+    appendKnownCliDirs({ env, platform: "win32", exists: () => true });
+    expect(env.PATH).toBe("C:\\Windows");
   });
 });

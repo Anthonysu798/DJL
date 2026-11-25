@@ -4,7 +4,7 @@ import { Effect, Layer, ServiceMap, Option } from "effect";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import { ServerSettingsService } from "../../serverSettings";
-import { nativeProfileOptions } from "./profile";
+import { applyChatAccount, nativeProfileOptions } from "./profile";
 import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
@@ -44,6 +44,8 @@ import { createQwenDriver } from "./qwen";
 import { createCopilotDriver } from "./copilot";
 import { createPiDriver } from "./pi";
 import { createCodeBuddyDriver } from "./codebuddy";
+import { createMuseDriver } from "./muse";
+import { createClaudeCompatibleDriverFactory } from "./claudeCompatible";
 import { createDjlCloudDriverFactory } from "./djlCloud";
 import { ServerConfig } from "../../config";
 import { VoiceTranscriptionError } from "../../voiceTranscription";
@@ -101,6 +103,18 @@ export class NativePiAdapter extends ServiceMap.Service<
   NativePiAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/PiAdapter") {}
+export class NativeMuseAdapter extends ServiceMap.Service<
+  NativeMuseAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/MuseAdapter") {}
+export class NativeDoubaoAdapter extends ServiceMap.Service<
+  NativeDoubaoAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/DoubaoAdapter") {}
+export class NativeDeepSeekAdapter extends ServiceMap.Service<
+  NativeDeepSeekAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/DeepSeekAdapter") {}
 
 /** Harnesses that are handed the user's connected plugins. */
 // Pi reaches them through a DJL extension and DJL Cloud through its own tool loop.
@@ -116,6 +130,9 @@ const PLUGIN_PROVIDERS: ReadonlyArray<NativeProvider> = [
   "copilot",
   "codebuddy",
   "pi",
+  "muse",
+  "doubao",
+  "deepseek",
   "djlCloud",
   "group",
 ];
@@ -229,6 +246,8 @@ export const makeConfiguredNativeAdapter = (
       scopedFactory,
       async () => nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
       extraModels,
+      async (options) =>
+        applyChatAccount(provider, options, await Effect.runPromise(settings.getSettings)),
     );
     if (provider !== "codex") return adapter;
     return {
@@ -389,6 +408,30 @@ export const NativeHarnessesLive = Layer.mergeAll(
     makeConfiguredNativeAdapter("codebuddy", createCodeBuddyDriver),
   ),
   Layer.effect(NativePiAdapter, makeConfiguredNativeAdapter("pi", createPiDriver)),
+  Layer.effect(NativeMuseAdapter, makeConfiguredNativeAdapter("muse", createMuseDriver)),
+  Layer.effect(
+    NativeDoubaoAdapter,
+    Effect.gen(function* () {
+      const config = yield* ServerConfig;
+      return yield* makeConfiguredNativeAdapter(
+        "doubao",
+        createClaudeCompatibleDriverFactory({ provider: "doubao", secretsDir: config.secretsDir }),
+      );
+    }),
+  ),
+  Layer.effect(
+    NativeDeepSeekAdapter,
+    Effect.gen(function* () {
+      const config = yield* ServerConfig;
+      return yield* makeConfiguredNativeAdapter(
+        "deepseek",
+        createClaudeCompatibleDriverFactory({
+          provider: "deepseek",
+          secretsDir: config.secretsDir,
+        }),
+      );
+    }),
+  ),
   Layer.effect(
     NativeDjlCloudAdapter,
     Effect.gen(function* () {

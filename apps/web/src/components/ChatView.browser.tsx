@@ -1577,9 +1577,9 @@ function dispatchComposerFocusToggleShortcut(): KeyboardEvent {
 // mounting with the active model label (the fixture pins the thread to gpt-5).
 async function waitForComposerPickerSurfaceOpen(): Promise<void> {
   await vi.waitFor(() => {
-    const popup = document.querySelector('[data-slot="menu-popup"]');
-    expect(popup).not.toBeNull();
-    expect(popup?.textContent ?? "").toContain("GPT-5");
+    const panel = document.querySelector('[data-slot="composer-model-panel"]');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent ?? "").toContain("GPT-5");
   });
 }
 
@@ -3802,9 +3802,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         composer.focus();
         dispatchComposerPickerShortcut(composer, "m");
         for (const name of ["OpenCode", "Codex", "Claude Code", "Cursor"]) {
-          await expect
-            .element(page.getByRole("menuitem", { name, exact: true }))
-            .toBeInTheDocument();
+          await expect.element(page.getByRole("tab", { name, exact: true })).toBeInTheDocument();
         }
         await userEvent.keyboard("{Escape}");
         const editor = page.getByRole("textbox");
@@ -3825,6 +3823,61 @@ describe("ChatView timeline estimator parity (full app)", () => {
       }
     },
   );
+
+  it("sends the skills a new-chat topic attaches, minus any the user removed", async () => {
+    const store = useComposerDraftStore.getState();
+    store.registerDraftThread(STUDIO_DRAFT_THREAD_ID, {
+      projectId: STUDIO_PROJECT_ID,
+      createdAt: NOW_ISO,
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      entryPoint: "chat",
+      branch: null,
+      worktreePath: null,
+      envMode: "local",
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withStudioProject(
+        createSnapshotForTargetUser({
+          targetMessageId: MessageId.makeUnsafe("other"),
+          targetText: "other",
+        }),
+      ),
+      initialEntry: `/${STUDIO_DRAFT_THREAD_ID}`,
+      configureFixture: (next) => {
+        next.welcome = {
+          ...next.welcome,
+          homeDir: "/Users/tester",
+          studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
+        };
+      },
+    });
+    try {
+      await waitForComposerEditor();
+      await page.getByRole("button", { name: "Documents", exact: true }).click();
+      const skills = page.getByRole("list", { name: "Skills for this task" });
+      await expect.element(skills.getByText("Word documents")).toBeVisible();
+      await expect.element(skills.getByText("Copy editing")).toBeVisible();
+      await page.getByRole("button", { name: "Remove Copy editing" }).click();
+      await expect.element(skills.getByText("Copy editing")).not.toBeInTheDocument();
+
+      await page.getByRole("button", { name: "Write a weekly report" }).click();
+      await expect.element(skills.getByText("Word documents")).toBeVisible();
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await vi.waitFor(() => {
+        const turn = wsRequests
+          .map(readDispatchedCommand)
+          .find((command) => command?.type === "thread.turn.start");
+        expect(turn?.message).toMatchObject({
+          text: expect.stringContaining("weekly report"),
+          skills: [{ name: "docx", path: "djl-starter://docx" }],
+        });
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 
   it.each(
     (["project", "studio"] as const).flatMap((surface) =>
@@ -3901,9 +3954,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .element(page.getByRole("button", { name: /Context window.*6%/ }))
           .toBeInTheDocument();
         await page.getByRole("button", { name: "Change model and reasoning", exact: true }).click();
-        await page
-          .getByRole("menuitemradio", { name: provider === "codex" ? "Ultra" : /Ultracode/ })
-          .click();
+        // The top effort stop (Ultra for Codex, Ultracode for Claude) is one End press away.
+        const effort = page.getByRole("slider", { name: "Effort" });
+        (effort.element() as HTMLElement).focus();
+        await userEvent.keyboard("{End}");
+        await expect
+          .element(effort)
+          .toHaveAttribute("aria-valuetext", provider === "codex" ? "Ultra" : "Ultracode");
+        await userEvent.keyboard("{Escape}");
         await page.getByRole("textbox").fill("hi again");
         await page.getByRole("button", { name: "Send message", exact: true }).click();
         await vi.waitFor(() => {
@@ -4525,7 +4583,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const newStudioChatButton = await waitForElement(
-        () => document.querySelector<HTMLButtonElement>('button[aria-label="New task"]'),
+        () => document.querySelector<HTMLButtonElement>('button[aria-label="Open new chat home"]'),
         "Unable to find the Studio new-chat action.",
       );
       newStudioChatButton.click();

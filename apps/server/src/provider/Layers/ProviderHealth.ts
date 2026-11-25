@@ -11,7 +11,10 @@
 import * as OS from "node:os";
 import { NATIVE_HARNESS_IDS, probeNativeHarnessStatuses } from "../../harnesses/accounts";
 import { readCloudSession } from "../../cloud/session";
+import { readClaudeCompatibleKey } from "../../harnesses/native/claudeCompatible";
+import { resolveClaudeExecutable } from "../../harnesses/native/claudeExecutable";
 import type {
+  ClaudeCompatibleProviderId,
   ProviderKind,
   ServerSettings,
   ServerProviderAuthStatus,
@@ -135,6 +138,12 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.opencode.binaryPath;
     case "pi":
       return settings.providers.pi.binaryPath;
+    case "muse":
+      return settings.providers.muse.binaryPath;
+    case "doubao":
+      return settings.providers.doubao.binaryPath;
+    case "deepseek":
+      return settings.providers.deepseek.binaryPath;
     case "djlCloud":
     case "group":
       return "";
@@ -226,6 +235,40 @@ export const checkDjlCloudProviderStatus = (
       authLabel: session.email,
       checkedAt,
       message: `Signed in to DJL Cloud as ${session.email}.`,
+    } satisfies ServerProviderStatus;
+  });
+
+/**
+ * Doubao and DeepSeek coding plans run on the Claude Code harness with a stored API key. They
+ * are ready when the key is saved and the Claude Code executable can be found.
+ */
+export const checkClaudeCompatibleProviderStatus = (
+  provider: ClaudeCompatibleProviderId,
+  settings: ServerSettings,
+  secretsDir: string,
+): Effect.Effect<ServerProviderStatus> =>
+  Effect.promise(async () => {
+    const checkedAt = new Date().toISOString();
+    const label = provider === "doubao" ? "Doubao" : "DeepSeek";
+    const claudeFound = await resolveClaudeExecutable(
+      settings.providers[provider].binaryPath.trim() || "claude",
+    ).then(
+      () => true,
+      () => false,
+    );
+    const hasKey = (await readClaudeCompatibleKey(secretsDir, provider)) !== null;
+    return {
+      provider,
+      status: claudeFound && hasKey ? ("ready" as const) : ("warning" as const),
+      available: claudeFound,
+      authStatus: hasKey ? ("authenticated" as const) : ("unauthenticated" as const),
+      authType: "api-key",
+      checkedAt,
+      message: !claudeFound
+        ? `${label} runs on Claude Code. Install Claude Code in Settings → Accounts.`
+        : hasKey
+          ? `${label} coding plan key saved.`
+          : `Add your ${label} API key in Settings → Accounts.`,
     } satisfies ServerProviderStatus;
   });
 
@@ -2342,7 +2385,15 @@ export const ProviderHealthLive = Layer.effect(
                   (binary, args, env) =>
                     Effect.runPromise(
                       runProviderCommand(binary, args, env).pipe(
-                        Effect.timeout("10 seconds"),
+                        Effect.timeoutOption("10 seconds"),
+                        // A slow CLI is installed, just busy: report it as unknown, not missing.
+                        Effect.map(
+                          Option.getOrElse(() => ({
+                            code: 1,
+                            stdout: "",
+                            stderr: "timed out",
+                          })),
+                        ),
                         Effect.catch(() =>
                           Effect.succeed({ code: 1, stdout: "", stderr: "", missing: true }),
                         ),
@@ -2355,6 +2406,16 @@ export const ProviderHealthLive = Layer.effect(
                 settings,
                 DJL_CLOUD_PROVIDER,
                 checkDjlCloudProviderStatus(serverConfig.secretsDir),
+              ).pipe(Effect.map((status) => [status])),
+              checkProviderWhenEnabled(
+                settings,
+                "doubao",
+                checkClaudeCompatibleProviderStatus("doubao", settings, serverConfig.secretsDir),
+              ).pipe(Effect.map((status) => [status])),
+              checkProviderWhenEnabled(
+                settings,
+                "deepseek",
+                checkClaudeCompatibleProviderStatus("deepseek", settings, serverConfig.secretsDir),
               ).pipe(Effect.map((status) => [status])),
             ],
             {

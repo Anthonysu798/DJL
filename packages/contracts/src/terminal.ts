@@ -185,6 +185,7 @@ const TerminalActivityEvent = Schema.Struct({
       "codebuddy",
       "gemini",
       "pi",
+      "muse",
     ]),
   ),
   agentState: Schema.NullOr(

@@ -140,6 +140,7 @@
 }
 .remote-access-copy {
   flex: 1;
+  min-width: 0;
 }
 .remote-access-copy h2 {
   font-size: 13px;
@@ -513,7 +514,7 @@
     rotate: 360deg;
   }
 }
-@media (max-width: 640px) {
+@container (max-width: 640px) {
   .remote-stage {
     border-radius: 17px;
   }

@@ -9,6 +9,7 @@ import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
 import { getStartupSession } from "../startup/session";
 import type { TerminalCliKind } from "@djl/shared/terminalThreads";
 import { effectiveRuntimeMode } from "@djl/contracts";
+import { HOME_TOPIC_SKILLS, type StarterSkillId, withStarterSkills } from "@djl/starter-skills";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
@@ -101,13 +102,19 @@ import {
   openCodeModelProvidersQueryOptions,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
+  skillsCatalogQueryOptions,
   supportsNativeSlashCommandDiscovery,
   supportsPluginDiscovery,
   supportsSkillDiscovery,
   supportsThreadCompaction,
 } from "~/lib/providerDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
-import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
+import {
+  serverConfigQueryOptions,
+  serverQueryKeys,
+  serverSettingsQueryOptions,
+} from "~/lib/serverReactQuery";
+import { isSkillNativeTo, resolveSkillOrigin } from "~/lib/skillOrigin";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
 import {
@@ -173,6 +180,14 @@ import {
 } from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { DjlMascot } from "./home/DjlMascot";
+import {
+  HomeModeToggle,
+  HomeSuggestions,
+  HomeTopicChips,
+  useHomeSuggestions,
+} from "./home/HomeStarter";
 import { useComposerDropzone } from "../hooks/useComposerDropzone";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
@@ -474,13 +489,9 @@ import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimelin
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import {
-  AVAILABLE_PROVIDER_OPTIONS,
-  ProviderModelPicker,
-  resolveProviderModelLabel,
-} from "./chat/ProviderModelPicker";
+import { AVAILABLE_PROVIDER_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
-import { resolveTraitsTriggerSummary, TraitsPicker } from "./chat/TraitsPicker";
+import { resolveTraitsTriggerSummary } from "./chat/TraitsPicker";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import {
   ComposerLocalDirectoryMenu,
@@ -494,6 +505,10 @@ import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPa
 import { ComposerVoiceButton } from "./chat/ComposerVoiceButton";
 import { ComposerVoiceRecorderBar } from "./chat/ComposerVoiceRecorderBar";
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
+import { ComposerPinnedSkills } from "./chat/ComposerPinnedSkills";
+import { ComposerAccountRow } from "./chat/ComposerAccountRow";
+import { isAccountProvider, useChatAccounts, withChatAccount } from "./chat/useChatAccounts";
+import { replaceActiveDesktopTabOnNextNavigation } from "./DesktopWorkspaceTabs";
 import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
@@ -520,6 +535,7 @@ import {
   ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./chat/composerPickerStyles";
 import { getComposerTraitSelection } from "./chat/composerTraits";
+import { isTopEffortSelected } from "./chat/effortLadder";
 import { resolveRuntimeModelDescriptor } from "./chat/runtimeModelCapabilities";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { FolderClosed } from "./FolderClosed";
@@ -837,6 +853,10 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.copilot?.binaryPath);
     case "codebuddy":
       return normalizeCustomBinaryPath(providerOptions?.codebuddy?.binaryPath);
+    case "doubao":
+      return normalizeCustomBinaryPath(providerOptions?.doubao?.binaryPath);
+    case "deepseek":
+      return normalizeCustomBinaryPath(providerOptions?.deepseek?.binaryPath);
     case "droid":
       return normalizeCustomBinaryPath(providerOptions?.droid?.binaryPath);
     case "kilo":
@@ -847,6 +867,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
+    case "muse":
+      return normalizeCustomBinaryPath(providerOptions?.muse?.binaryPath);
     case "djlCloud":
     case "group":
       return null;
@@ -1145,6 +1167,14 @@ export default function ChatView({
   const navigate = useNavigate();
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
+  const { handleNewStudioChat } = useHandleNewStudioChat();
+  // New-chat start screen: the open topic, and the suggestion previewed in the empty input.
+  const [homeTopic, setHomeTopic] = useState<string | null>(null);
+  const [homePreview, setHomePreview] = useState<string | null>(null);
+  const homeSuggestions = useHomeSuggestions(homeTopic);
+  // Skills the picked topic attaches; they stay when a suggestion fills the prompt.
+  const [homeSkills, setHomeSkills] = useState<readonly StarterSkillId[]>([]);
+  const homeSkillsForSendRef = useRef<readonly StarterSkillId[]>([]);
   const { createThreadHandoff, isCreatingHandoff } = useThreadHandoff();
   const rawSearch = useDiffRouteSearch();
   const activeSplitView = useSplitViewStore(selectSplitView(rawSearch.splitViewId ?? null));
@@ -2169,10 +2199,13 @@ export default function ChatView({
       qwen: resolveHint("qwen"),
       copilot: resolveHint("copilot"),
       codebuddy: resolveHint("codebuddy"),
+      doubao: resolveHint("doubao"),
+      deepseek: resolveHint("deepseek"),
       droid: resolveHint("droid"),
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
       pi: resolveHint("pi"),
+      muse: resolveHint("muse"),
       djlCloud: resolveHint("djlCloud"),
       group: null,
     };
@@ -2287,6 +2320,14 @@ export default function ChatView({
       binaryPath: settings.codebuddyBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
       enabled: selectedProvider === "codebuddy" || isModelPickerOpen,
+    }),
+  );
+  const museDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "muse",
+      binaryPath: settings.museBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "muse" || isModelPickerOpen,
     }),
   );
   const droidModelDiscoveryEnabled =
@@ -2455,6 +2496,16 @@ export default function ChatView({
         customModelsByProvider.codebuddy,
         composerModelHintByProvider.codebuddy,
       ),
+      doubao: getAppModelOptions(
+        "doubao",
+        customModelsByProvider.doubao,
+        composerModelHintByProvider.doubao,
+      ),
+      deepseek: getAppModelOptions(
+        "deepseek",
+        customModelsByProvider.deepseek,
+        composerModelHintByProvider.deepseek,
+      ),
       droid: getAppModelOptions(
         "droid",
         customModelsByProvider.droid,
@@ -2467,6 +2518,11 @@ export default function ChatView({
       ),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
+      muse: getAppModelOptions(
+        "muse",
+        customModelsByProvider.muse,
+        composerModelHintByProvider.muse,
+      ),
       djlCloud: [],
       group: [],
     };
@@ -2489,10 +2545,14 @@ export default function ChatView({
       qwen: qwenDynamicModelsQuery.data,
       copilot: copilotDynamicModelsQuery.data,
       codebuddy: codebuddyDynamicModelsQuery.data,
+      // Doubao and DeepSeek serve a fixed model list, so there is nothing to discover.
+      doubao: undefined,
+      deepseek: undefined,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      muse: museDynamicModelsQuery.data,
       djlCloud: djlCloudDynamicModelsQuery.data,
       group: undefined,
     };
@@ -2512,6 +2572,7 @@ export default function ChatView({
       "kilo",
       "opencode",
       "pi",
+      "muse",
       "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
@@ -2546,6 +2607,7 @@ export default function ChatView({
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    museDynamicModelsQuery.data,
     djlCloudDynamicModelsQuery.data,
   ]);
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
@@ -2568,10 +2630,13 @@ export default function ChatView({
       qwen: qwenDynamicModelsQuery.data?.models ?? [],
       copilot: copilotDynamicModelsQuery.data?.models ?? [],
       codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
+      doubao: [],
+      deepseek: [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      muse: museDynamicModelsQuery.data?.models ?? [],
       djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
       group: [],
     }),
@@ -2590,6 +2655,7 @@ export default function ChatView({
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      museDynamicModelsQuery.data?.models,
       djlCloudDynamicModelsQuery.data?.models,
     ],
   );
@@ -2604,10 +2670,13 @@ export default function ChatView({
     qwen: qwenDynamicModelsQuery,
     copilot: copilotDynamicModelsQuery,
     codebuddy: codebuddyDynamicModelsQuery,
+    doubao: undefined,
+    deepseek: undefined,
     droid: droidDynamicModelsQuery,
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,
     pi: piDynamicModelsQuery,
+    muse: museDynamicModelsQuery,
     djlCloud: djlCloudDynamicModelsQuery,
     // Group threads open in the Multi agents view, never here; this disabled query is inert.
     group: djlCloudDynamicModelsQuery,
@@ -2651,7 +2720,12 @@ export default function ChatView({
     selectedModelOptionsForDispatch,
     selectedProvider,
   ]);
-  const providerOptionsForDispatch = useMemo(() => getProviderStartOptions(settings), [settings]);
+  // The subscription account this chat uses (model picker pills, automatic switches).
+  const chatAccounts = useChatAccounts(threadId, activeThread?.activities);
+  const providerOptionsForDispatch = useMemo(
+    () => withChatAccount(getProviderStartOptions(settings), chatAccounts.providerOptionsPatch),
+    [settings, chatAccounts.providerOptionsPatch],
+  );
   const selectedModelForPicker =
     selectedModelSelection.provider === selectedProvider
       ? selectedModelSelection.model
@@ -3607,6 +3681,20 @@ export default function ChatView({
         composerSkillCwd !== null,
     }),
   );
+  // Providers without their own skill listing (the native Codex, Claude Code, Cursor, Muse
+  // bridges) get the full catalog: Codex, Claude, Claude plugin, shared and DJL skills.
+  // Picked skills are inlined into the prompt server-side, so every one of them works.
+  const composerSkillsCatalogQuery = useQuery(
+    skillsCatalogQueryOptions({
+      cwd: composerSkillCwd,
+      enabled:
+        (isSkillTrigger || composerTriggerKind === "slash-command") && !canDiscoverProviderSkills,
+    }),
+  );
+  const composerServerSettingsQuery = useQuery({
+    ...serverSettingsQueryOptions(),
+    enabled: !canDiscoverProviderSkills,
+  });
   const providerPluginsQuery = useQuery(
     providerPluginsQueryOptions({
       provider: selectedProvider,
@@ -3695,7 +3783,35 @@ export default function ChatView({
     () => providerNativeCommands.some((command) => command.name.toLowerCase() === "review"),
     [providerNativeCommands],
   );
-  const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
+  const catalogSkills = composerSkillsCatalogQuery.data?.skills;
+  const disabledSkillNames = composerServerSettingsQuery.data?.skills.disabled;
+  const providerSkills = useMemo(() => {
+    if (canDiscoverProviderSkills) return providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
+    if (!catalogSkills) return EMPTY_PROVIDER_SKILLS;
+    const disabled = new Set((disabledSkillNames ?? []).map((name) => name.trim().toLowerCase()));
+    // Many skills live in both ~/.claude/skills and ~/.codex/skills; list each name once,
+    // preferring the copy the selected provider loads itself.
+    const byName = new Map<string, ProviderSkillDescriptor>();
+    for (const skill of catalogSkills) {
+      const key = skill.name.trim().toLowerCase();
+      if (disabled.has(key)) continue;
+      const kept = byName.get(key);
+      if (
+        !kept ||
+        (!isSkillNativeTo(resolveSkillOrigin(kept), selectedProvider) &&
+          isSkillNativeTo(resolveSkillOrigin(skill), selectedProvider))
+      ) {
+        byName.set(key, skill);
+      }
+    }
+    return [...byName.values()];
+  }, [
+    canDiscoverProviderSkills,
+    catalogSkills,
+    disabledSkillNames,
+    providerSkillsQuery.data,
+    selectedProvider,
+  ]);
   const selectedModelCaps = useMemo(
     () => getModelCapabilities(selectedProvider, selectedModel),
     [selectedModel, selectedProvider],
@@ -4150,6 +4266,18 @@ export default function ChatView({
     zeroConfigRemoteSelection.kind === "no-model" &&
     !hasUsableZeroConfigModel;
   const isZeroConfigHomeLanding = isEmptyChatLanding && showZeroConfigLocalAiCard;
+  // The new-chat starter (Work / Code, topics, mascot) stays put when a fresh draft moves into
+  // a folder, so choosing a folder never reshuffles the page.
+  const showHomeStarter =
+    isCenteredEmptyLanding &&
+    Boolean(homeDir) &&
+    (isContainerLandingProject || isLocalDraftThread) &&
+    !isZeroConfigHomeLanding;
+  homeSkillsForSendRef.current = showHomeStarter ? homeSkills : [];
+  useEffect(() => {
+    // Leaving the start screen (sent, or opened another chat) drops the topic's skills.
+    if (!showHomeStarter) setHomeSkills((existing) => (existing.length === 0 ? existing : []));
+  }, [showHomeStarter]);
 
   const prepareLocalAiAndResume = useCallback(
     async (resumeTask: boolean): Promise<boolean> => {
@@ -4352,10 +4480,6 @@ export default function ChatView({
         altKey: false,
         modKey: true,
       }),
-    [keybindings],
-  );
-  const traitsPickerShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "traitsPicker.toggle"),
     [keybindings],
   );
   const onToggleDiff = useCallback(() => {
@@ -8428,10 +8552,13 @@ export default function ChatView({
       effort: selectedPromptEffortForSend,
       text: outgoingTextSeed,
     });
-    const mentionedSkillsForSend = filterPromptSkillReferences(
-      outgoingMessageText,
-      selectedComposerSkillsForSend,
-      selectedProviderForSend,
+    const mentionedSkillsForSend = withStarterSkills(
+      filterPromptSkillReferences(
+        outgoingMessageText,
+        selectedComposerSkillsForSend,
+        selectedProviderForSend,
+      ),
+      homeSkillsForSendRef.current,
     );
     const mentionedPluginMentionsForSend = filterPromptProviderMentionReferences(
       outgoingMessageText,
@@ -9653,6 +9780,8 @@ export default function ChatView({
     selectedProviderModelOptions,
     selectedRuntimeModel,
   );
+  // The strongest effort (the slider's purple stop) lights the input with an RGB ring.
+  const isTopEffort = isTopEffortSelected(composerTraitSelection);
   const runtimeUsageContextWindow = useMemo(
     () =>
       activeContextWindow ??
@@ -9676,7 +9805,6 @@ export default function ChatView({
       }),
     [runtimeUsageContextWindow],
   );
-  const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   const composerFooterControlsPlan = useMemo(
     () => composerFooterPlanForTier(composerFooterTier, Boolean(runtimeUsageContextWindow)),
     [composerFooterTier, runtimeUsageContextWindow],
@@ -9703,7 +9831,6 @@ export default function ChatView({
     composerFooterModelLabel,
     composerFooterTraitsSummary.summaryText,
     Boolean(runtimeUsageContextWindow),
-    useSplitComposerPickerControls,
   ].join(":");
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
@@ -9716,8 +9843,6 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterTier]);
-  const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
-  const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const isComposerModelEffortPickerOpen = isModelPickerOpen || isTraitsPickerOpen;
   const handleComposerModelEffortPickerOpenChange = useCallback(
@@ -9731,63 +9856,13 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
+  // One button opens the model panel (providers, models and effort) in every chat.
   const composerPickerControls = showComposerModelBootstrapSkeleton ? (
-    useSplitComposerPickerControls ? (
-      <>
-        {selectedProviderRuntimeModelDiscoveryPending ? (
-          <ComposerModelLoadingControl widthClassName={composerModelPickerWidthClassName} />
-        ) : (
-          <ComposerControlSkeleton widthClassName={composerModelPickerWidthClassName} />
-        )}
-        <ComposerControlSkeleton widthClassName={composerOptionsPickerWidthClassName} />
-      </>
-    ) : selectedProviderRuntimeModelDiscoveryPending ? (
+    selectedProviderRuntimeModelDiscoveryPending ? (
       <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
     ) : (
       <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
     )
-  ) : useSplitComposerPickerControls ? (
-    <>
-      <ProviderModelPicker
-        compact={isComposerFooterCompact}
-        hideLabel={!composerFooterControlsPlan.showModelLabel}
-        provider={selectedProvider}
-        model={selectedModelForPickerWithCustomFallback}
-        lockedProvider={lockedProvider}
-        providers={providerStatuses}
-        modelOptionsByProvider={modelOptionsByProvider}
-        loadingModelProviders={{
-          cursor: cursorModelDiscoveryPending,
-          droid: droidModelDiscoveryPending,
-          kilo: kiloModelDiscoveryPending,
-          opencode: openCodeModelDiscoveryPending,
-          pi: piModelDiscoveryPending,
-        }}
-        hiddenProviders={settings.hiddenProviders}
-        providerOrder={settings.providerOrder}
-        onProviderModelChange={onProviderModelSelect}
-        onSelectionCommitted={scheduleComposerFocus}
-        open={isModelPickerOpen}
-        onOpenChange={handleModelPickerOpenChange}
-        shortcutLabel={modelPickerShortcutLabel}
-      />
-      <TraitsPicker
-        provider={selectedProvider}
-        threadId={threadId}
-        model={selectedModelForPickerWithCustomFallback}
-        runtimeModel={selectedRuntimeModel}
-        runtimeModels={runtimeModelsByProvider[selectedProvider]}
-        runtimeAgents={dynamicAgents}
-        modelOptions={selectedProviderModelOptions}
-        prompt={prompt}
-        onPromptChange={setPromptFromTraits}
-        open={isTraitsPickerOpen}
-        onOpenChange={handleTraitsPickerOpenChange}
-        onSelectionCommitted={scheduleComposerFocus}
-        shortcutLabel={traitsPickerShortcutLabel}
-        hideLabel={!composerFooterControlsPlan.showTraitsLabel}
-      />
-    </>
   ) : (
     <ComposerModelEffortPicker
       compact={isComposerFooterCompact}
@@ -9814,6 +9889,19 @@ export default function ChatView({
       modelOptions={selectedProviderModelOptions}
       prompt={prompt}
       onPromptChange={setPromptFromTraits}
+      renderAccounts={(provider) => {
+        if (!isAccountProvider(provider)) return null;
+        const options = chatAccounts.optionsFor(provider);
+        return options.length > 1 ? (
+          <ComposerAccountRow
+            accounts={options}
+            selectedId={chatAccounts.selectedIdFor(provider)}
+            defaultId={chatAccounts.defaultIdFor(provider)}
+            onSelect={(id) => chatAccounts.select(provider, id)}
+            onMakeDefault={(id) => chatAccounts.makeDefault(provider, id)}
+          />
+        ) : null;
+      }}
       onProviderModelChange={onProviderModelSelect}
       onSelectionCommitted={scheduleComposerFocus}
       open={isComposerModelEffortPickerOpen}
@@ -10591,7 +10679,8 @@ export default function ChatView({
       (providerComposerCapabilitiesQuery.isLoading ||
         providerComposerCapabilitiesQuery.isFetching ||
         providerSkillsQuery.isLoading ||
-        providerSkillsQuery.isFetching));
+        providerSkillsQuery.isFetching ||
+        (composerSkillsCatalogQuery.isLoading && !composerSkillsCatalogQuery.data)));
 
   const onPromptChange = useCallback(
     (
@@ -11090,7 +11179,11 @@ export default function ChatView({
   // the branch-toolbar row below the input instead of getting clipped; the
   // relocated variant is icon-only since relocation means space is minimal.
   const relocateComposerLeadingControls = composerFooterControlsPlan.relocateLeadingControls;
-  const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
+  // On the new-chat screen the permission choice sits in the tray under the input instead.
+  const renderComposerLeadingControls = (options: {
+    iconOnly: boolean;
+    withPermissions?: boolean;
+  }) => (
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
@@ -11113,7 +11206,7 @@ export default function ChatView({
       {computerEngineAvailable ? (
         <ComputerChatControlButton control={computerChatControl} iconOnly={options.iconOnly} />
       ) : null}
-      {!isVoiceRecording && !isVoiceTranscribing ? (
+      {options.withPermissions !== false && !isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
           {...runtimeUsageControlsProps}
           className="shrink-0"
@@ -11177,24 +11270,28 @@ export default function ChatView({
       )}
     >
       {isEmptyChatLanding ? (
-        <ProjectPicker
-          align="start"
-          side="top"
-          purpose={isStudioContainer ? "work" : "chat"}
-          triggerClassName="h-7 py-1"
-          showResetToHome={Boolean(resolvedThreadWorktreePath)}
-          selectedWorkspaceRoot={resolvedThreadWorktreePath}
-          onSelectProject={
-            isStudioContainer
-              ? handleSelectWorkProjectForEmptyDraft
-              : handleSelectProjectForEmptyDraft
-          }
-          onSelectWorkspaceRoot={handleSelectWorkspaceRoot}
-          onCreateProjectFromPath={
-            isStudioContainer ? handleSelectWorkFolderFromPicker : handleCreateProjectFromPickerPath
-          }
-          onResetToHome={handleResetWorkspaceToHome}
-        />
+        <span data-onboarding-target="project-mode" className="contents">
+          <ProjectPicker
+            align="start"
+            side="top"
+            purpose={isStudioContainer ? "work" : "chat"}
+            triggerClassName="h-7 py-1"
+            showResetToHome={Boolean(resolvedThreadWorktreePath)}
+            selectedWorkspaceRoot={resolvedThreadWorktreePath}
+            onSelectProject={
+              isStudioContainer
+                ? handleSelectWorkProjectForEmptyDraft
+                : handleSelectProjectForEmptyDraft
+            }
+            onSelectWorkspaceRoot={handleSelectWorkspaceRoot}
+            onCreateProjectFromPath={
+              isStudioContainer
+                ? handleSelectWorkFolderFromPicker
+                : handleCreateProjectFromPickerPath
+            }
+            onResetToHome={handleResetWorkspaceToHome}
+          />
+        </span>
       ) : showEmptyLandingProjectPicker ? (
         <ProjectPicker
           align="start"
@@ -11211,6 +11308,10 @@ export default function ChatView({
       ) : (
         emptyLandingProjectChip
       )}
+      {/* Who approves what the AI does, next to where it works. */}
+      {!isVoiceRecording && !isVoiceTranscribing ? (
+        <RuntimeUsageControls {...runtimeUsageControlsProps} className="shrink-0" />
+      ) : null}
       {/* Reserve the Local/branch slot so project selection fades controls in without resizing. */}
       <div
         aria-hidden={showEmptyLandingBranchToolbar ? undefined : true}
@@ -11397,9 +11498,11 @@ export default function ChatView({
               ) : null}
             </div>
             <div
+              data-top-effort={isTopEffort ? "" : undefined}
               className={cn(
                 COMPOSER_INPUT_SHELL_CLASS_NAME,
-                composerProviderState.composerFrameClassName,
+                composerProviderState.composerFrameClassName ??
+                  (isTopEffort ? "top-effort-frame" : undefined),
                 composerMenuOpen && !isComposerApprovalState && "overflow-visible",
               )}
             >
@@ -11464,11 +11567,20 @@ export default function ChatView({
                               : effectiveComposerTriggerKind
                           }
                           activeItemId={activeComposerMenuItem?.id ?? null}
+                          provider={selectedProvider}
                           onHighlightedItemChange={onComposerMenuItemHighlighted}
                           onSelect={onSelectComposerItem}
                         />
                       )}
                     </div>
+                  ) : null}
+                  {showHomeStarter && !isComposerApprovalState ? (
+                    <ComposerPinnedSkills
+                      skills={homeSkills}
+                      onRemove={(id) =>
+                        setHomeSkills((existing) => existing.filter((skill) => skill !== id))
+                      }
+                    />
                   ) : null}
                   {!isComposerApprovalState &&
                     pendingUserInputs.length === 0 &&
@@ -11525,25 +11637,27 @@ export default function ChatView({
                       ? { onCollapsePastedText: addPastedTextToDraft }
                       : {})}
                     placeholder={
-                      isLegacyReadOnlyThread
-                        ? t("composer.placeholder.readOnly")
-                        : isZeroConfigEntry
-                          ? t("composer.zeroConfig.placeholder")
-                          : !hasConfiguredOpenCodeModel
-                            ? t("composer.placeholder.configureModel")
-                            : isComposerApprovalState
-                              ? t("composer.placeholder.approval")
-                              : activePendingProgress
-                                ? activePendingProgress.activeQuestion?.options.length === 0
-                                  ? t("composer.placeholder.answer")
-                                  : t("composer.placeholder.ownAnswer")
-                                : showPlanFollowUpPrompt && activeProposedPlan
-                                  ? t("composer.placeholder.planFeedback")
-                                  : hasLiveTurn
-                                    ? t("composer.placeholder.followUp")
-                                    : phase === "disconnected"
-                                      ? t("composer.placeholder.followUpAttachments")
-                                      : t("composer.placeholder.default")
+                      showHomeStarter && homePreview && prompt.length === 0
+                        ? homePreview
+                        : isLegacyReadOnlyThread
+                          ? t("composer.placeholder.readOnly")
+                          : isZeroConfigEntry
+                            ? t("composer.zeroConfig.placeholder")
+                            : !hasConfiguredOpenCodeModel
+                              ? t("composer.placeholder.configureModel")
+                              : isComposerApprovalState
+                                ? t("composer.placeholder.approval")
+                                : activePendingProgress
+                                  ? activePendingProgress.activeQuestion?.options.length === 0
+                                    ? t("composer.placeholder.answer")
+                                    : t("composer.placeholder.ownAnswer")
+                                  : showPlanFollowUpPrompt && activeProposedPlan
+                                    ? t("composer.placeholder.planFeedback")
+                                    : hasLiveTurn
+                                      ? t("composer.placeholder.followUp")
+                                      : phase === "disconnected"
+                                        ? t("composer.placeholder.followUpAttachments")
+                                        : t("composer.placeholder.default")
                     }
                     disabled={isComposerEditorDisabled}
                   />
@@ -11576,7 +11690,10 @@ export default function ChatView({
                       >
                         {relocateComposerLeadingControls
                           ? null
-                          : renderComposerLeadingControls({ iconOnly: false })}
+                          : renderComposerLeadingControls({
+                              iconOnly: false,
+                              withPermissions: !showEmptyLandingControls,
+                            })}
 
                         {!isVoiceRecording && !isVoiceTranscribing ? (
                           <>
@@ -12097,7 +12214,10 @@ export default function ChatView({
                         CHAT_COLUMN_FRAME_CLASS_NAME,
                       )}
                     >
-                      <DjlLogo aria-label={t("a11y.djlLogo")} className="size-10" />
+                      {/* The mascot greets new chats; other landings keep the logo. */}
+                      {showHomeStarter ? null : (
+                        <DjlLogo aria-label={t("a11y.djlLogo")} className="size-10" />
+                      )}
                       <h2
                         data-testid="empty-landing-heading"
                         className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
@@ -12114,8 +12234,47 @@ export default function ChatView({
                           </>
                         )}
                       </h2>
+                      {showHomeStarter ? (
+                        <HomeModeToggle
+                          mode={isStudioContainer ? "work" : "code"}
+                          disabled={!isLocalDraftThread}
+                          onChange={(mode) => {
+                            setHomeTopic(null);
+                            setHomePreview(null);
+                            setHomeSkills([]);
+                            // Switching swaps one empty draft for another: keep the same tab.
+                            replaceActiveDesktopTabOnNextNavigation();
+                            void (mode === "work"
+                              ? handleNewStudioChat({ fresh: true })
+                              : handleNewChat({ fresh: true }));
+                          }}
+                        />
+                      ) : null}
                     </div>
                   )}
+                  {showHomeStarter ? (
+                    // Topic chips, with the mascot peeking over the input's top edge.
+                    <div
+                      className={cn(
+                        "relative flex items-end gap-3 pb-3 pe-24",
+                        COMPOSER_COLUMN_FRAME_CLASS_NAME,
+                      )}
+                    >
+                      <HomeTopicChips
+                        mode={isStudioContainer ? "work" : "code"}
+                        topic={homeTopic}
+                        onTopicChange={(topic) => {
+                          setHomeTopic(topic);
+                          setHomePreview(null);
+                          setHomeSkills(topic ? (HOME_TOPIC_SKILLS[topic] ?? []) : []);
+                        }}
+                      />
+                      <DjlMascot
+                        label={t("home.mascot")}
+                        className="absolute end-1 -bottom-[6px] z-20 h-[95px] w-[88px]"
+                      />
+                    </div>
+                  ) : null}
                   {computerEngineAvailable ? (
                     <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
                       <ComputerChatStatus
@@ -12143,6 +12302,22 @@ export default function ChatView({
                       </div>
                     </div>
                   ) : null}
+                  {showHomeStarter && homeTopic ? (
+                    <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
+                      <HomeSuggestions
+                        topic={homeTopic}
+                        suggestions={homeSuggestions}
+                        onPreview={setHomePreview}
+                        onPick={(nextPrompt) => {
+                          // Focuses the input once it shows the prompt; focusing sooner makes
+                          // the editor report its old, empty text and wipe the prompt.
+                          setComposerPromptValue(nextPrompt);
+                          setHomeTopic(null);
+                          setHomePreview(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -12158,6 +12333,7 @@ export default function ChatView({
                       agentActivityDetail={openAgentActivityDetail}
                       hasMessages={timelineEntries.length > 0}
                       isWorking={isWorking}
+                      workingProvider={activeThread.session?.provider ?? selectedProvider}
                       worktreeSetup={activeWorktreeSetup}
                       activeTurnInProgress={activeTurnInProgress}
                       activeTurnStartedAt={activeWorkStartedAt}

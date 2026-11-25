@@ -9,8 +9,19 @@ import {
   type ProviderSkillDescriptor,
   type ServerRecord,
 } from "@djl/contracts";
-import { memo, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { PROVIDER_DISPLAY_NAMES } from "@djl/contracts";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { type ComposerTriggerKind } from "../../composer-logic";
 import { type ComposerSlashCommand } from "../../composerSlashCommands";
 import {
@@ -37,6 +48,7 @@ import {
 } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { formatSkillScope } from "~/lib/providerDiscovery";
+import { resolveSkillOrigin, type SkillGroupKey } from "~/lib/skillOrigin";
 import { cn } from "~/lib/utils";
 import {
   Command,
@@ -50,8 +62,8 @@ import { FileEntryIcon } from "./FileEntryIcon";
 import { ProviderIcon } from "../ProviderIcon";
 import { SiteFavicon } from "../SiteFavicon";
 import {
-  COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
-  COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_GLIDING_ITEM_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_HIGHLIGHT_CLASS_NAME,
   COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME,
 } from "./composerPickerStyles";
 
@@ -94,7 +106,30 @@ function commandMenuTitle(
   }
 }
 
-function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
+// Where a skill comes from, beside its name: "Claude · superpowers", "Codex", "Built-in".
+function skillOriginLabel(skill: ProviderSkillDescriptor, t: TFunction): string {
+  const origin = resolveSkillOrigin(skill);
+  const where = origin.plugin ?? (origin.project ? t("commandMenu.skillOrigin.project") : null);
+  const withDetail = (name: string) => (where ? `${name} · ${where}` : name);
+  switch (origin.kind) {
+    case "builtin":
+      return t("commandMenu.groups.builtIn");
+    case "claude":
+      return withDetail("Claude");
+    case "codex":
+      return withDetail(PROVIDER_DISPLAY_NAMES.codex);
+    case "shared":
+      return origin.project
+        ? t("commandMenu.skillOrigin.project")
+        : t("commandMenu.skillOrigin.shared");
+    case "djl":
+      return "DJL";
+    default:
+      return formatSkillScope(skill.scope);
+  }
+}
+
+function commandMenuTrailingMeta(item: ComposerCommandItem, t: TFunction): string | null {
   if (item.type === "agent") {
     return "delegate task to subagent";
   }
@@ -112,7 +147,7 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   }
 
   if (item.type === "skill") {
-    return formatSkillScope(item.skill.scope);
+    return skillOriginLabel(item.skill, t);
   }
 
   if (item.type === "model") {
@@ -218,6 +253,8 @@ export type ComposerCommandItem =
       id: string;
       type: "skill";
       skill: ProviderSkillDescriptor;
+      /** Picker section; the provider's own skills are "suggested". */
+      group: SkillGroupKey;
       label: string;
       description: string;
     }
@@ -245,8 +282,46 @@ export type ComposerCommandItem =
 type ComposerCommandGroupModel = {
   id: string;
   labelKey: string | null;
+  labelValues?: Record<string, string>;
   items: ComposerCommandItem[];
 };
+
+const SKILL_GROUP_LABEL_KEYS: Record<SkillGroupKey, string> = {
+  suggested: "commandMenu.groups.suggestedSkills",
+  builtin: "commandMenu.groups.builtIn",
+  claude: "commandMenu.groups.claudeSkills",
+  codex: "commandMenu.groups.codexSkills",
+  shared: "commandMenu.groups.sharedSkills",
+  other: "commandMenu.groups.otherSkills",
+};
+
+// `$` results arrive ordered by group (see orderSkillsByGroup), so consecutive runs map
+// straight to sections and the keyboard order matches what is on screen.
+function groupSkillItems(
+  items: ComposerCommandItem[],
+  provider: ProviderKind | undefined,
+): ComposerCommandGroupModel[] {
+  const groups: ComposerCommandGroupModel[] = [];
+  for (const item of items) {
+    const key: SkillGroupKey | "other-items" = item.type === "skill" ? item.group : "other-items";
+    const last = groups.at(-1);
+    if (last?.id === key) {
+      last.items.push(item);
+      continue;
+    }
+    groups.push({
+      id: key,
+      labelKey: key === "other-items" ? null : SKILL_GROUP_LABEL_KEYS[key],
+      ...(key === "suggested" && provider
+        ? { labelValues: { provider: PROVIDER_DISPLAY_NAMES[provider] } }
+        : {}),
+      items: [item],
+    });
+  }
+  // A single section needs no heading.
+  if (groups.length === 1 && groups[0]) groups[0].labelKey = null;
+  return groups;
+}
 
 const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME =
   "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
@@ -255,7 +330,11 @@ export function groupCommandItems(
   items: ComposerCommandItem[],
   triggerKind: ComposerTriggerKind | null,
   groupSlashCommandSections: boolean,
+  provider?: ProviderKind,
 ): ComposerCommandGroupModel[] {
+  if (triggerKind === "skill") {
+    return groupSkillItems(items, provider);
+  }
   if (triggerKind === "mention") {
     const handoffItems = items.filter((item) => item.type === "handoff-model");
     const pluginItems = items.filter(
@@ -344,6 +423,8 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   groupSlashCommandSections?: boolean;
   emptyStateText?: string;
   activeItemId: string | null;
+  /** The chat's provider: its own skills lead the `$` list under "For <provider>". */
+  provider?: ProviderKind;
   onHighlightedItemChange: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
 }) {
@@ -351,9 +432,38 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const groups = useMemo(
     () =>
-      groupCommandItems(props.items, props.triggerKind, props.groupSlashCommandSections ?? true),
-    [props.groupSlashCommandSections, props.items, props.triggerKind],
+      groupCommandItems(
+        props.items,
+        props.triggerKind,
+        props.groupSlashCommandSections ?? true,
+        props.provider,
+      ),
+    [props.groupSlashCommandSections, props.items, props.provider, props.triggerKind],
   );
+  // Rows rise in once when the menu opens; rows that appear while typing just appear.
+  const [entering, setEntering] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setEntering(false), 360);
+    return () => window.clearTimeout(timer);
+  }, []);
+  // One highlight that glides between rows instead of each row flashing its own fill.
+  const [highlight, setHighlight] = useState<{
+    top: number;
+    height: number;
+    glide: boolean;
+  } | null>(null);
+  useLayoutEffect(() => {
+    const node = props.activeItemId ? itemRefs.current[props.activeItemId] : null;
+    if (!node) {
+      setHighlight(null);
+      return;
+    }
+    setHighlight((previous) => ({
+      top: node.offsetTop,
+      height: node.offsetHeight,
+      glide: previous !== null,
+    }));
+  }, [props.activeItemId, props.items]);
 
   useEffect(() => {
     if (!props.activeItemId) {
@@ -364,6 +474,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
       block: "nearest",
     });
   }, [props.activeItemId]);
+  let rowIndex = 0;
 
   return (
     <Command
@@ -375,33 +486,46 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
         );
       }}
     >
-      <div className={COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME}>
+      <div className={cn(COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME, "command-menu-enter")}>
         <CommandList className="max-h-72 scroll-py-1 p-1">
-          {groups.map((group, groupIndex) => (
-            <div key={group.id}>
-              {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
-              <CommandGroup>
-                {group.labelKey ? (
-                  <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
-                    {t(group.labelKey)}
-                  </CommandGroupLabel>
-                ) : null}
-                {group.items.map((item) => (
-                  <ComposerCommandMenuItem
-                    key={item.id}
-                    item={item}
-                    resolvedTheme={props.resolvedTheme}
-                    isActive={props.activeItemId === item.id}
-                    itemRef={(node) => {
-                      itemRefs.current[item.id] = node;
-                    }}
-                    onHighlight={props.onHighlightedItemChange}
-                    onSelect={props.onSelect}
-                  />
-                ))}
-              </CommandGroup>
-            </div>
-          ))}
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className={COMPOSER_COMMAND_MENU_HIGHLIGHT_CLASS_NAME}
+              data-glide={highlight?.glide ? "true" : "false"}
+              style={{
+                transform: `translateY(${highlight?.top ?? 0}px)`,
+                height: highlight?.height ?? 0,
+                opacity: highlight ? 1 : 0,
+              }}
+            />
+            {groups.map((group, groupIndex) => (
+              <div key={group.id}>
+                {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
+                <CommandGroup>
+                  {group.labelKey ? (
+                    <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
+                      {group.labelValues ? t(group.labelKey, group.labelValues) : t(group.labelKey)}
+                    </CommandGroupLabel>
+                  ) : null}
+                  {group.items.map((item) => (
+                    <ComposerCommandMenuItem
+                      key={item.id}
+                      item={item}
+                      resolvedTheme={props.resolvedTheme}
+                      isActive={props.activeItemId === item.id}
+                      enterIndex={entering && rowIndex < 8 ? rowIndex++ : null}
+                      itemRef={(node) => {
+                        itemRefs.current[item.id] = node;
+                      }}
+                      onHighlight={props.onHighlightedItemChange}
+                      onSelect={props.onSelect}
+                    />
+                  ))}
+                </CommandGroup>
+              </div>
+            ))}
+          </div>
           {props.triggerKind === "mention" ? (
             <>
               {groups.length > 0 ? <CommandSeparator className="my-0.5" /> : null}
@@ -531,8 +655,15 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
     }
     case "server":
       return <CentralIcon name="server" className={cls} />;
-    case "skill":
-      return <SkillCubeIcon className={cls} />;
+    case "skill": {
+      // Claude and Codex skills carry their maker's logo; DJL and shared skills the skill mark.
+      const origin = resolveSkillOrigin(item.skill);
+      return origin.provider ? (
+        <ProviderIcon provider={origin.provider} className={cls} />
+      ) : (
+        <SkillCubeIcon className={cls} />
+      );
+    }
     default:
       return null;
   }
@@ -547,7 +678,8 @@ const ComposerCommandItemIcon = memo(function ComposerCommandItemIcon(props: {
     <span
       className={cn(
         COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME,
-        props.isActive && "text-foreground/70",
+        "command-menu-glyph",
+        props.isActive && "text-foreground/80",
       )}
     >
       {commandMenuItemGlyph(props.item, props.resolvedTheme)}
@@ -559,6 +691,8 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
   item: ComposerCommandItem;
   resolvedTheme: "light" | "dark";
   isActive: boolean;
+  /** Position in the opening stagger, or null once the menu has settled. */
+  enterIndex: number | null;
   itemRef: (node: HTMLElement | null) => void;
   onHighlight: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
@@ -568,16 +702,23 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
   const trailingMeta =
     props.item.type === "handoff-model"
       ? t("commandMenu.continueWithContext")
-      : commandMenuTrailingMeta(props.item);
+      : commandMenuTrailingMeta(props.item, t);
 
   return (
     <CommandItem
       ref={props.itemRef}
       value={props.item.id}
+      data-active={props.isActive ? "true" : undefined}
+      title={props.item.type === "skill" ? (props.item.skill.description ?? undefined) : undefined}
       className={cn(
-        COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
-        props.isActive && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
+        COMPOSER_COMMAND_MENU_GLIDING_ITEM_CLASS_NAME,
+        props.enterIndex !== null && "command-menu-row-enter",
       )}
+      style={
+        props.enterIndex !== null
+          ? ({ "--row-index": props.enterIndex } as CSSProperties)
+          : undefined
+      }
       onMouseMove={() => {
         if (!props.isActive) props.onHighlight(props.item.id);
       }}
@@ -595,7 +736,12 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
       />
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-          <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
+          <span
+            className={cn(
+              "shrink-0 text-[11.5px] font-medium text-foreground/80 transition-colors duration-150",
+              props.isActive && "text-foreground",
+            )}
+          >
             {props.item.type === "slash-command" || props.item.type === "provider-native-command"
               ? commandMenuTitle(props.item)
               : props.item.label}
@@ -603,7 +749,8 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           {secondaryText ? (
             <span
               className={cn(
-                "truncate text-[11px] text-muted-foreground/55",
+                "truncate text-[11px] text-muted-foreground/55 transition-colors duration-150",
+                props.isActive && "text-muted-foreground/80",
                 props.item.type === "server" && "font-mono",
               )}
             >
@@ -612,7 +759,12 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">
+          <span
+            className={cn(
+              "shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42 transition-colors duration-150",
+              props.isActive && "text-muted-foreground/70",
+            )}
+          >
             {trailingMeta}
           </span>
         ) : null}

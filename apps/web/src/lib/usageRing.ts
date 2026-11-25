@@ -4,7 +4,11 @@
 // Claude "Weekly" stay separate and the ring can name the one that is lowest.
 
 import {
+  DEFAULT_CLI_ACCOUNT_ID,
   PROVIDER_DISPLAY_NAMES,
+  type CliAccountProvider,
+  type CliAccountSetting,
+  type CliAccountUsage,
   type CloudAccountStatus,
   type ProviderKind,
   type ProviderUsageStatus,
@@ -31,11 +35,20 @@ import {
 } from "./rateLimits";
 
 export interface UsageRingEntry {
+  /** Unique per row: the provider, or `provider:accountId` for an extra AI account. */
+  key: string;
   provider: ProviderKind;
   name: string;
+  /**
+   * Set only when the provider has extra AI accounts: whether new chats use this one. Spare
+   * accounts are listed but never drive the ring.
+   */
+  inUse: boolean | null;
   planName: string | null;
   /** Only "ok" entries carry rows; an "ok" entry without rows has no limit data. */
   status: ProviderUsageStatus;
+  /** The provider's own CLI reports a signed-in account, whatever the usage fetch said. */
+  cliSignedIn: boolean;
   rows: ProviderUsageDisplayRow[];
   usageLines: OpenUsageUsageLine[];
   /** DJL Cloud credit balance, ready to render. */
@@ -81,10 +94,13 @@ function cloudEntry(cloud: CloudAccountStatus, options: DisplayOptions): UsageRi
     row.paceTone = row.remainingTone;
   }
   return {
+    key: "djlCloud",
     provider: "djlCloud",
+    inUse: null,
     name: PROVIDER_DISPLAY_NAMES.djlCloud,
     planName: usage?.planId ?? null,
     status: cloud.problem ? "error" : "ok",
+    cliSignedIn: true,
     rows,
     usageLines: [],
     credits: cloud.problem ? null : (cloud.credits?.display.total ?? null),
@@ -92,10 +108,24 @@ function cloudEntry(cloud: CloudAccountStatus, options: DisplayOptions): UsageRi
   };
 }
 
+/**
+ * Whether the CLI itself says it is signed in. The usage fetch reads stored tokens directly,
+ * so an expired or unreadable token there must not be shown as "Not signed in".
+ */
+export function isCliSignedIn(
+  provider: ProviderKind,
+  providerStatuses: ReadonlyArray<ServerProviderStatus>,
+): boolean {
+  return providerStatuses.some(
+    (status) => status.provider === provider && status.authStatus === "authenticated",
+  );
+}
+
 function snapshotEntry(
   snapshot: ServerProviderUsageSnapshot,
   liveRateLimits: ReadonlyArray<ProviderRateLimit>,
   options: DisplayOptions,
+  cliSignedIn: boolean,
 ): UsageRingEntry {
   const status = snapshot.status ?? "ok";
   const snapshotRateLimit =
@@ -109,10 +139,13 @@ function snapshotEntry(
         )
       : [];
   return {
+    key: snapshot.provider,
     provider: snapshot.provider,
+    inUse: null,
     name: PROVIDER_DISPLAY_NAMES[snapshot.provider],
     planName: status === "ok" ? (snapshot.planName ?? null) : null,
     status,
+    cliSignedIn,
     rows: rateLimit ? deriveProviderUsageDisplayRows([rateLimit], options) : [],
     usageLines: status === "ok" ? normalizeServerProviderUsageLines(snapshot) : [],
     credits: null,
@@ -131,6 +164,14 @@ export function deriveUsageRingEntries(
     cloud: CloudAccountStatus | null | undefined;
     /** Limits the agents reported during turns; see createAccountRateLimitsSelector. */
     liveRateLimits?: ReadonlyArray<ProviderRateLimit>;
+    /** Extra Claude / Codex subscription accounts (Settings → AI accounts). */
+    aiAccounts?: {
+      accounts: ReadonlyArray<Pick<CliAccountSetting, "id" | "provider" | "name">>;
+      active: Partial<Record<CliAccountProvider, string>>;
+      usage: ReadonlyArray<CliAccountUsage>;
+      /** Name for the CLI's normal login once a provider has more than one account. */
+      mainLabel: string;
+    };
   } & DisplayOptions,
 ): UsageRingEntry[] {
   const entries: UsageRingEntry[] = [];
@@ -139,7 +180,42 @@ export function deriveUsageRingEntries(
   }
   for (const provider of PROVIDER_USAGE_PROVIDERS) {
     const snapshot = input.snapshots.find((candidate) => candidate.provider === provider);
-    if (snapshot) entries.push(snapshotEntry(snapshot, input.liveRateLimits ?? [], input));
+    const extras =
+      provider === "claudeAgent" || provider === "codex"
+        ? (input.aiAccounts?.accounts.filter((account) => account.provider === provider) ?? [])
+        : [];
+    const activeId =
+      provider === "claudeAgent" || provider === "codex"
+        ? (input.aiAccounts?.active[provider] ?? DEFAULT_CLI_ACCOUNT_ID)
+        : DEFAULT_CLI_ACCOUNT_ID;
+    const mainInUse = !extras.some((account) => account.id === activeId);
+    // Limits reported mid-turn come from whichever account the chats are using.
+    const liveFor = (inUse: boolean) => (inUse ? (input.liveRateLimits ?? []) : []);
+    if (snapshot) {
+      const entry = snapshotEntry(
+        snapshot,
+        liveFor(mainInUse),
+        input,
+        isCliSignedIn(provider, input.providerStatuses),
+      );
+      if (extras.length > 0 && input.aiAccounts) {
+        entry.name = `${entry.name} · ${input.aiAccounts.mainLabel}`;
+        entry.inUse = mainInUse;
+      }
+      entries.push(entry);
+    }
+    for (const account of extras) {
+      const usage = input.aiAccounts?.usage.find(
+        (item) => item.provider === provider && item.accountId === account.id,
+      )?.snapshot;
+      if (!usage) continue;
+      const inUse = account.id === activeId;
+      const entry = snapshotEntry(usage, liveFor(inUse), input, false);
+      entry.key = `${provider}:${account.id}`;
+      entry.name = `${PROVIDER_DISPLAY_NAMES[provider]} · ${account.name}`;
+      entry.inUse = inUse;
+      entries.push(entry);
+    }
   }
   for (const status of input.providerStatuses) {
     if (
@@ -152,10 +228,13 @@ export function deriveUsageRingEntries(
       continue;
     }
     entries.push({
+      key: status.provider,
       provider: status.provider,
+      inUse: null,
       name: PROVIDER_DISPLAY_NAMES[status.provider],
       planName: null,
       status: "ok",
+      cliSignedIn: true,
       rows: [],
       usageLines: [],
       credits: null,
@@ -171,6 +250,8 @@ export function selectLowestUsageRow(
 ): LowestUsageRow | null {
   let lowest: LowestUsageRow | null = null;
   for (const entry of entries) {
+    // A spare AI account running low is not a problem until the user switches to it.
+    if (entry.inUse === false) continue;
     const row = selectPrimaryProviderUsageDisplayRow(entry.rows);
     if (row && (!lowest || row.remainingPercent < lowest.row.remainingPercent)) {
       lowest = { entry, row };

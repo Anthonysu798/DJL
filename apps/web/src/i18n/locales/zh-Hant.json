@@ -103,13 +103,18 @@
       "groups": {
         "agentModels": "切換智慧體繼續",
         "builtIn": "內建",
+        "claudeSkills": "Claude Code",
+        "codexSkills": "Codex",
         "local": "本地",
         "mcp": "MCP 伺服器",
+        "otherSkills": "其他技能",
         "plugins": "外掛",
         "provider": "提供者",
         "servers": "伺服器",
+        "sharedSkills": "共用",
         "skills": "技能",
-        "subagents": "子代理"
+        "subagents": "子代理",
+        "suggestedSkills": "適用於 {{provider}}"
       },
       "handoffReady": "智慧體已就緒",
       "handoffReadyDescription": "對話、筆記和草稿已保留。傳送下一條指令即可繼續。",
@@ -128,7 +133,11 @@
       },
       "runNativeCommand": "執行 {{provider}} 原生命令",
       "searchFilesHint": "鍵入以搜尋文件",
-      "searchingMentions": "搜尋中提及..."
+      "searchingMentions": "搜尋中提及...",
+      "skillOrigin": {
+        "project": "專案",
+        "shared": "共用"
+      }
     },
     "composer": {
       "actions": {
@@ -427,32 +436,32 @@
       "openRepositoryFallback": "應用程式內瀏覽器無法開啟 GitHub。",
       "providerFailure": {
         "authentication": {
-          "action": "登入或更新提供者憑證，然後再試一次。",
-          "title": "需要登入提供者"
+          "action": "你的 AI 帳號需要重新登入。登入後再傳送一次訊息。",
+          "title": "請重新登入以繼續"
         },
         "commandMissing": {
-          "action": "安裝或設定提供者指令，然後再試一次。",
-          "title": "找不到提供者指令"
+          "action": "請在設定中安裝，然後再傳送一次訊息。",
+          "title": "這個 AI 工具尚未設定"
         },
         "connection": {
-          "action": "檢查提供者服務或網路，然後再試一次。",
-          "title": "提供者連線已中斷"
+          "action": "請檢查網路連線，然後再傳送一次訊息。",
+          "title": "連線已中斷"
         },
         "generic": {
-          "action": "重新嘗試此任務。如果再次失敗，請檢查提供者設定。",
-          "title": "任務已停止"
+          "action": "請再傳送一次訊息。如果一再發生，可以換一個 AI 模型試試。",
+          "title": "這次回覆中斷了"
         },
         "permission": {
-          "action": "檢查提供者的檔案權限，然後再試一次。",
-          "title": "提供者存取遭封鎖"
+          "action": "請確認 DJL 可以開啟這個資料夾，然後再傳送一次訊息。",
+          "title": "DJL 無法開啟需要的檔案"
         },
         "rateLimit": {
-          "action": "等待限制重設或切換提供者，然後再試一次。",
-          "title": "已達提供者限制"
+          "action": "請等待額度重設，或切換到其他帳號後再傳送。",
+          "title": "已達到方案用量上限"
         },
         "workspaceMissing": {
-          "action": "請選擇現有的專案資料夾，然後重新傳送訊息。",
-          "title": "工作資料夾無法使用"
+          "action": "請選擇一個仍然存在的資料夾，然後再傳送一次訊息。",
+          "title": "找不到這個資料夾"
         }
       },
       "renameThreadFailed": "重命名線程失敗",
@@ -584,6 +593,337 @@
       },
       "unavailable": "{{provider}} 提供者無法使用。"
     },
+    "home": {
+      "mascot": "跟 DJL 打個招呼",
+      "modeLabel": "任務類型",
+      "modes": {
+        "code": "程式",
+        "work": "工作"
+      },
+      "suggestionsLabel": "{{topic}}的建議提示詞",
+      "topics": {
+        "apps": {
+          "label": "應用程式",
+          "suggestions": {
+            "s1": {
+              "label": "做一個習慣追蹤應用程式",
+              "prompt": "幫我做一個簡單的習慣追蹤應用程式，讓我可以新增習慣、每天打勾完成，還能看到連續達成的天數。設計保持簡潔，所有資料都存在這台電腦上。"
+            },
+            "s2": {
+              "label": "做一個預算計算機",
+              "prompt": "幫我做一個小型預算計算機：我輸入每月收入和各類別的支出，它就會顯示還剩多少錢，並附上一張簡單的圖表。完成後請告訴我怎麼開啟它。"
+            },
+            "s3": {
+              "label": "製作兒童問答遊戲",
+              "prompt": "製作一個色彩繽紛的問答遊戲，給 8 到 10 歲的孩子玩，包含 10 道選擇題，最後顯示分數，並提供「再玩一次」按鈕。"
+            },
+            "s4": {
+              "label": "把試算表變成應用程式",
+              "prompt": "我會分享一份試算表。請把它變成一個小型應用程式，讓我不用開啟試算表，也能搜尋、篩選和新增資料。"
+            }
+          }
+        },
+        "automation": {
+          "label": "自動化",
+          "suggestions": {
+            "s1": {
+              "label": "批次重新命名照片",
+              "prompt": "把我指定資料夾裡的所有照片，依拍攝日期重新命名，例如 2026-05-14 海邊 01.jpg。重新命名之前，請先列出所有變更讓我確認。"
+            },
+            "s2": {
+              "label": "整理我的下載資料夾",
+              "prompt": "把我的「下載」資料夾依檔案類型分到不同的子資料夾（文件、圖片、影片、安裝程式、其他）。搬移之前，請先告訴我你打算移動哪些檔案。"
+            },
+            "s3": {
+              "label": "合併多份試算表",
+              "prompt": "把一個資料夾裡的所有試算表合併成一張工作表，欄位保持一致，並新增一欄標示每一列來自哪個檔案。"
+            },
+            "s4": {
+              "label": "製作每日摘要腳本",
+              "prompt": "幫我寫一個每天早上可以執行的腳本，列出我昨天修改過的檔案，並寫成一份簡短的摘要筆記。請用淺白的話說明怎麼執行它。"
+            }
+          }
+        },
+        "data": {
+          "label": "資料",
+          "suggestions": {
+            "s1": {
+              "label": "找出銷售表的趨勢",
+              "prompt": "我會分享一份銷售試算表。請找出主要趨勢、表現最好和最差的月份，以及任何異常之處，然後用五個重點條列總結，並附上一張簡單的圖表。"
+            },
+            "s2": {
+              "label": "整理雜亂的試算表",
+              "prompt": "幫我整理我分享的試算表：統一格式不一致的日期和名稱、刪除重複的資料列，並列出你做的每一項修改，方便我檢查。"
+            },
+            "s3": {
+              "label": "製作簡易儀表板",
+              "prompt": "把我的資料做成一頁式儀表板，包含三到四個關鍵數字和兩張圖表。如果我還沒分享資料，請使用清楚標示的範例數字。"
+            },
+            "s4": {
+              "label": "比對兩份清單",
+              "prompt": "比對我分享的兩份清單，告訴我哪些項目兩份都有、哪些只出現在第一份、哪些只出現在第二份。"
+            }
+          }
+        },
+        "docs": {
+          "label": "技術文件",
+          "suggestions": {
+            "s1": {
+              "label": "為我的專案撰寫 README",
+              "prompt": "閱讀這個專案，寫一份清楚的 README：說明它的用途、如何安裝、如何執行，以及如何取得協助。內容簡短，語氣親切。"
+            },
+            "s2": {
+              "label": "用白話解釋這段程式碼",
+              "prompt": "用淺白的語言，向不會寫程式的人解釋這個專案在做什麼，然後列出主要的組成部分，以及各自的用途。"
+            },
+            "s3": {
+              "label": "撰寫 API 文件",
+              "prompt": "為這個專案的 API 撰寫簡單的說明文件：列出每個端點、需要傳送什麼、會回傳什麼，並各附一個範例。"
+            },
+            "s4": {
+              "label": "撰寫安裝設定步驟",
+              "prompt": "寫一份逐步的安裝設定說明，讓新同事能在全新的電腦上照著完成，包括要先安裝哪些東西，以及如何確認一切正常運作。"
+            }
+          }
+        },
+        "documents": {
+          "label": "文件",
+          "suggestions": {
+            "s1": {
+              "label": "摘要一份長篇文件",
+              "prompt": "把我分享的文件摘要成一頁：列出重點、任何決議或截止日期，以及三個我應該提出的問題。"
+            },
+            "s2": {
+              "label": "撰寫週報",
+              "prompt": "根據我的筆記撰寫一份週報，分成三個簡短段落：已完成的事項、卡關的事項，以及接下來要做的事。字數控制在 300 字以內，並標出任何你自行推測的內容。"
+            },
+            "s3": {
+              "label": "建立會議記錄範本",
+              "prompt": "建立一份可重複使用的會議記錄範本，包含出席者、議程、決議，以及附上負責人和截止日期的待辦事項。"
+            },
+            "s4": {
+              "label": "校對並潤飾我的文章",
+              "prompt": "校對我分享的文字。修正錯字和文法，讓內容更清楚簡潔，同時保留我的語氣。請標示出你做了哪些修改。"
+            }
+          }
+        },
+        "email": {
+          "label": "電子郵件",
+          "suggestions": {
+            "s1": {
+              "label": "寫一封禮貌的追蹤信",
+              "prompt": "寫一封禮貌但明確的追蹤郵件，寄給一位已經一週沒回覆的人。請附上主旨，並在姓名和日期的地方留空。"
+            },
+            "s2": {
+              "label": "回覆一則棘手的訊息",
+              "prompt": "幫我回覆我貼上的訊息。語氣保持冷靜專業，先肯定對方的看法，再提出下一步的建議。"
+            },
+            "s3": {
+              "label": "請同事對草稿提供意見",
+              "prompt": "寫一封簡短的郵件，請同事在指定日期前對我的草稿提供意見，並讓對方只要回幾句話就能輕鬆回覆。"
+            },
+            "s4": {
+              "label": "向團隊宣布一項異動",
+              "prompt": "根據我描述的異動，寫一則親切的團隊公告：說明改了什麼、什麼時候生效、有什麼好處，以及有問題可以找誰。"
+            }
+          }
+        },
+        "fixes": {
+          "label": "修正錯誤",
+          "suggestions": {
+            "s1": {
+              "label": "找出按鈕沒反應的原因",
+              "prompt": "這個專案裡有個按鈕，點了之後完全沒反應。請找出原因並修好它，再用一兩句話說明問題出在哪裡。"
+            },
+            "s2": {
+              "label": "修正錯誤訊息",
+              "prompt": "我會貼上一則錯誤訊息。請找出它在這個專案中的來源，修正根本原因，並告訴我如何確認問題已經解決。"
+            },
+            "s3": {
+              "label": "加快緩慢的網頁",
+              "prompt": "這個專案有一個頁面載入很慢。請找出變慢的原因，修正影響最大的那一項，並告訴我速度提升了多少。"
+            },
+            "s4": {
+              "label": "讓網站在手機上正常顯示",
+              "prompt": "讓這個網站在手機上正常顯示：用小螢幕尺寸逐頁檢查，修正任何超出畫面或小到不好點按的地方。"
+            }
+          }
+        },
+        "planning": {
+          "label": "規劃",
+          "suggestions": {
+            "s1": {
+              "label": "規劃專案時程",
+              "prompt": "幫我規劃一個專案。先問我三個簡單的問題，然後做出一份時程表，列出里程碑和負責人，並標出風險最高的步驟。"
+            },
+            "s2": {
+              "label": "把筆記變成待辦清單",
+              "prompt": "把我雜亂的筆記整理成清楚的待辦清單，依優先順序分組，並把今天最先要做的三件事放在最上面。"
+            },
+            "s3": {
+              "label": "規劃團隊活動",
+              "prompt": "規劃一場約 15 人的半天團隊活動：包括活動流程、需要預訂的項目清單，以及附上範例費用的粗估預算。"
+            },
+            "s4": {
+              "label": "準備一場會議",
+              "prompt": "幫我準備一場重要的會議：會議目標、我一定要提出的三個重點、對方可能會問的問題，以及每個問題的簡短回答。"
+            }
+          }
+        },
+        "research": {
+          "label": "研究",
+          "suggestions": {
+            "s1": {
+              "label": "購買前比較產品",
+              "prompt": "比較我指定產品的幾個熱門選擇。做一張表格列出價格、主要功能、優點和缺點，並告訴我哪一款最適合大多數人，以及原因。"
+            },
+            "s2": {
+              "label": "幫我研究一個主題",
+              "prompt": "研究我指定的主題，給我一份簡短的重點整理：關鍵事實、主要觀點，以及三個可信來源的連結。"
+            },
+            "s3": {
+              "label": "了解一家公司",
+              "prompt": "用 400 字以內，說明我指定的公司如何賺錢、主要競爭對手是誰，以及它所在的市場正在發生哪些變化。"
+            },
+            "s4": {
+              "label": "查證說法是否屬實",
+              "prompt": "查證我貼上的說法是否屬實。說明可靠來源怎麼說、你有多大把握，以及還有哪些地方不確定。"
+            }
+          }
+        },
+        "review": {
+          "label": "程式碼審查",
+          "suggestions": {
+            "s1": {
+              "label": "審查我最近的修改",
+              "prompt": "審查這個專案最近的修改，找出錯誤、容易混淆的命名，以及缺少的錯誤處理。請把最重要的問題列在最前面。"
+            },
+            "s2": {
+              "label": "為功能加上測試",
+              "prompt": "為這個專案的主要功能加上測試並執行，然後用淺白的話告訴我這些測試在檢查什麼，以及是否全部通過。"
+            },
+            "s3": {
+              "label": "檢查資安問題",
+              "prompt": "檢查這個專案中常見的資安問題，例如程式碼裡寫死了密鑰，或沒有檢查使用者輸入的內容，並針對最嚴重的問題提出修正建議。"
+            },
+            "s4": {
+              "label": "整理雜亂的程式碼",
+              "prompt": "找出這個專案中最雜亂的部分，在不改變功能的前提下整理它，然後說明你改善了哪些地方。"
+            }
+          }
+        },
+        "slides": {
+          "label": "簡報",
+          "suggestions": {
+            "s1": {
+              "label": "把筆記做成簡報",
+              "prompt": "把我的筆記做成 6 張投影片的簡報：包含一張標題頁、每張投影片一個重點，最後附上簡短總結。"
+            },
+            "s2": {
+              "label": "擬定提案簡報大綱",
+              "prompt": "為我描述的點子擬一份 10 張投影片的提案簡報大綱：要解決的問題、解決方案、目標對象、獲利模式、團隊，以及我們希望爭取的支持。"
+            },
+            "s3": {
+              "label": "製作教育訓練簡報",
+              "prompt": "製作一份簡短的教育訓練簡報，用簡單的例子教初學者認識我指定的主題，最後附上三題小測驗。"
+            },
+            "s4": {
+              "label": "製作專案進度簡報",
+              "prompt": "製作一份 5 張投影片的專案進度報告：目前進度、成果、遇到的問題、下一步，以及我需要的協助。"
+            }
+          }
+        },
+        "websites": {
+          "label": "網站",
+          "suggestions": {
+            "s1": {
+              "label": "建立個人網站",
+              "prompt": "建立一個簡單的個人網站，包含首頁、「關於我」頁面和聯絡方式區塊。在手機上也要好看，並說明怎麼開啟它。"
+            },
+            "s2": {
+              "label": "製作產品介紹頁",
+              "prompt": "為我描述的產品製作一個介紹頁面，包含清楚的標題、三項優點、簡短的常見問題，以及一個註冊按鈕。"
+            },
+            "s3": {
+              "label": "建立小店家網站",
+              "prompt": "為一家小店家建立四頁的網站：首頁、服務項目、關於我們和聯絡我們，並附上營業時間和地圖的預留位置。"
+            },
+            "s4": {
+              "label": "製作待辦清單網頁",
+              "prompt": "製作一個待辦清單網頁，讓我可以新增、勾選完成和刪除工作項目，而且重新開啟頁面後清單還在。"
+            }
+          }
+        }
+      },
+      "skillsLabel": "此任務使用的技能",
+      "removeSkill": "移除{{name}}",
+      "skills": {
+        "docx": {
+          "name": "Word 文件",
+          "description": "建立和編輯真正的 Word 檔案，標題、表格和排版規範。"
+        },
+        "copy-editing": {
+          "name": "文字潤飾",
+          "description": "校對並精簡文字，保留你的語氣。"
+        },
+        "xlsx": {
+          "name": "試算表",
+          "description": "讀取、整理和製作 Excel 與 CSV 檔案，公式和圖表都能用。"
+        },
+        "build-dashboard": {
+          "name": "資料儀表板",
+          "description": "把資料做成一頁可互動的儀表板，突顯關鍵數字和圖表。"
+        },
+        "pptx": {
+          "name": "PPT 簡報",
+          "description": "製作真正的 PowerPoint 簡報，版面清爽、易讀。"
+        },
+        "theme-factory": {
+          "name": "簡報主題",
+          "description": "為簡報和文件套用協調的配色與字型主題。"
+        },
+        "djl-research": {
+          "name": "研究",
+          "description": "根據真實來源研究，公平比較各選項，每個結論都註明出處。"
+        },
+        "djl-email": {
+          "name": "郵件撰寫",
+          "description": "寫出清楚、得體、下一步明確的郵件。"
+        },
+        "djl-planning": {
+          "name": "規劃",
+          "description": "把目標拆成有日期、負責人、風險和檢查點的小步驟。"
+        },
+        "frontend-design": {
+          "name": "前端設計",
+          "description": "讓頁面有獨特、用心的設計，而不是範本感。"
+        },
+        "frontend-ui-engineering": {
+          "name": "應用程式介面",
+          "description": "打造無障礙、適配各種尺寸的應用程式介面。"
+        },
+        "systematic-debugging": {
+          "name": "系統化除錯",
+          "description": "先找出根本原因，再動手修改。"
+        },
+        "djl-automation": {
+          "name": "安全自動化",
+          "description": "每次修改前先預覽，從不刪除，並保留復原清單。"
+        },
+        "code-review-and-quality": {
+          "name": "程式碼審查",
+          "description": "從正確性、安全性、效能和可讀性審查程式碼。"
+        },
+        "documentation-and-adrs": {
+          "name": "技術文件",
+          "description": "寫出說明原因的文件，並找出與程式碼不符的舊文件。"
+        },
+        "create-readme": {
+          "name": "README 撰寫",
+          "description": "寫出清楚的 README：做什麼、怎麼安裝和執行。"
+        }
+      }
+    },
     "image": {
       "download": "下載產生的圖片",
       "downloadError": "無法下載產生的圖片",
@@ -659,6 +999,26 @@
       "noPiModels": "找不到 Pi 模型",
       "search": "搜尋模型或提供者",
       "setUpLocalAi": "設定本機 AI…"
+    },
+    "modelPanel": {
+      "aboutEffort": "關於思考強度",
+      "addProvider": "新增 AI 供應商",
+      "checking": "正在檢查 {{provider}}…",
+      "effortNote": "強度越高，回答前思考得越久。Ultracode 還會讓 Claude 自行規劃多步驟的工作流程。",
+      "effortNoteBasic": "強度越高，回答前思考得越久。",
+      "fastMode": "快速模式",
+      "faster": "更快",
+      "noFavourites": "為模型加上星號，它就會出現在這裡。",
+      "recommended": "推薦",
+      "searchPlaceholder": "搜尋模型...",
+      "signInTo": "登入 {{provider}} 才能使用它的模型。",
+      "smarter": "更聰明",
+      "unavailable": "{{provider}} 暫時無法使用。",
+      "account": "帳號",
+      "accountLeft": "剩餘 {{percent}}%",
+      "accountDefaultTag": "預設",
+      "accountSignedOut": "未登入",
+      "makeDefault": "設為新聊天預設"
     },
     "models": {
       "addFavorite": "在最愛中新增{{name}}",
@@ -983,7 +1343,6 @@
       "library": "素材庫",
       "loading": "正在載入社群工具…",
       "navigation": "社群工具",
-      "open": "社群工具",
       "product": "產品連結",
       "publishingHistory": "發布紀錄",
       "results": "成效分析",
@@ -1512,6 +1871,11 @@
       "unpublish": "下線",
       "unpublishTitle": "下線 {{address}}？",
       "unpublishDescription": "網站會立即下線，網址會被釋放，任何人都可以使用。你的專案檔案仍保留在這台電腦上。"
+    },
+    "accountSwitch": {
+      "switched": "已切換到 {{to}}：{{from}} 已達用量上限。",
+      "resets": "將於 {{time}} 重置。",
+      "mainAccount": "主帳號"
     }
   },
   "common": {
@@ -1626,7 +1990,25 @@
   },
   "settings": {
     "accounts": {
+      "addAnotherTool": "新增其他 AI 工具（{{total}}）",
       "checking": "正在檢查…",
+      "claudeCompatible": {
+        "description": "豆包和 DeepSeek 程式開發方案透過 Claude Code 執行，並使用你方案的 API 金鑰。請先安裝 Claude Code，在這裡儲存金鑰，然後選擇「用於新對話」。",
+        "getKey": "取得 API 金鑰",
+        "keyLabel": "{{provider}} API 金鑰",
+        "keyMissing": "尚未儲存 API 金鑰",
+        "keyPlaceholder": "貼上你的 API 金鑰",
+        "keySaved": "已儲存 API 金鑰",
+        "loadError": "無法檢查已儲存的 API 金鑰。",
+        "region": "豆包區域",
+        "regionChina": "中國大陸",
+        "regionInternational": "國際版（BytePlus）",
+        "remove": "移除",
+        "replacePlaceholder": "貼上新金鑰以取代已儲存的金鑰",
+        "save": "儲存",
+        "saveError": "無法儲存，請再試一次。",
+        "title": "程式開發方案"
+      },
       "codingPlansDescription": "在 OpenCode 登入中，為 GLM 選擇 Z.AI Coding Plan，為 Kimi 選擇 Kimi For Coding，或選擇你的 MiniMax 程式開發方案服務商。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code 和 Pi 在上方透過官方 CLI 連線，直接沿用這些 CLI 已登入的帳號。",
       "codingPlansTitle": "中國模型與程式開發方案",
       "default": "新對話預設使用",
@@ -1663,6 +2045,9 @@
       "installNotDetected": "安裝後找不到 {{provider}}。請查看設定指南，然後再試一次。",
       "loadError": "無法檢查帳戶。",
       "loginFor": "登入 {{provider}}",
+      "moreOptions": "更多連接方式",
+      "moreOptionsDescription": "程式設計方案 API 金鑰、工具更新和其他方案。",
+      "noneConnected": "尚未登入任何 AI 工具。在下方選擇一個並登入。",
       "openCodeExistingKept": "已保留現有 CLI 登入資訊：{{providers}}。",
       "openCodeLegacyAvailable": "DJL 中有可複製的已儲存登入資訊：{{providers}}。現有 CLI 登入資訊將保留，原始 DJL 憑證也會備份保留。",
       "openCodeSharedLogin": "OpenCode 與已安裝的 OpenCode CLI 共用登入資訊。在此登入也會更新 CLI 的登入資訊。",
@@ -1691,6 +2076,33 @@
       "resetAriaLabel": "將{{label}}重設為預設值",
       "resetToDefault": "重設為預設值",
       "restoreDefaults": "還原預設值"
+    },
+    "aiAccounts": {
+      "addAccount": "新增帳戶",
+      "addAndSignIn": "新增並登入",
+      "cancel": "取消",
+      "description": "新增更多 Claude Code 與 Codex 訂閱,查看每個帳戶的剩餘額度,並選擇新對話使用的帳戶。",
+      "error": "AI 帳戶發生問題。",
+      "inUse": "使用中",
+      "mainAccount": "主要帳戶",
+      "nameLabel": "新的 {{provider}} 帳戶名稱",
+      "namePlaceholder": "取個名字,例如工作或個人",
+      "noUsage": "尚無用量",
+      "refresh": "重新整理用量",
+      "remove": "移除",
+      "removeConfirm": "移除 {{name}}?DJL 會登出該帳戶並刪除其儲存的登入資訊。",
+      "signIn": "登入",
+      "signInAgain": "重新登入",
+      "status": {
+        "signedIn": "已登入",
+        "signedOut": "未登入",
+        "unavailable": "已在帳戶中關閉",
+        "unknown": "無法檢查登入狀態"
+      },
+      "switchNote": "新對話使用標示為「使用中」的帳戶。已開始的對話會繼續使用原本的帳戶。",
+      "usageUnavailable": "目前無法取得用量",
+      "autoSwitch": "自動切換帳號",
+      "autoSwitchHint": "聊天所用帳號達到 5 小時或每週上限時，DJL 會改用剩餘用量最多的已登入帳號繼續，並在聊天中註明。"
     },
     "appearance": {
       "baseFontSize": {
@@ -2274,6 +2686,11 @@
           "description": "按鍵綁定、復原工具與版本資訊。",
           "eyebrow": "系統工具",
           "label": "進階"
+        },
+        "aiAccounts": {
+          "description": "多個 Claude 與 Codex 訂閱,以及新對話使用的帳戶。",
+          "eyebrow": "切換帳戶",
+          "label": "AI 帳戶"
         },
         "appearance": {
           "description": "語言、主題、字型與時間格式。",
@@ -3424,6 +3841,7 @@
       "working": "正在處理…"
     },
     "usage": {
+      "cannotShow": "目前無法顯示用量。",
       "learnMore": "深入瞭解",
       "left": "剩餘 {{remaining}}",
       "loading": "正在載入供應商用量…",
@@ -3448,7 +3866,7 @@
           "on-track": "符合進度"
         }
       },
-      "privacyDescription": "用量會從各供應商 CLI 儲存於本機的憑證讀取，並直接向供應商取得。OAuth 供應商可能透過官方權杖端點更新短期權杖；若顯示「未登入」，請使用其 CLI 重新驗證。",
+      "privacyDescription": "DJL 使用這台電腦上的登入資訊，直接從各個 AI 服務讀取用量。如果某個帳號顯示「未登入」，請在「帳戶」中重新登入。",
       "rateLimits": {
         "current": "目前",
         "fiveHours": "5 小時",
@@ -3460,14 +3878,16 @@
       },
       "rateLimitsRemaining": "剩餘速率限制",
       "remainingAriaLabel": "{{label}}：剩餘 {{remaining}}",
+      "signInToSee": "登入 {{provider}} 後即可查看剩餘用量。",
+      "signedInNoUsage": "你已登入 {{provider}}。下次聊天後會顯示用量。",
       "source": "用量來源：{{source}}",
       "status": {
         "notSignedIn": "未登入",
+        "signedIn": "已登入",
         "unavailable": "無法使用",
         "unsupported": "不支援"
       },
-      "title": "供應商用量",
-      "unavailableWithDetail": "用量無法使用。{{detail}}"
+      "title": "供應商用量"
     },
     "couldNotCheckPermissions": "無法檢查權限",
     "keyboardFocus": "鍵盤焦點",
@@ -3618,7 +4038,6 @@
     },
     "multiAgents": {
       "title": "多智慧體",
-      "beta": "測試版",
       "newGroup": "新增群組",
       "groups": "群組",
       "emptyTitle": "把你的智慧體拉進一個群組",
@@ -4042,7 +4461,7 @@
       "settings": {
         "action": "開始教學",
         "basicTitle": "基礎功能教學",
-        "description": "重新播放智慧體模式、專案、本機 AI 建議和設定的導覽。",
+        "description": "重新觀看「工作和程式」、專案、本機 AI 推薦和設定的導覽。",
         "section": "開始使用",
         "title": "新手教學"
       },
@@ -4061,8 +4480,8 @@
           "title": "選擇本機 AI 擅長方向"
         },
         "project-mode": {
-          "description": "任務圍繞資料夾或程式碼專案並需要持續脈絡時，請使用專案模式。",
-          "title": "專案模式"
+          "description": "在輸入框下方選擇資料夾，任務就會放進該專案。沒有選擇的話，會放到「最近」。",
+          "title": "專案"
         },
         "settings": {
           "description": "點擊這裡可以更改語言、模型、外觀和軟體行為。",
@@ -4073,8 +4492,8 @@
           "title": "隨時重新查看教學"
         },
         "work-mode": {
-          "description": "開始任務後，輸入 @ 即可切換至其他智慧體，並保留任務上下文。",
-          "title": "智慧體模式"
+          "description": "處理文件、研究和日常事務選「工作」，開發或修正軟體選「程式」。選一個主題即可取得現成的提示。",
+          "title": "工作或程式"
         }
       }
     },
@@ -4432,7 +4851,8 @@
         "newThread": "新話題",
         "newWorkspace": "新工作區",
         "social": "社群發布",
-        "socialNeedsChat": "請先開始一個聊天，社群發布內容會儲存在聊天裡。"
+        "socialNeedsChat": "請先開始一個聊天，社群發布內容會儲存在聊天裡。",
+        "newChat": "新對話"
       },
       "adding": "正在新增...",
       "addProject": "新增專案",
@@ -4477,7 +4897,7 @@
       "automationCount_other": "{{count}} 次自動化",
       "browse": "瀏覽",
       "cancelAddProject": "取消新增專案",
-      "chats": "聊天記錄",
+      "chats": "最近",
       "confirm": {
         "archiveThread": "存檔線條 \"{{title}}\"?\n存檔的執行緒從側邊欄中隱藏,但可以稍後恢復.",
         "deleteThread": "刪除線條“{{title}} ” ?\n這永久地澄清了這個執行緒的對話歷史.",
@@ -4820,6 +5240,50 @@
       "spinClockwise": "順時針旋轉",
       "spinCounterClockwise": "逆時針旋轉",
       "title": "2026 世界盃"
+    },
+    "skillsStore": {
+      "title": "技能",
+      "hint": "技能教 Claude Code 和 Codex 把某類任務做好。安裝後的技能會出現在 $ 選單裡。",
+      "search": "搜尋技能",
+      "installed": "已安裝",
+      "reviewedResults": "DJL 已審核",
+      "liveResults": "來自 skills.sh",
+      "liveHint": "未經 DJL 審核。使用前請先看看它會做什麼。",
+      "searching": "正在搜尋 skills.sh…",
+      "searchFailed": "無法連線 skills.sh，請稍後再試。",
+      "noMatches": "沒有符合的技能。",
+      "builtIn": "內建",
+      "unreviewed": "未審核",
+      "install": "安裝",
+      "installNamed": "安裝 {{name}}",
+      "installing": "正在安裝…",
+      "working": "處理中…",
+      "update": "更新",
+      "remove": "移除",
+      "installedTag": "已安裝",
+      "edited": "你在安裝後修改過這個技能。",
+      "installs": "{{value}} 次安裝",
+      "notOnGitHub": "不在 GitHub 上",
+      "viewOnGitHub": "在 GitHub 查看",
+      "previewFailed": "無法載入這個技能。",
+      "scriptsWarning": "這個技能包含智慧體可以執行的指令碼。",
+      "unreviewedNote": "DJL 尚未審核這個技能。使用前請先看看它會做什麼。",
+      "builtInNote": "DJL 內建此技能。可在 $ 選單或首頁的主題中選擇。",
+      "consentScriptsTitle": "安裝會執行指令碼的技能？",
+      "consentScriptsBody": "{{name}} 包含智慧體可以在你電腦上執行的檔案。只在你信任 {{owner}} 時安裝。",
+      "consentEditsTitle": "覆蓋你的修改？",
+      "consentEditsBody": "你在安裝後修改過 {{name}}。更新會覆蓋你的修改。",
+      "installAnyway": "仍然安裝",
+      "replaceChanges": "覆蓋我的修改",
+      "categories": {
+        "design": "設計",
+        "coding": "程式設計",
+        "documents": "文件",
+        "writing": "寫作",
+        "research": "調研與規劃",
+        "data": "資料",
+        "tools": "工具"
+      }
     }
   },
   "whatsNew": {
@@ -5657,10 +6121,20 @@
       "terminalHint": "選擇這些終端機共用的帳號。第二個訂閱請使用另一個設定檔。",
       "title": "工作空間",
       "useThisAccount": "使用此帳號",
-      "welcomeDescription": "並排執行程式開發代理，依專案整理終端機，並為每個訂閱使用獨立的帳號設定檔。",
+      "welcomeDescription": "在專案資料夾中並排執行程式設計智慧體。設定中的帳號在這裡可直接使用。",
       "welcomeTitle": "專屬於代理程式的工作空間",
       "workspaceHint": "將終端機整理到命名的工作空間，並選擇執行的專案資料夾。",
-      "workspacePlaceholder": "我的專案"
+      "workspacePlaceholder": "我的專案",
+      "mainAccount": "主帳號",
+      "accountsFromSettings": "與「設定 → 帳戶」共用，無需再次登入。",
+      "startTitle": "開始工作",
+      "startDescription": "選擇一個帳號，即可用它開啟終端機。每個帳號各自保持登入。",
+      "startWith": "啟動 {{provider}}",
+      "shellHint": "一般終端機，可執行任何工具",
+      "moreOptions": "更多選項",
+      "readyAccounts": "可直接使用",
+      "mainTag": "主帳號",
+      "browseFolderMenu": "選擇其他資料夾…"
     },
     "branch": {
       "actions": {

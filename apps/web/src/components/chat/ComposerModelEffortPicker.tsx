@@ -13,34 +13,24 @@ import {
   type ServerProviderStatus,
   type ThreadId,
 } from "@djl/contracts";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChevronDownIcon, FastModeIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { useComposerDraftStore } from "../../composerDraftStore";
-import { buildNextProviderOptions, type ProviderModelOption } from "../../providerModelOptions";
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { type ProviderModelOption } from "../../providerModelOptions";
 import { Button } from "../ui/button";
-import {
-  Menu,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
-  MenuTrigger,
-} from "../ui/menu";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
+  APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME,
   COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME,
-  COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME,
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./composerPickerStyles";
-import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
-import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./composerTraits";
-import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
-import { TraitsMenuContent } from "./TraitsPicker";
+import { ComposerModelPanel } from "./ComposerModelPanel";
+import { getComposerTraitSelection } from "./composerTraits";
+import { resolveProviderModelLabel } from "./ProviderModelPicker";
 import { MODEL_GUIDE_TARGET } from "~/onboarding/firstRunTour";
 
 type ComposerModelEffortPickerProps = {
@@ -70,6 +60,8 @@ type ComposerModelEffortPickerProps = {
   modelOptions: ProviderModelOptions[ProviderKind] | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
+  /** Subscription accounts for a provider tab, shown in the panel under the search. */
+  renderAccounts?: (provider: ProviderKind) => ReactNode;
 
   // Shared menu control.
   open?: boolean;
@@ -99,8 +91,6 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
     [onOpenChange, open],
   );
 
-  const setProviderModelOptions = useComposerDraftStore((store) => store.setProviderModelOptions);
-
   const modelLabel = resolveProviderModelLabel({
     provider: props.provider,
     lockedProvider: props.lockedProvider,
@@ -127,10 +117,6 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
   } = traitSelection;
 
   const supportsFastModeControl = fastModeDescriptor !== null || caps.supportsFastMode;
-  const hasTraitsTopSection = hasVisibleComposerTraitControls(traitSelection, {
-    includeFastMode: false,
-  });
-
   const effortLabel = effort
     ? (effortLevels.find((level) => level.value === effort)?.label ?? effort)
     : null;
@@ -145,34 +131,8 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
         : null;
   const showsFastBadge = supportsFastModeControl && fastModeEnabled;
 
-  const handleFastModeChange = useCallback(
-    (value: string) => {
-      if (!value) return;
-      const nextFastMode = value === "on";
-      if (nextFastMode === fastModeEnabled) return;
-      setProviderModelOptions(
-        props.threadId,
-        props.provider,
-        buildNextProviderOptions(props.provider, props.modelOptions, {
-          fastMode: nextFastMode,
-        }),
-        {
-          ...(props.model !== undefined ? { model: props.model } : {}),
-          persistSticky: true,
-        },
-      );
-      setMenuOpen(false);
-      props.onSelectionCommitted?.();
-    },
-    [fastModeEnabled, props, setMenuOpen, setProviderModelOptions],
-  );
-
-  const handleAfterModelSelection = useCallback(() => {
-    setMenuOpen(false);
-    props.onSelectionCommitted?.();
-  }, [props, setMenuOpen]);
-
-  const handleAfterTraitsSelection = useCallback(() => {
+  // Picking a model closes the panel and returns focus to the composer.
+  const handleClose = useCallback(() => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();
   }, [props, setMenuOpen]);
@@ -226,8 +186,43 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
     </span>
   );
 
+  const popup = (
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Positioner side="top" align="end" sideOffset={8} className="z-50">
+        <PopoverPrimitive.Popup
+          className={cn(
+            APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME,
+            "w-[min(17.5rem,calc(100vw-1.5rem))] overflow-hidden outline-none",
+            "origin-(--transform-origin) transition-[opacity,scale] duration-150 ease-out data-ending-style:scale-[.98] data-ending-style:opacity-0 data-starting-style:scale-[.97] data-starting-style:opacity-0 motion-reduce:transition-none",
+          )}
+        >
+          <ComposerModelPanel
+            provider={props.provider}
+            model={props.model}
+            lockedProvider={props.lockedProvider}
+            providers={props.providers}
+            modelOptionsByProvider={props.modelOptionsByProvider}
+            loadingModelProviders={props.loadingModelProviders}
+            hiddenProviders={props.hiddenProviders}
+            providerOrder={props.providerOrder}
+            disabled={props.disabled}
+            onProviderModelChange={props.onProviderModelChange}
+            onClose={handleClose}
+            threadId={props.threadId}
+            runtimeModel={props.runtimeModel}
+            runtimeAgents={props.runtimeAgents}
+            modelOptions={props.modelOptions}
+            prompt={props.prompt}
+            onPromptChange={props.onPromptChange}
+            renderAccounts={props.renderAccounts}
+          />
+        </PopoverPrimitive.Popup>
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
+  );
+
   return (
-    <Menu
+    <PopoverPrimitive.Root
       open={isMenuOpen}
       onOpenChange={(nextOpen) => {
         if (props.disabled) {
@@ -239,7 +234,7 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
     >
       {props.shortcutLabel ? (
         <Tooltip>
-          <TooltipTrigger render={<MenuTrigger render={triggerButton} />}>
+          <TooltipTrigger render={<PopoverPrimitive.Trigger render={triggerButton} />}>
             {triggerContent}
           </TooltipTrigger>
           {!isMenuOpen ? (
@@ -255,82 +250,9 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
           ) : null}
         </Tooltip>
       ) : (
-        <MenuTrigger render={triggerButton}>{triggerContent}</MenuTrigger>
+        <PopoverPrimitive.Trigger render={triggerButton}>{triggerContent}</PopoverPrimitive.Trigger>
       )}
-      <ComposerPickerMenuPopup align="end" side="top" fixedWidth>
-        {hasTraitsTopSection ? (
-          <TraitsMenuContent
-            provider={props.provider}
-            threadId={props.threadId}
-            model={props.model}
-            {...(props.runtimeModel ? { runtimeModel: props.runtimeModel } : {})}
-            {...(props.runtimeModels !== undefined ? { runtimeModels: props.runtimeModels } : {})}
-            {...(props.runtimeAgents !== undefined ? { runtimeAgents: props.runtimeAgents } : {})}
-            modelOptions={props.modelOptions}
-            prompt={props.prompt}
-            onPromptChange={props.onPromptChange}
-            includeFastMode={false}
-            onSelectionComplete={handleAfterTraitsSelection}
-          />
-        ) : null}
-
-        {hasTraitsTopSection ? <MenuSeparator /> : null}
-
-        <MenuSub>
-          <MenuSubTrigger>
-            <span className="truncate">{modelLabel}</span>
-          </MenuSubTrigger>
-          <ComposerPickerMenuSubPopup
-            fixedWidth
-            className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
-          >
-            <ProviderModelMenuItems
-              provider={props.provider}
-              model={props.model}
-              lockedProvider={props.lockedProvider}
-              {...(props.providers ? { providers: props.providers } : {})}
-              modelOptionsByProvider={props.modelOptionsByProvider}
-              {...(props.loadingModelProviders
-                ? { loadingModelProviders: props.loadingModelProviders }
-                : {})}
-              {...(props.hiddenProviders ? { hiddenProviders: props.hiddenProviders } : {})}
-              {...(props.providerOrder ? { providerOrder: props.providerOrder } : {})}
-              {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
-              onProviderModelChange={props.onProviderModelChange}
-              onAfterSelection={handleAfterModelSelection}
-            />
-          </ComposerPickerMenuSubPopup>
-        </MenuSub>
-
-        {supportsFastModeControl ? (
-          <MenuSub>
-            <MenuSubTrigger>
-              <FastModeIcon
-                aria-hidden="true"
-                className={cn(
-                  "size-3 shrink-0",
-                  fastModeEnabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground/85",
-                )}
-              />
-              <span className="truncate">
-                {t("traits.speed")}
-                {fastModeEnabled ? (
-                  <span className="ms-1.5 text-muted-foreground/65">{t("traits.fast")}</span>
-                ) : null}
-              </span>
-            </MenuSubTrigger>
-            <ComposerPickerMenuSubPopup fixedWidth>
-              <MenuRadioGroup
-                value={fastModeEnabled ? "on" : "off"}
-                onValueChange={handleFastModeChange}
-              >
-                <MenuRadioItem value="off">{t("traits.default")}</MenuRadioItem>
-                <MenuRadioItem value="on">{t("traits.fast")}</MenuRadioItem>
-              </MenuRadioGroup>
-            </ComposerPickerMenuSubPopup>
-          </MenuSub>
-        ) : null}
-      </ComposerPickerMenuPopup>
-    </Menu>
+      {popup}
+    </PopoverPrimitive.Root>
   );
 });

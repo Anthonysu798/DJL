@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ThreadId, ProviderRuntimeEvent } from "@djl/contracts";
@@ -69,6 +69,34 @@ describe("new official protocol drivers", () => {
       await turn;
       expect(driver.id).toBe("kimi-resume");
       expect(events).toContainEqual({ type: "turn.completed", payload: { state: "interrupted" } });
+    } finally {
+      driver.close();
+    }
+  });
+  it("Cursor in Full access approves tool permissions without asking the user", async () => {
+    const binary = fixture(
+      `
+      if(m.method==='initialize')reply(m,{protocolVersion:1,agentCapabilities:{}});
+      if(m.method==='authenticate')reply(m,{});
+      if(m.method==='session/new')reply(m,{sessionId:'cursor-full',models:{availableModels:[]}});
+      if(m.method==='session/set_mode')reply(m,{});
+      if(m.method==='session/prompt'){global.prompt=m.id;send({id:88,method:'session/request_permission',params:{sessionId:'cursor-full',toolCall:{kind:'fetch',title:'Web search'},options:[{optionId:'allow-once',kind:'allow_once'},{optionId:'allow-always',kind:'allow_always'},{optionId:'reject-once',kind:'reject_once'}]}})}
+      if(m.id===88&&!m.method){if(m.result.outcome.optionId!=='allow-always')throw Error('not auto-approved: '+JSON.stringify(m.result));send({id:global.prompt,result:{stopReason:'end_turn'}})}
+    `,
+      "cursor-agent",
+    );
+    const request = vi.fn(async () => "decline" as const);
+    const driver = await createCursorDriver(
+      {
+        ...input,
+        runtimeMode: "full-access",
+        providerOptions: { cursor: { binaryPath: binary } },
+      },
+      sink([], request),
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "search the web" });
+      expect(request).not.toHaveBeenCalled();
     } finally {
       driver.close();
     }
@@ -426,6 +454,51 @@ describe("new official protocol drivers", () => {
     );
     try {
       expect(driver.id).toBe("editor-session");
+    } finally {
+      driver.close();
+    }
+  });
+
+  it("Cursor maps DJL model slugs to the parameterized values cursor-agent accepts", async () => {
+    // cursor-agent 2026.11 rejects bare slugs with -32602 "Invalid params".
+    const binary = fixture(
+      `
+      const values=['default[]','claude-opus-5-5[context=300k,effort=medium,fast=false]','composer-2.5[fast=true]'];
+      if(m.method==='initialize')reply(m,{protocolVersion:1,agentCapabilities:{}});
+      if(m.method==='authenticate')reply(m,{});
+      if(m.method==='session/new')reply(m,{sessionId:'cursor-session',configOptions:[{id:'model',category:'model',type:'select',currentValue:values[1],options:values.map(value=>({value,name:value==='default[]'?'Auto':value.split('[')[0]}))}]});
+      if(m.method==='session/set_model'){if(values.includes(m.params.modelId)){require('fs').appendFileSync(process.env.MODEL_LOG,m.params.modelId+'\\n');reply(m,{})}else send({id:m.id,error:{code:-32602,message:'Invalid params',data:{message:'Invalid model value: '+m.params.modelId}}})}
+      if(m.method==='session/set_mode')reply(m,{});
+      if(m.method==='session/prompt')reply(m,{stopReason:'end_turn'});
+    `,
+      "cursor-agent",
+    );
+    const modelLog = join(dirs.at(-1)!, "models.log");
+    vi.stubEnv("MODEL_LOG", modelLog);
+    const driver = await createCursorDriver(
+      {
+        ...input,
+        providerOptions: { cursor: { binaryPath: binary } },
+        modelSelection: { provider: "cursor", model: "claude-opus-5-5" },
+      },
+      sink([]),
+    );
+    try {
+      await driver.send({
+        threadId: input.threadId,
+        input: "hi",
+        modelSelection: { provider: "cursor", model: "auto" },
+      });
+      // A model this Cursor install no longer offers keeps Cursor's own choice instead of failing.
+      await driver.send({
+        threadId: input.threadId,
+        input: "hi",
+        modelSelection: { provider: "cursor", model: "retired-model" },
+      });
+      expect(readFileSync(modelLog, "utf8").trim().split("\n")).toEqual([
+        "claude-opus-5-5[context=300k,effort=medium,fast=false]",
+        "default[]",
+      ]);
     } finally {
       driver.close();
     }

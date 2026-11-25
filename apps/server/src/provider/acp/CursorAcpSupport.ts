@@ -1361,6 +1361,44 @@ function resolveCursorAcpModelValue(
   );
 }
 
+function resolveCursorAcpSelection(
+  configOptions: ReadonlyArray<EffectAcpSchema.SessionConfigOption>,
+  model: string | null | undefined,
+  options: CursorModelOptions | null | undefined,
+) {
+  const choices = flattenCursorAcpModelChoices(configOptions);
+  const runtimeSafeOptions = normalizeCursorAcpRuntimeOptions({
+    configOptions,
+    choices,
+    baseModel: resolveCursorAcpBaseModelId(model),
+    options: mergeCursorModelOptions(cursorModelOptionsFromModelParameters(model), options),
+  });
+  const mergedOptions = mergeCursorModelOptions(
+    cursorModelOptionsFromCliModelId(model),
+    runtimeSafeOptions,
+  );
+  return {
+    choices,
+    mergedOptions,
+    modelValue: resolveCursorAcpModelValue(configOptions, model, mergedOptions),
+  };
+}
+
+/**
+ * The exact model value cursor-agent advertises for a DJL slug (`claude-opus-5-5` →
+ * `claude-opus-5-5[context=300k,…]`, `auto` → `default[]`). Undefined when this Cursor install
+ * does not offer the model, since cursor-agent rejects any value outside its list.
+ */
+export function resolveCursorAcpModelId(
+  configOptions: ReadonlyArray<EffectAcpSchema.SessionConfigOption>,
+  model: string,
+): string | undefined {
+  const { choices, modelValue } = resolveCursorAcpSelection(configOptions, model, undefined);
+  return modelValue && choices.some((choice) => choice.slug === modelValue)
+    ? modelValue
+    : undefined;
+}
+
 export function applyCursorAcpModelSelection<E>(input: {
   readonly runtime: CursorAcpModelSelectionRuntime;
   readonly model: string | null | undefined;
@@ -1368,23 +1406,11 @@ export function applyCursorAcpModelSelection<E>(input: {
   readonly mapError: (context: CursorAcpModelSelectionErrorContext) => E;
 }): Effect.Effect<void, E> {
   return Effect.gen(function* () {
-    const initialConfigOptions = yield* input.runtime.getConfigOptions;
-    const choices = flattenCursorAcpModelChoices(initialConfigOptions);
-    const baseModel = resolveCursorAcpBaseModelId(input.model);
-    const runtimeSafeOptions = normalizeCursorAcpRuntimeOptions({
-      configOptions: initialConfigOptions,
-      choices,
-      baseModel,
-      options: mergeCursorModelOptions(
-        cursorModelOptionsFromModelParameters(input.model),
-        input.options,
-      ),
-    });
-    const mergedOptions = mergeCursorModelOptions(
-      cursorModelOptionsFromCliModelId(input.model),
-      runtimeSafeOptions,
+    const { modelValue, mergedOptions } = resolveCursorAcpSelection(
+      yield* input.runtime.getConfigOptions,
+      input.model,
+      input.options,
     );
-    const modelValue = resolveCursorAcpModelValue(initialConfigOptions, input.model, mergedOptions);
     if (modelValue) {
       yield* input.runtime.setModel(modelValue).pipe(
         Effect.mapError((cause) =>

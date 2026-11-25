@@ -870,6 +870,27 @@ export function createWsNativeApi(): NativeApi {
       startLogin: (input) =>
         transport.request(WS_METHODS.harnessStartLogin, input, { timeoutMs: 30_000 }),
       endLogin: (input) => transport.request(WS_METHODS.harnessEndLogin, input),
+      listClaudeCompatibleKeys: () =>
+        transport.request(WS_METHODS.harnessListClaudeCompatibleKeys, {}),
+      setClaudeCompatibleKey: (input) =>
+        transport.request(WS_METHODS.harnessSetClaudeCompatibleKey, input),
+    },
+    cliAccounts: {
+      list: () => transport.request(WS_METHODS.cliAccountsList, {}),
+      add: (input) => transport.request(WS_METHODS.cliAccountsAdd, input),
+      remove: (input) => transport.request(WS_METHODS.cliAccountsRemove, input),
+      setActive: (input) => transport.request(WS_METHODS.cliAccountsSetActive, input),
+      usage: (input) => transport.request(WS_METHODS.cliAccountsUsage, input),
+    },
+    skillsStore: {
+      snapshot: () => transport.request(WS_METHODS.skillsStoreSnapshot, {}, { timeoutMs: 30_000 }),
+      search: (input) =>
+        transport.request(WS_METHODS.skillsStoreSearch, input, { timeoutMs: 20_000 }),
+      preview: (input) =>
+        transport.request(WS_METHODS.skillsStorePreview, input, { timeoutMs: 30_000 }),
+      install: (input) =>
+        transport.request(WS_METHODS.skillsStoreInstall, input, { timeoutMs: 180_000 }),
+      remove: (input) => transport.request(WS_METHODS.skillsStoreRemove, input),
     },
     codingPlans: {
       list: () => transport.request(WS_METHODS.codingPlansList, {}, { timeoutMs: 15_000 }),

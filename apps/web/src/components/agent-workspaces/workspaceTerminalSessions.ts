@@ -4,6 +4,7 @@ import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { addWsTransportStateListener } from "~/wsTransportEvents";
 import type { TerminalRuntimeCallbacks } from "../terminal/terminalRuntimeTypes";
 import { terminalEventDispatcher } from "../terminal/terminalEventDispatcher";
+import { resolveWorkspaceProfile, terminalProfileId } from "~/lib/workspaceAccountIds";
 
 export interface WorkspaceSessionState {
   status: "connecting" | "ready" | "error";
@@ -109,10 +110,9 @@ export class WorkspaceTerminalSessions {
   }
 
   sync(workspaces: AgentWorkspace[], profiles: AgentAccountProfile[]) {
-    const accounts = new Map(profiles.map((p) => [p.id, p]));
     for (const workspace of workspaces)
       for (const pane of workspace.panes) {
-        const profile = pane.profileId ? accounts.get(pane.profileId) : undefined;
+        const profile = resolveWorkspaceProfile(pane.profileId, profiles);
         this.ensure({
           threadId: workspace.id,
           terminalId: pane.id,
@@ -122,7 +122,7 @@ export class WorkspaceTerminalSessions {
             ? {
                 agentProfile: {
                   provider: profile.provider,
-                  profileId: profile.id,
+                  profileId: terminalProfileId(profile.id),
                   action: pane.action,
                 },
               }

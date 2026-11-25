@@ -2,6 +2,7 @@ import type { TerminalAgentProfile } from "@djl/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { randomUUID } from "~/lib/utils";
+import { appAccountProvider } from "~/lib/workspaceAccountIds";
 
 export interface AgentAccountProfile {
   id: string;
@@ -54,7 +55,7 @@ export const useAgentWorkspaceStore = create<AgentWorkspaceState>()(
       selectedProfileId: null,
       selectProfile: (id) =>
         set((state) =>
-          id === null || state.profiles.some((p) => p.id === id)
+          id === null || appAccountProvider(id) || state.profiles.some((p) => p.id === id)
             ? { selectedProfileId: id }
             : state,
         ),
@@ -110,7 +111,12 @@ export const useAgentWorkspaceStore = create<AgentWorkspaceState>()(
         ),
       addTerminals: (workspaceId, profileId, count, action) =>
         set((state) => {
-          if (profileId && !state.profiles.some((p) => p.id === profileId)) return state;
+          if (
+            profileId &&
+            !appAccountProvider(profileId) &&
+            !state.profiles.some((p) => p.id === profileId)
+          )
+            return state;
           if (![1, 5, 10].includes(count)) return state;
           return {
             workspaces: state.workspaces.map((w) =>

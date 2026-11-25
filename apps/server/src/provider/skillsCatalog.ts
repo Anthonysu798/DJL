@@ -13,12 +13,16 @@ import * as nodePath from "node:path";
 
 import type { ProviderKind, ProviderSkillDescriptor } from "@djl/contracts";
 
+import { starterSkillsDir } from "./starterSkills.ts";
+
 type FrontmatterValue = string | boolean;
 
 export interface SkillRoot {
   readonly path: string;
   readonly scope: string;
   readonly includeMarkdownFiles?: boolean;
+  /** Set for a Claude Code plugin's skills folder. */
+  readonly plugin?: string;
 }
 
 // ── Frontmatter parsing ──────────────────────────────────────────────
@@ -218,6 +222,7 @@ export async function collectSkillMarkdownPaths(
 export async function readSkillDescriptor(input: {
   readonly skillPath: string;
   readonly scope: string;
+  readonly plugin?: string;
 }): Promise<ProviderSkillDescriptor | null> {
   let raw: string;
   try {
@@ -232,7 +237,9 @@ export async function readSkillDescriptor(input: {
     skillFilename.toLowerCase() === "skill.md"
       ? nodePath.basename(nodePath.dirname(input.skillPath))
       : nodePath.basename(input.skillPath, nodePath.extname(input.skillPath));
-  const name = readStringField(frontmatter, ["name"]) ?? fallbackName;
+  const baseName = readStringField(frontmatter, ["name"]) ?? fallbackName;
+  // Claude Code invokes plugin skills as `plugin:skill`, so that is the skill's real name.
+  const name = input.plugin ? `${input.plugin}:${baseName}` : baseName;
   const description = readStringField(frontmatter, ["description"]);
   const displayName = readStringField(frontmatter, ["display-name", "displayName", "title"]);
   const shortDescription = readStringField(frontmatter, [
@@ -242,6 +249,8 @@ export async function readSkillDescriptor(input: {
   ]);
   const disabled =
     readBooleanField(frontmatter, ["disable-model-invocation", "disableModelInvocation"]) === true;
+  // Plugin skills show their own name; the plugin is shown beside it.
+  const shownName = displayName ?? (input.plugin ? baseName : undefined);
 
   return {
     name,
@@ -249,10 +258,11 @@ export async function readSkillDescriptor(input: {
     path: input.skillPath,
     enabled: !disabled,
     scope: input.scope,
-    ...(displayName || shortDescription
+    ...(input.plugin ? { plugin: input.plugin } : {}),
+    ...(shownName || shortDescription
       ? {
           interface: {
-            ...(displayName ? { displayName } : {}),
+            ...(shownName ? { displayName: shownName } : {}),
             ...(shortDescription ? { shortDescription } : {}),
           },
         }
@@ -274,7 +284,13 @@ async function collectSkillDescriptorsFromRoots(
         root.includeMarkdownFiles ? { includeMarkdownFiles: true } : undefined,
       );
       const descriptors = await Promise.all(
-        skillPaths.map((skillPath) => readSkillDescriptor({ skillPath, scope: root.scope })),
+        skillPaths.map((skillPath) =>
+          readSkillDescriptor({
+            skillPath,
+            scope: root.scope,
+            ...(root.plugin ? { plugin: root.plugin } : {}),
+          }),
+        ),
       );
       return descriptors.filter((skill) => skill !== null);
     }),
@@ -452,6 +468,11 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
+  // Muse Code reads .agents, .claude and .codex skill folders itself.
+  muse: ["agents", "claude", "codex"],
+  // The Claude Code harness serves these coding plans, so Claude skills are native.
+  doubao: ["claude"],
+  deepseek: ["claude"],
   djlCloud: [],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
 
@@ -543,6 +564,87 @@ function rootsForOrderedOrigins(
   return [...projectRoots, ...homeRoots];
 }
 
+async function readJsonRecord(path: string): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed: unknown = JSON.parse(await fs.readFile(path, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function enabledPluginKeys(settings: Record<string, unknown> | null): Set<string> {
+  const enabled = settings?.enabledPlugins;
+  if (!enabled || typeof enabled !== "object" || Array.isArray(enabled)) return new Set();
+  return new Set(
+    Object.entries(enabled as Record<string, unknown>)
+      .filter(([, value]) => value === true)
+      .map(([key]) => key),
+  );
+}
+
+function isWithin(child: string, parent: string): boolean {
+  const relative = nodePath.relative(nodePath.resolve(parent), nodePath.resolve(child));
+  return relative === "" || (!relative.startsWith("..") && !nodePath.isAbsolute(relative));
+}
+
+/**
+ * Skills folders of the Claude Code plugins that are installed and enabled: user-scoped
+ * plugins enabled in ~/.claude/settings.json, and project-scoped plugins when the cwd is
+ * inside that project and the project (or user) settings enable them.
+ */
+export async function claudePluginSkillRoots(input: {
+  readonly homeDir: string;
+  readonly cwd?: string | null;
+}): Promise<SkillRoot[]> {
+  const claudeDir = nodePath.join(input.homeDir, ".claude");
+  const installed = await readJsonRecord(
+    nodePath.join(claudeDir, "plugins", "installed_plugins.json"),
+  );
+  const plugins = installed?.plugins;
+  if (!plugins || typeof plugins !== "object" || Array.isArray(plugins)) return [];
+  const userEnabled = enabledPluginKeys(
+    await readJsonRecord(nodePath.join(claudeDir, "settings.json")),
+  );
+  const cwd = input.cwd?.trim();
+  const roots: SkillRoot[] = [];
+  for (const [key, entries] of Object.entries(plugins as Record<string, unknown>)) {
+    const pluginName = key.split("@")[0]?.trim();
+    if (!pluginName || !Array.isArray(entries)) continue;
+    for (const raw of entries) {
+      const entry = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+      const installPath = typeof entry?.installPath === "string" ? entry.installPath : null;
+      if (!installPath) continue;
+      let enabled = false;
+      if (entry?.scope === "project") {
+        const projectPath = typeof entry.projectPath === "string" ? entry.projectPath : null;
+        if (!projectPath || !cwd || !isWithin(cwd, projectPath)) continue;
+        const projectEnabled = new Set([
+          ...enabledPluginKeys(
+            await readJsonRecord(nodePath.join(projectPath, ".claude", "settings.json")),
+          ),
+          ...enabledPluginKeys(
+            await readJsonRecord(nodePath.join(projectPath, ".claude", "settings.local.json")),
+          ),
+        ]);
+        enabled = projectEnabled.has(key) || userEnabled.has(key);
+      } else {
+        enabled = userEnabled.has(key);
+      }
+      if (!enabled) continue;
+      roots.push({
+        path: nodePath.join(installPath, "skills"),
+        scope: "claude",
+        plugin: pluginName,
+      });
+      break;
+    }
+  }
+  return roots.toSorted((a, b) => (a.plugin ?? "").localeCompare(b.plugin ?? ""));
+}
+
 export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
   return rootsForOrderedOrigins(
     input,
@@ -580,9 +682,18 @@ export async function discoverSkillsCatalog(
 
   const scan = (async () => {
     await ensureDjlSkillsDir(input.djlBaseDir);
+    // Plugin skills come last: a user's own skill of the same name wins.
+    // DJL's bundled starter skills (the new-chat topics) come after everything the user owns.
+    // Settings lists only the user's own skills, which it can edit.
+    const starterDir = input.includeDuplicateOrigins ? null : starterSkillsDir();
+    const roots = [
+      ...skillsCatalogRoots(input),
+      ...(await claudePluginSkillRoots(input)),
+      ...(starterDir ? [{ path: starterDir, scope: "built-in" }] : []),
+    ];
     const skills = input.includeDuplicateOrigins
-      ? await collectSkillDescriptorsFromRoots(skillsCatalogRoots(input))
-      : await collectSkillsFromRoots(skillsCatalogRoots(input));
+      ? await collectSkillDescriptorsFromRoots(roots)
+      : await collectSkillsFromRoots(roots);
 
     skillsCatalogCache.delete(cacheKey);
     skillsCatalogCache.set(cacheKey, { at: Date.now(), skills });

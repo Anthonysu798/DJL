@@ -77,8 +77,8 @@ function FormRow({
   errorId?: string;
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-[11rem_minmax(0,1fr)] md:gap-x-8">
-      <div className="space-y-0.5 md:pt-2">
+    <div className="grid gap-2 @xl:grid-cols-[11rem_minmax(0,1fr)] @xl:gap-x-8">
+      <div className="space-y-0.5 @xl:pt-2">
         <label
           htmlFor={htmlFor}
           className="block text-[13px] font-medium text-[var(--color-text-foreground)]"
@@ -303,7 +303,7 @@ export function ServerEditorDialog({
 
         <DialogPanel className="max-h-[min(72vh,680px)] border-t border-[color:var(--color-border)] px-6 py-5">
           <form
-            className="space-y-6"
+            className="@container space-y-6"
             noValidate
             onSubmit={(event) => {
               event.preventDefault();
@@ -377,7 +377,7 @@ export function ServerEditorDialog({
               <div
                 role="radiogroup"
                 aria-label={t("servers.form.authLabel")}
-                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                className="grid grid-cols-2 gap-2 @md:grid-cols-4"
               >
                 {AUTH_TYPES.map((option) => (
                   <ChoiceCard

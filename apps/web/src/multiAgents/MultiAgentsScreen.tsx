@@ -70,12 +70,7 @@ export function MultiAgentsScreen(props: {
     <div className="flex h-full min-h-0 w-full bg-background" data-testid="multi-agents-screen">
       <nav className="flex w-60 shrink-0 flex-col border-r border-[color:var(--color-border-light)]">
         <div className="flex h-12 items-center justify-between pr-2 pl-4">
-          <h1 className="flex items-center gap-2 text-[13px] font-medium">
-            {t("multiAgents.title")}
-            <span className="rounded-[5px] border border-[color:var(--color-border-light)] px-1 py-px text-[10px] leading-3.5 font-normal text-muted-foreground">
-              {t("multiAgents.beta")}
-            </span>
-          </h1>
+          <h1 className="text-[13px] font-medium">{t("multiAgents.title")}</h1>
           <Tooltip>
             <TooltipTrigger
               render={
