@@ -3,7 +3,7 @@
  * user search and detail, credit grant with audit, reset limits, kill switch,
  * catalog edit, stats, and role enforcement for a support admin.
  */
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { Redis } from "ioredis";
 import * as OTPAuth from "otpauth";
@@ -865,7 +865,8 @@ describe("admin request forgery and second-factor hardening", () => {
           eq(schema.auditEvents.actorId, id),
           eq(schema.auditEvents.action, "admin.totp.enrollment_started"),
         ),
-      );
+      )
+      .orderBy(asc(schema.auditEvents.createdAt));
     expect(started.map((e) => e.before)).toEqual([{ totpEnabled: false }, { totpEnabled: true }]);
   });
 
