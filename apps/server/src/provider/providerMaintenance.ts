@@ -32,6 +32,8 @@ export interface ProviderMaintenanceCapabilities {
   readonly packageName: string | null;
   readonly latestVersionSource: ProviderLatestVersionSource | null;
   readonly update: ProviderMaintenanceCommandAction | null;
+  /** The CLI file these capabilities were resolved for, when it was found on PATH. */
+  readonly commandPath?: string;
 }
 
 export interface ProviderMaintenanceCommandAction {
@@ -485,7 +487,10 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
 ) {
   const binaryPath = nonEmptyString(options?.binaryPath) ?? definition.binaryName;
   if (hasPathSeparator(binaryPath)) {
-    return resolvePackageManagedProviderMaintenance(definition, options);
+    return {
+      ...resolvePackageManagedProviderMaintenance(definition, options),
+      commandPath: binaryPath,
+    };
   }
 
   const pathEntries = (options?.env?.PATH ?? process.env.PATH ?? "")
@@ -506,11 +511,14 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
       const realCommandPath = yield* fileSystem
         .realPath(candidate)
         .pipe(Effect.catch(() => Effect.succeed(candidate)));
-      return resolvePackageManagedProviderMaintenance(definition, {
-        ...options,
-        binaryPath,
-        realCommandPath,
-      });
+      return {
+        ...resolvePackageManagedProviderMaintenance(definition, {
+          ...options,
+          binaryPath,
+          realCommandPath,
+        }),
+        commandPath: candidate,
+      };
     }
   }
 
@@ -561,6 +569,75 @@ export function createProviderVersionAdvisory(input: {
     checkedAt: input.checkedAt ?? null,
     message: advisory.message,
   };
+}
+
+export interface ProviderUpdateVerification {
+  readonly status: "succeeded" | "unchanged" | "failed";
+  readonly message: string;
+}
+
+/**
+ * Decides what a finished update command really achieved. Its exit code is not proof: a package
+ * manager exits 0 after installing into a different prefix than the copy DJL runs, or after doing
+ * nothing. Only the version the CLI reports afterwards counts.
+ */
+export function verifyProviderUpdate(input: {
+  readonly command: string;
+  readonly cliPath: string;
+  readonly versionBefore: string | null;
+  readonly versionAfter: string | null;
+  readonly latestVersion: string | null;
+}): ProviderUpdateVerification {
+  const { command, cliPath, versionBefore, versionAfter, latestVersion } = input;
+  if (!versionAfter) {
+    return {
+      status: "failed",
+      message: `\`${command}\` finished, but DJL could not read a version from ${cliPath} afterwards. Run \`${cliPath} --version\` in a terminal to see what is wrong.`,
+    };
+  }
+
+  const changed = versionBefore !== null && versionBefore !== versionAfter;
+  const updated = changed
+    ? `Updated from ${versionBefore} to ${versionAfter}.`
+    : `${versionAfter} is installed.`;
+  if (!latestVersion) {
+    return changed
+      ? { status: "succeeded", message: updated }
+      : {
+          status: "unchanged",
+          message: `\`${command}\` finished without an error, but ${cliPath} still reports ${versionAfter} and DJL could not look up the latest version to confirm it is current.`,
+        };
+  }
+  if (compareSemverVersions(versionAfter, latestVersion) >= 0) {
+    return { status: "succeeded", message: updated };
+  }
+  return {
+    status: "unchanged",
+    message: changed
+      ? `\`${command}\` finished without an error, but ${cliPath} now reports ${versionAfter} and the latest is ${latestVersion}.`
+      : `\`${command}\` finished without an error, but ${cliPath} still reports ${versionAfter} and the latest is ${latestVersion}. The package manager most likely installed to a different location than the copy DJL runs.`,
+  };
+}
+
+const UPDATE_FAILURE_REASON_MAX_LENGTH = 300;
+
+/** One line for a failed update command: its exit code plus the installer's own error line. */
+export function describeUpdateCommandFailure(input: {
+  readonly command: string;
+  readonly exitCode: number;
+  readonly stderr: string;
+  readonly stdout: string;
+}): string {
+  const lines = `${input.stderr}\n${input.stdout}`
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  // Package managers print the cause first ("npm error code EACCES") and a log path last.
+  const reason = lines.find((line) => /error|denied|not found/i.test(line)) ?? lines.at(-1);
+  const summary = `\`${input.command}\` exited with code ${input.exitCode}`;
+  return reason
+    ? `${summary}: ${reason.slice(0, UPDATE_FAILURE_REASON_MAX_LENGTH)}`
+    : `${summary} without any output.`;
 }
 
 const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (packageName: string) {
