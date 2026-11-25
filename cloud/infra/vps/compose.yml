@@ -11,6 +11,7 @@ x-server-environment: &server-environment
   API_PUBLIC_URL: https://${API_HOST:?Set API_HOST}
   WEB_PUBLIC_URL: https://${WEB_HOST:?Set WEB_HOST}
   ADMIN_PUBLIC_URL: https://${ADMIN_HOST:?Set ADMIN_HOST}
+  SITES_DOMAIN: ${SITES_DOMAIN:-slcor.site}
   COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
   PASSKEY_RP_ID: ${PASSKEY_RP_ID:?Set PASSKEY_RP_ID}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run djl.sh init}
@@ -238,6 +239,40 @@ services:
       start_period: 30s
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+
+  sites:
+    image: djl-cloud-api:local
+    restart: unless-stopped
+    command: [bun, cloud/apps/sites/src/index.ts]
+    # Serves untrusted user sites, so it gets only what it reads: site rows, storage, the API.
+    environment:
+      DJL_ENV: ${DJL_ENV:-staging}
+      DATABASE_URL: postgres://djl_api:${POSTGRES_API_PASSWORD:?Run djl.sh init}@postgres:5432/djl
+      SITES_DOMAIN: ${SITES_DOMAIN:-slcor.site}
+      SITES_PORT: "8790"
+      API_INTERNAL_URL: http://api:8787
+      STORAGE_S3_ENDPOINT: http://s3:8333
+      STORAGE_S3_REGION: us-east-1
+      STORAGE_BUCKET: djl-files
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:?Run djl.sh init}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:?Run djl.sh init}
+    ports: ["${SITES_BIND:-127.0.0.1:8790}:8790"]
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [data, outbound]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        [
+          CMD,
+          bun,
+          -e,
+          "const r=await fetch('http://127.0.0.1:8790/__health');process.exit(r.ok?0:1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   web:
     build:

@@ -149,6 +149,47 @@ export const MULTIPOST_PLUGIN: ProviderPluginDescriptor = {
   },
 };
 
+const websiteInstructions =
+  "Build the website the user asks for as a static site that DJL can publish to {name}.slcor.site. Use Next.js with the App Router, TypeScript and Tailwind CSS, set output: \"export\" and images: { unoptimized: true } in next.config, and keep everything static: no API routes, server actions, middleware, cookies, or secrets, and no forms that collect passwords or payments. Keep the words, prices, links and images people may want to change in content/*.json or content/*.md and read them from there, so the site can be edited later by chatting. Make it responsive, accessible and fast, with real copy written for the user's business rather than placeholder text, and a favicon. Never imitate another company's brand. When the site builds, call djl_publish_site once: it builds and checks the site and shows a Publish card; only the user publishes, by tapping Publish. If it fails, fix the reported problem and call it again. After the user edits content, change the files and call djl_publish_site again to republish to the same address.";
+export const WEBSITE_PLUGIN: ProviderPluginDescriptor = {
+  id: "djl-website",
+  name: "website",
+  source: { type: "local", path: "builtin://djl/website" },
+  installed: true,
+  enabled: true,
+  installPolicy: "INSTALLED_BY_DEFAULT",
+  authPolicy: "ON_USE",
+  interface: {
+    displayName: "Website",
+    shortDescription: "Build a website and publish it free on slcor.site",
+    longDescription:
+      "Describe the site you want and DJL builds it, from a landing page to a menu, portfolio or small business site. Publish it with one tap to your own name.slcor.site address, then change it any time by chatting.",
+    developerName: "DJL",
+    category: "Productivity",
+    brandColor: "#2f6fed",
+    capabilities: ["Landing pages", "Content sites", "One-tap publishing", "Edit by chat"],
+    defaultPrompt: [
+      "Build a landing page for my bakery",
+      "Make a one-page portfolio with my projects",
+      "Publish my site again with the new prices",
+    ],
+  },
+};
+export const WEBSITE_PLUGIN_MENTION: ProviderMentionReference = {
+  name: "website",
+  path: "plugin://djl/website",
+};
+export const WEBSITE_SKILLS: ReadonlyArray<ProviderSkillDescriptor & { instructions: string }> = [
+  {
+    name: "website-build",
+    path: "builtin://djl/website/build",
+    enabled: true,
+    scope: "built-in",
+    description: "Build a static website and publish it on slcor.site",
+    instructions: websiteInstructions,
+  },
+];
+
 export const BUILT_IN_PLUGINS = [
   {
     plugin: MULTIPOST_PLUGIN,
@@ -170,6 +211,13 @@ export const BUILT_IN_PLUGINS = [
     skills: COMPUTER_SKILLS,
     mcpServers: [SOCIAL_MCP_NAME],
     instructions: computerInstructions,
+  },
+  {
+    plugin: WEBSITE_PLUGIN,
+    mention: WEBSITE_PLUGIN_MENTION,
+    skills: WEBSITE_SKILLS,
+    mcpServers: [SOCIAL_MCP_NAME],
+    instructions: websiteInstructions,
   },
 ] as const;
 export const BUILT_IN_SKILLS = BUILT_IN_PLUGINS.flatMap((entry) => entry.skills);

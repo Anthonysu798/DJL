@@ -38,6 +38,7 @@ import {
   WsRpcError,
   WsRpcGroup,
   type GitActionProgressEvent,
+  type SitesPublishResult,
   type OrchestrationEvent,
   type ProjectDevServerEvent,
   type OrchestrationShellStreamEvent,
@@ -76,6 +77,7 @@ import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig } from "./config";
 import { listHarnessAccounts } from "./harnesses/accounts";
 import { CloudAccount } from "./cloud/account";
+import { SitePublishError, SitePublisher, suggestSiteName } from "./sites/sitePublisher";
 import { createHarnessLoginController } from "./harnesses/login";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { listStudioThreadOutputs } from "./studioOutputs";
@@ -863,6 +865,54 @@ export const makeWsRpcLayer = () =>
         region: async () =>
           (await Effect.runPromise(serverSettings.getSettings)).providers.djlCloud.region,
       });
+      const sitePublisher = new SitePublisher({ secretsDir: config.secretsDir });
+      /** The chat's project folder, resolved on the server so clients never name a path. */
+      const siteProjectRoot = (threadId: ThreadId) =>
+        projectionReadModelQuery.getThreadCheckpointContext(threadId).pipe(
+          Effect.map((context) =>
+            Option.isNone(context)
+              ? null
+              : (resolveThreadWorkspaceCwd({
+                  thread: {
+                    id: threadId,
+                    projectId: context.value.projectId,
+                    envMode: context.value.envMode,
+                    worktreePath: context.value.worktreePath,
+                  },
+                  projects: [
+                    {
+                      id: context.value.projectId,
+                      kind: context.value.projectKind,
+                      workspaceRoot: context.value.workspaceRoot,
+                    },
+                  ],
+                }) ?? null),
+          ),
+        );
+      const requireSiteOwner = Effect.gen(function* () {
+        if ((yield* CurrentWsSessionRole) !== "owner")
+          return yield* Effect.fail(
+            new WsRpcError({ message: "Only the desktop owner can publish or unpublish sites." }),
+          );
+      });
+      const sitePublishResult = (run: () => Promise<SitesPublishResult>) =>
+        Effect.promise(() =>
+          run().catch(
+            (error: unknown): SitesPublishResult =>
+              error instanceof SitePublishError
+                ? {
+                    status: "failed",
+                    code: error.code,
+                    message: error.message,
+                    ...(error.log ? { log: error.log } : {}),
+                  }
+                : {
+                    status: "failed",
+                    code: "cloud_error",
+                    message: error instanceof Error ? error.message : "Publishing failed.",
+                  },
+          ),
+        );
 
       return WsRpcGroup.of({
         ...ownerComputerHandlers,
@@ -1950,6 +2000,77 @@ export const makeWsRpcLayer = () =>
           rpcEffect(
             Effect.tryPromise(() => cloudAccount.completeBrowserSignIn(input)),
             "Could not complete DJL Cloud sign-in",
+          ),
+        [WS_METHODS.sitesList]: () =>
+          rpcEffect(
+            Effect.tryPromise(async () => {
+              const result = await sitePublisher.list();
+              return result.signedIn
+                ? { signedIn: true, sites: result.sites, limits: result.limits }
+                : { signedIn: false, sites: [], limits: null };
+            }),
+            "Could not load your sites",
+          ),
+        [WS_METHODS.sitesProjectStatus]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const root = yield* siteProjectRoot(input.threadId);
+              const signedIn = (yield* Effect.promise(() => cloudAccount.session())) !== null;
+              if (!root)
+                return { signedIn, projectAvailable: false, linkedSite: null, suggestedName: "" };
+              const linkedSite = signedIn
+                ? yield* Effect.tryPromise(() => sitePublisher.linkedSite(root))
+                : null;
+              return {
+                signedIn,
+                projectAvailable: true,
+                linkedSite,
+                suggestedName: linkedSite?.name ?? suggestSiteName(path.basename(root)),
+              };
+            }),
+            "Could not read this project's site",
+          ),
+        [WS_METHODS.sitesNameAvailable]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => sitePublisher.nameAvailable(input.name)),
+            "Could not check that name",
+          ),
+        [WS_METHODS.sitesPublish]: (input) =>
+          rpcEffect(
+            requireSiteOwner.pipe(
+              Effect.andThen(siteProjectRoot(input.threadId)),
+              Effect.flatMap((root) =>
+                root
+                  ? sitePublishResult(async () => ({
+                      status: "published",
+                      site: await sitePublisher.publish({
+                        projectRoot: root,
+                        ...(input.name ? { name: input.name } : {}),
+                        ...(input.acceptTerms !== undefined
+                          ? { acceptTerms: input.acceptTerms }
+                          : {}),
+                      }),
+                    }))
+                  : Effect.succeed<SitesPublishResult>({
+                      status: "failed",
+                      code: "no_site",
+                      message: "This chat has no project folder to publish.",
+                    }),
+              ),
+            ),
+            "Could not publish the site",
+          ),
+        [WS_METHODS.sitesUnpublish]: (input) =>
+          rpcEffect(
+            requireSiteOwner.pipe(
+              Effect.andThen(
+                sitePublishResult(async () => ({
+                  status: "published",
+                  site: await sitePublisher.unpublish(input.siteId),
+                })),
+              ),
+            ),
+            "Could not unpublish the site",
           ),
         [WS_METHODS.harnessListAccounts]: () =>
           rpcEffect(

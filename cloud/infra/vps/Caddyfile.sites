@@ -1,0 +1,17 @@
+# slcor.site user sites. Kept out of the main Caddyfile so a missing origin certificate can
+# never stop the API from loading: add these blocks only after the certificate is installed.
+# Cloudflare proxies *.slcor.site (its Universal SSL covers the wildcard) and the origin
+# presents a Cloudflare Origin CA certificate saved as .secrets/sites-origin/{cert,key}.pem.
+*.{$SITES_DOMAIN} {
+    tls {$SITES_TLS_DIR}/cert.pem {$SITES_TLS_DIR}/key.pem
+    request_body {
+        max_size 64KB
+    }
+    encode zstd gzip
+    reverse_proxy {$SITES_UPSTREAM}
+}
+
+{$SITES_DOMAIN} {
+    tls {$SITES_TLS_DIR}/cert.pem {$SITES_TLS_DIR}/key.pem
+    redir https://slcor.com 301
+}

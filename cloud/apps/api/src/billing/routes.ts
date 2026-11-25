@@ -102,6 +102,8 @@ export function makeBillingRoutes(deps: BillingRouteDeps) {
     handle(
       Effect.gen(function* () {
         const p = yield* requirePrincipal(deps.principals);
+        // Invoices and the raw subscription are billing records, not something every member needs.
+        requireRole(p, BILLING_ROLES);
         const sub = yield* Effect.promise(() =>
           deps.db.query.subscriptions.findFirst({
             where: eq(schema.subscriptions.orgId, p.orgId),

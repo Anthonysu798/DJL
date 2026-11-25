@@ -3,7 +3,7 @@ import { HttpRouter } from "effect/unstable/http";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, errorResponse } from "./errors.ts";
-import { json, readJson } from "./json.ts";
+import { json, readBoundedBytes, readJson } from "./json.ts";
 
 const limit = 256 * 1024;
 const encoder = new TextEncoder();
@@ -284,6 +284,38 @@ describe("JSON content type", () => {
       expect(f.received).toHaveBeenCalledWith({ ok: 1 });
     } finally {
       await f.dispose();
+    }
+  });
+});
+
+describe("readBoundedBytes", () => {
+  it("caps a headerless chunked body at a route's own limit", async () => {
+    const router = HttpRouter.toWebHandler(
+      HttpRouter.add(
+        "POST",
+        "/json",
+        readBoundedBytes(64 * 1024).pipe(
+          Effect.map((bytes) => json({ bytes: bytes.byteLength })),
+          Effect.catchIf(
+            (error): error is ApiError => error instanceof ApiError,
+            (error) =>
+              Effect.succeed(errorResponse(error.status, error.code, error.message, "raw")),
+          ),
+        ),
+      ),
+      { disableLogger: true },
+    );
+    const octets = { "content-type": "application/octet-stream" };
+    try {
+      const big = trackedBody(new Uint8Array(1024 * 1024));
+      const over = await router.handler(post(big.body, octets));
+      expect(over.status).toBe(413);
+      expect(big.finalChunkProduced()).toBe(false);
+      const small = trackedBody(new Uint8Array(1000));
+      const ok = await router.handler(post(small.body, octets));
+      expect(await ok.json()).toEqual({ bytes: 1000 });
+    } finally {
+      await router.dispose();
     }
   });
 });

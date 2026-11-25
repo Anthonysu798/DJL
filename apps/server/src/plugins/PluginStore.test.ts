@@ -96,6 +96,7 @@ describe("bundled plugin catalog", () => {
       "djl-multipost",
       "djl-pdf",
       "djl-powerpoint",
+      "djl-website",
       "djl-word",
     ]);
   });

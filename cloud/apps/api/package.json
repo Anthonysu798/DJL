@@ -13,7 +13,8 @@
     "./commerce-alert-email": "./src/commerce/CommerceAlertDeliveryService.ts",
     "./commerce-image-uploads": "./src/commerce/CommerceImageUploads.ts",
     "./free-allowance": "./src/credits/freeAllowance.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./sites": "./src/sites/SiteService.ts"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -45,6 +46,7 @@
     "better-auth": "^1.7.4",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
+    "fflate": "0.8.3",
     "ioredis": "^6.0.0",
     "jose": "^6.2.3",
     "otpauth": "^9.5.2",

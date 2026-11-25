@@ -1,6 +1,6 @@
 /**
  * Cross-device sync: append-only replication of the desktop's orchestration
- * events into an org-scoped log with per-device cursors, plus content-addressed
+ * events into the user's personal-org log with per-device cursors, plus content-addressed
  * attachments. Opt-in per device; storage is bounded by the plan quota; the
  * `sync` kill switch stops writes but never reads.
  */
@@ -13,6 +13,16 @@ import type { Principal } from "../auth/guard.ts";
 import { isSupportedType } from "../files/fileTypes.ts";
 import { ApiError } from "../http/errors.ts";
 import type { BlobStore } from "./BlobStore.ts";
+
+/**
+ * Synced desktop history is personal: it always lives in the caller's personal org, never
+ * a team org, so teammates (any role) cannot read or rewrite each other's conversations.
+ */
+function ownSyncScope(principal: Principal): Principal {
+  return principal.orgId === principal.personalOrgId
+    ? principal
+    : { ...principal, orgId: principal.personalOrgId };
+}
 
 export interface SyncEventInput {
   readonly eventId: string;
@@ -82,6 +92,7 @@ export class SyncService {
   }
 
   async setDeviceSync(principal: Principal, deviceId: string, enabled: boolean) {
+    principal = ownSyncScope(principal);
     await this.device(principal, deviceId);
     await this.db
       .update(schema.devices)
@@ -91,6 +102,7 @@ export class SyncService {
   }
 
   async status(principal: Principal, deviceId: string) {
+    principal = ownSyncScope(principal);
     const device = await this.device(principal, deviceId);
     const cursor = await this.db.query.deviceCursors.findFirst({
       where: eq(schema.deviceCursors.deviceId, deviceId),
@@ -111,6 +123,7 @@ export class SyncService {
 
   /** Append events. Duplicate event ids are ignored so the client can retry a batch. */
   async push(principal: Principal, deviceId: string, events: readonly SyncEventInput[]) {
+    principal = ownSyncScope(principal);
     await this.assertWritable();
     const device = await this.device(principal, deviceId);
     if (!device.syncEnabled)
@@ -264,6 +277,7 @@ export class SyncService {
     cursor: bigint,
     options: { readonly includeOwn?: boolean; readonly limit?: number } = {},
   ) {
+    principal = ownSyncScope(principal);
     await this.device(principal, deviceId);
     const limit = Math.min(Math.max(options.limit ?? PULL_LIMIT, 1), PULL_LIMIT);
     const rows = await this.db
@@ -311,6 +325,7 @@ export class SyncService {
   }
 
   async listThreads(principal: Principal, limit = 100) {
+    principal = ownSyncScope(principal);
     return this.db.query.threadIndex.findMany({
       where: and(
         eq(schema.threadIndex.orgId, principal.orgId),
@@ -322,6 +337,7 @@ export class SyncService {
   }
 
   async threadEvents(principal: Principal, threadId: string) {
+    principal = ownSyncScope(principal);
     return this.db
       .select()
       .from(schema.threadEvents)
@@ -340,6 +356,7 @@ export class SyncService {
     principal: Principal,
     input: { readonly contentHash: string; readonly mimeType: string; readonly sizeBytes: number },
   ) {
+    principal = ownSyncScope(principal);
     await this.assertWritable();
     if (!/^[0-9a-f]{64}$/.test(input.contentHash))
       throw new ApiError(400, "bad_hash", "contentHash must be a sha256 hex digest.");
@@ -411,6 +428,7 @@ export class SyncService {
   }
 
   async completeAttachmentUpload(principal: Principal, contentHash: string) {
+    principal = ownSyncScope(principal);
     const mine = and(
       eq(schema.attachments.orgId, principal.orgId),
       eq(schema.attachments.contentHash, contentHash),
@@ -465,6 +483,7 @@ export class SyncService {
   }
 
   async attachmentDownload(principal: Principal, contentHash: string) {
+    principal = ownSyncScope(principal);
     const row = await this.db.query.attachments.findFirst({
       where: and(
         eq(schema.attachments.orgId, principal.orgId),

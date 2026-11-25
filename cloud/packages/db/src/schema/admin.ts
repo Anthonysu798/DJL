@@ -167,7 +167,7 @@ export const auditEvents = pgTable(
   ],
 );
 
-export const killSwitchEnum = pgEnum("kill_switch", ["gateway", "billing", "sync"]);
+export const killSwitchEnum = pgEnum("kill_switch", ["gateway", "billing", "sync", "sites"]);
 
 export const killSwitches = pgTable("kill_switches", {
   name: killSwitchEnum("name").primaryKey(),

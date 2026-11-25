@@ -17,7 +17,7 @@ const directories: string[] = [];
 const fixture = () => {
   const directory = mkdtempSync(resolve(tmpdir(), "djl-vps-test-"));
   directories.push(directory);
-  for (const name of [".env.example", "Caddyfile"])
+  for (const name of [".env.example", "Caddyfile", "Caddyfile.sites"])
     copyFileSync(new URL(name, import.meta.url), resolve(directory, name));
   initialize(directory);
   return directory;
@@ -60,6 +60,11 @@ describe("VPS private configuration", () => {
     expect(readFileSync(resolve(directory, "Caddyfile.host"), "utf8")).toContain(
       "reverse_proxy 127.0.0.1:8787",
     );
+    const sites = readFileSync(resolve(directory, "Caddyfile.sites.host"), "utf8");
+    expect(sites).toContain("*.slcor.site {");
+    expect(sites).toContain("reverse_proxy 127.0.0.1:8790");
+    expect(sites).toContain(`tls ${resolve(directory, ".secrets/sites-origin")}/cert.pem`);
+    expect(readFileSync(resolve(directory, "Caddyfile.host"), "utf8")).not.toContain("slcor.site");
   });
 });
 

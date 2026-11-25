@@ -5,7 +5,7 @@ import type { PrincipalResolver } from "../auth/guard.ts";
 import { requirePrincipal } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";
 import { attempt, handle } from "../http/handle.ts";
-import { json, requireJsonContentType } from "../http/json.ts";
+import { json, readJsonUpTo } from "../http/json.ts";
 import type { SyncEventInput, SyncService } from "./SyncService.ts";
 
 export interface SyncRouteDeps {
@@ -16,22 +16,10 @@ export interface SyncRouteDeps {
 const FAIL = { status: 500, code: "sync_error", message: "Sync failed." };
 const MAX_BODY = 8 * 1024 * 1024;
 
-const readBody = Effect.gen(function* () {
-  yield* requireJsonContentType;
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  if (Number(request.headers["content-length"] ?? "0") > MAX_BODY)
-    return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
-  const text = yield* request.text.pipe(
-    Effect.mapError(() => new ApiError(400, "bad_body", "Could not read body.")),
-  );
-  if (text.length > MAX_BODY)
-    return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
-  try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    return yield* Effect.fail(new ApiError(400, "bad_json", "Body is not valid JSON."));
-  }
-});
+const readBody = Effect.map(
+  readJsonUpTo(MAX_BODY),
+  (body) => (body ?? {}) as Record<string, unknown>,
+);
 
 const deviceHeader = Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;

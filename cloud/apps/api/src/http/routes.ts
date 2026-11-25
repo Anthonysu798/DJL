@@ -53,6 +53,7 @@ import { makeGatewayRoutes, type GatewayRouteDeps } from "../gateway/routes.ts";
 import { makePushRoutes, type PushRouteDeps } from "../push/routes.ts";
 import { makeRunRoutes, type RunRouteDeps } from "../runs/routes.ts";
 import { makeShareRoutes, type ShareRouteDeps } from "../shares/routes.ts";
+import { makeSiteRoutes, type SiteRouteDeps } from "../sites/routes.ts";
 import { makeContentReportRoutes, type ContentReportRouteDeps } from "../reports/routes.ts";
 import { makeNativeAuthRoutes, type NativeAuthRouteDeps } from "../nativeAuth/routes.ts";
 import { makeSyncRoutes, type SyncRouteDeps } from "../sync/routes.ts";
@@ -114,6 +115,7 @@ export interface RouteDeps
     ChatRouteDeps,
     FileRouteDeps,
     ShareRouteDeps,
+    SiteRouteDeps,
     ContentReportRouteDeps,
     RunRouteDeps,
     AuthRouteDeps,
@@ -283,6 +285,7 @@ export function makeRoutes(deps: RouteDeps) {
     makeSocialReportRoutes(deps),
     makeTrackingLinkRoutes({ ...deps, socialWebPublicUrl: deps.env.webPublicUrl }),
     makeShareRoutes(deps),
+    makeSiteRoutes(deps),
     makeContentReportRoutes(deps),
     makeRunRoutes(deps),
     makeAuthRoutes(deps),

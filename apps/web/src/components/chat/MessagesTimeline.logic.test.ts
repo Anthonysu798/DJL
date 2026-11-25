@@ -964,6 +964,44 @@ describe("deriveMessagesTimelineRows", () => {
     expect(terminal!.collapsedWorkElapsed).toBe("23m");
   });
 
+  it("keeps a site's Publish card visible when the turn's work folds away", () => {
+    const site: TimelineEntry = {
+      id: "entry-site",
+      kind: "work",
+      createdAt: "2026-01-01T00:00:08Z",
+      entry: {
+        id: "site",
+        createdAt: "2026-01-01T00:00:08Z",
+        label: "Website ready to publish",
+        tone: "info",
+        siteReady: {
+          fileCount: 12,
+          bytes: 40_000,
+          suggestedName: "bakery",
+          linkedSiteName: null,
+          linkedSiteUrl: null,
+        },
+      },
+    };
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        workEntry("w1", "2026-01-01T00:00:05Z", "npm run build"),
+        site,
+        assistantEntry("a1", "2026-01-01T00:00:10Z", {
+          turnId: "t1",
+          text: "Tap Publish on the card.",
+          completedAt: "2026-01-01T00:00:10Z",
+        }),
+      ],
+    });
+
+    const terminal = messageRow(rows, "a1");
+    expect(collapsedSignature(terminal!)).toEqual(["work:w1"]);
+    expect(terminal!.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["site"]);
+  });
+
   it("keeps the live turn expanded instead of collapsing while it streams", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,

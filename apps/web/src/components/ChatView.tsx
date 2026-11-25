@@ -1,4 +1,5 @@
 import type { MultiPostView } from "./multipost/shared";
+import { SiteThreadContext } from "./sites/SiteReadyCard";
 import { useComputerChatControl } from "../hooks/useComputerChatControl";
 import { ComputerChatControlButton, ComputerChatStatus } from "./chat/ComputerChatControls";
 import { ComputerPreviewPopover } from "./chat/ComputerPreviewPopover";
@@ -12149,67 +12150,71 @@ export default function ChatView({
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <ChatTranscriptPane
-                    onMarketingPrompt={handleMarketingPrompt}
-                    activeThreadId={activeThread.id}
-                    activeTurnId={activeThread.session?.activeTurnId ?? null}
-                    agentActivityDetail={openAgentActivityDetail}
-                    hasMessages={timelineEntries.length > 0}
-                    isWorking={isWorking}
-                    worktreeSetup={activeWorktreeSetup}
-                    activeTurnInProgress={activeTurnInProgress}
-                    activeTurnStartedAt={activeWorkStartedAt}
-                    listRef={legendListRef}
-                    timelineControllerRef={timelineControllerRef}
-                    pinnedMessageIds={pinnedMessageIds}
-                    canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
-                    onTogglePinMessage={handleTogglePinMessageGuarded}
-                    threadMarkers={threadMarkers}
-                    enteringUserMessageIds={enteringUserMessageIds}
-                    timelineEntries={timelineEntries}
-                    turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
-                    onOpenTurnDiff={onOpenTurnDiff}
-                    onOpenThread={onNavigateToThread}
-                    onOpenAutomation={onOpenAutomation}
-                    revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
-                    onRevertUserMessage={onRevertUserMessage}
-                    onUndoTurnFiles={onUndoTurnFiles}
-                    onEditUserMessage={onEditUserMessage}
-                    isRevertingCheckpoint={isRevertingCheckpoint}
-                    onExpandTimelineImage={onExpandTimelineImage}
-                    followLiveOutput={hasStreamingAssistantText}
-                    onIsAtEndChange={onIsAtEndChange}
-                    markdownCwd={threadWorkspaceCwd ?? undefined}
-                    resolvedTheme={resolvedTheme}
-                    chatFontSizePx={settings.chatFontSizePx}
-                    timestampFormat={timestampFormat}
-                    workspaceRoot={activeProject?.cwd ?? undefined}
-                    emptyStateContent={isEditorRail ? <span aria-hidden="true" /> : undefined}
-                    emptyStateProjectName={activeProjectDisplayName}
-                    terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
-                    onMessagesScroll={onMessagesScroll}
-                    onMessagesClickCapture={onMessagesClickCapture}
-                    onMessagesMouseUp={onMessagesMouseUp}
-                    onMessagesWheel={onMessagesWheel}
-                    onMessagesPointerDown={onMessagesPointerDown}
-                    onMessagesPointerUp={onMessagesPointerUp}
-                    onMessagesPointerCancel={onMessagesPointerCancel}
-                    onMessagesTouchStart={onMessagesTouchStart}
-                    onMessagesTouchMove={onMessagesTouchMove}
-                    onMessagesTouchEnd={onMessagesTouchEnd}
-                    onOpenAgentActivity={setOpenAgentActivityId}
-                    onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
-                    scrollButtonVisible={showScrollToBottom}
-                    onScrollToBottom={onScrollToBottom}
-                    bottomContentInsetPx={
-                      composerStackedChromeHeight > 0 ? composerStackedChromeHeight + 8 : undefined
-                    }
-                    contentInsetRightPx={
-                      environmentAppliesContentInset
-                        ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
-                        : undefined
-                    }
-                  />
+                  <SiteThreadContext.Provider value={activeThread.id}>
+                    <ChatTranscriptPane
+                      onMarketingPrompt={handleMarketingPrompt}
+                      activeThreadId={activeThread.id}
+                      activeTurnId={activeThread.session?.activeTurnId ?? null}
+                      agentActivityDetail={openAgentActivityDetail}
+                      hasMessages={timelineEntries.length > 0}
+                      isWorking={isWorking}
+                      worktreeSetup={activeWorktreeSetup}
+                      activeTurnInProgress={activeTurnInProgress}
+                      activeTurnStartedAt={activeWorkStartedAt}
+                      listRef={legendListRef}
+                      timelineControllerRef={timelineControllerRef}
+                      pinnedMessageIds={pinnedMessageIds}
+                      canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
+                      onTogglePinMessage={handleTogglePinMessageGuarded}
+                      threadMarkers={threadMarkers}
+                      enteringUserMessageIds={enteringUserMessageIds}
+                      timelineEntries={timelineEntries}
+                      turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
+                      onOpenTurnDiff={onOpenTurnDiff}
+                      onOpenThread={onNavigateToThread}
+                      onOpenAutomation={onOpenAutomation}
+                      revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
+                      onRevertUserMessage={onRevertUserMessage}
+                      onUndoTurnFiles={onUndoTurnFiles}
+                      onEditUserMessage={onEditUserMessage}
+                      isRevertingCheckpoint={isRevertingCheckpoint}
+                      onExpandTimelineImage={onExpandTimelineImage}
+                      followLiveOutput={hasStreamingAssistantText}
+                      onIsAtEndChange={onIsAtEndChange}
+                      markdownCwd={threadWorkspaceCwd ?? undefined}
+                      resolvedTheme={resolvedTheme}
+                      chatFontSizePx={settings.chatFontSizePx}
+                      timestampFormat={timestampFormat}
+                      workspaceRoot={activeProject?.cwd ?? undefined}
+                      emptyStateContent={isEditorRail ? <span aria-hidden="true" /> : undefined}
+                      emptyStateProjectName={activeProjectDisplayName}
+                      terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
+                      onMessagesScroll={onMessagesScroll}
+                      onMessagesClickCapture={onMessagesClickCapture}
+                      onMessagesMouseUp={onMessagesMouseUp}
+                      onMessagesWheel={onMessagesWheel}
+                      onMessagesPointerDown={onMessagesPointerDown}
+                      onMessagesPointerUp={onMessagesPointerUp}
+                      onMessagesPointerCancel={onMessagesPointerCancel}
+                      onMessagesTouchStart={onMessagesTouchStart}
+                      onMessagesTouchMove={onMessagesTouchMove}
+                      onMessagesTouchEnd={onMessagesTouchEnd}
+                      onOpenAgentActivity={setOpenAgentActivityId}
+                      onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
+                      scrollButtonVisible={showScrollToBottom}
+                      onScrollToBottom={onScrollToBottom}
+                      bottomContentInsetPx={
+                        composerStackedChromeHeight > 0
+                          ? composerStackedChromeHeight + 8
+                          : undefined
+                      }
+                      contentInsetRightPx={
+                        environmentAppliesContentInset
+                          ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
+                          : undefined
+                      }
+                    />
+                  </SiteThreadContext.Provider>
                 </div>
 
                 <div

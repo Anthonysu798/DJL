@@ -6,7 +6,7 @@
  * any mismatch rejects the file and deletes the object. Downloads are
  * five-minute signed GETs. Every file belongs to one user in one org.
  */
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import type {
   CloudFile,
@@ -18,11 +18,16 @@ import type {
 
 import type { Principal } from "../auth/guard.ts";
 import type { Settings } from "../config/settings.ts";
+import type { RateLimiter } from "../gateway/RateLimiter.ts";
 import { ApiError } from "../http/errors.ts";
 import type { BlobStore } from "../sync/BlobStore.ts";
 import { bytesMatchType, isImageType, isSupportedType } from "./fileTypes.ts";
 
 export const DOWNLOAD_URL_SECONDS = 300;
+/** Uploads a user may start per hour. */
+export const UPLOADS_PER_HOUR = 120;
+/** Pending uploads count against the quota for this long (presigned PUTs expire sooner). */
+const PENDING_COUNTS_MS = 60 * 60 * 1000;
 
 export type FileRow = typeof schema.files.$inferSelect;
 
@@ -53,12 +58,18 @@ export function toFile(row: FileRow): typeof CloudFile.Encoded {
 }
 
 export class FileService {
+  private readonly scan: FileScanner;
+  private readonly limiter: RateLimiter | null;
+
   constructor(
     private readonly db: DjlDatabase,
     private readonly blobs: BlobStore,
     private readonly settings: Settings,
-    private readonly scan: FileScanner = async () => true,
-  ) {}
+    options: { readonly scan?: FileScanner; readonly limiter?: RateLimiter } = {},
+  ) {
+    this.scan = options.scan ?? (async () => true);
+    this.limiter = options.limiter ?? null;
+  }
 
   async create(
     p: Principal,
@@ -71,6 +82,18 @@ export class FileService {
     const limit = await this.maxBytes(p.orgId);
     if (input.size > limit)
       throw new ApiError(413, "file_too_large", `Files on your plan can be up to ${limit} bytes.`);
+    if (this.limiter) {
+      const hit = await this.limiter.hit(`files:user:${p.userId}`, UPLOADS_PER_HOUR, 3600);
+      if (!hit.allowed)
+        throw new ApiError(429, "rate_limited", "Too many uploads. Try again later.");
+    }
+    const quota = await this.orgQuota(p.orgId);
+    if ((await this.orgBytes(p.orgId)) + input.size > quota)
+      throw new ApiError(
+        413,
+        "storage_full",
+        "Your file storage is full. Delete conversations with files to free space.",
+      );
     const id = crypto.randomUUID();
     const key = storageKey(p.orgId, id);
     const [row] = await this.db
@@ -183,6 +206,37 @@ export class FileService {
   private async reject(row: FileRow) {
     await this.setStatus(row.id, "rejected");
     await this.blobs.remove(row.storageKey);
+  }
+
+  /** Bytes the org's files hold, counting uploads still in flight. */
+  private async orgBytes(orgId: string): Promise<number> {
+    const since = new Date(Date.now() - PENDING_COUNTS_MS);
+    const [row] = await this.db
+      .select({ bytes: sql<string>`COALESCE(SUM(${schema.files.sizeBytes}), 0)` })
+      .from(schema.files)
+      .where(
+        and(
+          eq(schema.files.orgId, orgId),
+          isNull(schema.files.deletedAt),
+          or(
+            eq(schema.files.status, "ready"),
+            and(
+              inArray(schema.files.status, ["pending", "scanning"]),
+              gt(schema.files.createdAt, since),
+            ),
+          ),
+        ),
+      );
+    return Number(row?.bytes ?? 0);
+  }
+
+  private async orgQuota(orgId: string): Promise<number> {
+    const quotas = await this.settings.get("files.max_org_bytes");
+    const sub = await this.db.query.subscriptions.findFirst({
+      columns: { planId: true },
+      where: and(eq(schema.subscriptions.orgId, orgId), eq(schema.subscriptions.status, "active")),
+    });
+    return (sub && quotas[sub.planId]) ?? quotas.default ?? 2 * 1024 ** 3;
   }
 
   private async maxBytes(orgId: string): Promise<number> {

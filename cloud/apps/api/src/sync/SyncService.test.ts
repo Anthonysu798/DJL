@@ -332,3 +332,50 @@ describe("SyncService", () => {
       if (r.status === "rejected") expect(r.reason).toMatchObject({ code: "sync_quota_exceeded" });
   });
 });
+
+describe("team orgs", () => {
+  it("keeps each member's synced history in their personal org, invisible to teammates", async () => {
+    const team = await seedOrg(conn.db, "sync-team");
+    const memberOf = async (label: string): Promise<Principal> => {
+      const own = await seedOrg(conn.db, label);
+      await conn.db.insert(schema.member).values({
+        organizationId: team.orgId,
+        userId: own.userId,
+        role: "member",
+        createdAt: new Date(),
+      });
+      // Signed in with the team org active, as the web app allows.
+      return {
+        ...p,
+        userId: own.userId,
+        orgId: team.orgId,
+        role: "member",
+        personalOrgId: own.orgId,
+      };
+    };
+    const alice = await memberOf("sync-alice");
+    const bob = await memberOf("sync-bob");
+    const aliceDesktop = await device(alice.userId, "desktop");
+    const bobDesktop = await device(bob.userId, "desktop");
+    const thread = `thread-${crypto.randomUUID()}`;
+    await sync.push(alice, aliceDesktop, [
+      ev(crypto.randomUUID(), thread, 1, "thread.created", { title: "Private plans" }),
+    ]);
+
+    expect((await sync.listThreads(alice)).map((t) => t.threadId)).toContain(thread);
+    expect((await sync.listThreads(bob)).map((t) => t.threadId)).not.toContain(thread);
+    expect(await sync.threadEvents(bob, thread)).toEqual([]);
+    const pulled = await sync.pull(bob, bobDesktop, 0n, { includeOwn: true, limit: 500 });
+    expect(pulled.events.map((e) => e.streamId)).not.toContain(thread);
+
+    // Bob deleting "the same" thread id only touches his own history.
+    await sync.push(bob, bobDesktop, [ev(crypto.randomUUID(), thread, 1, "thread.deleted", {})]);
+    expect((await sync.listThreads(alice)).map((t) => t.threadId)).toContain(thread);
+    const stored = await conn.db.query.threadEvents.findMany({
+      where: eq(schema.threadEvents.streamId, thread),
+    });
+    expect(new Set(stored.map((e) => e.orgId))).toEqual(
+      new Set([alice.personalOrgId, bob.personalOrgId]),
+    );
+  });
+});

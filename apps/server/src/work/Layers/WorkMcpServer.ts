@@ -17,7 +17,17 @@ import http from "node:http";
 import { cpus, platform, release, totalmem } from "node:os";
 import path from "node:path";
 
-import { ProjectId, ThreadId } from "@djl/contracts";
+import {
+  CommandId,
+  EventId,
+  ProjectId,
+  SITE_READY_ACTIVITY_KIND,
+  ThreadId,
+  type SiteReadyActivityPayload,
+} from "@djl/contracts";
+import { ServerConfig } from "../../config";
+import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine";
+import { SitePublishError, SitePublisher } from "../../sites/sitePublisher";
 import { Effect, Layer, Ref, Option } from "effect";
 
 import {
@@ -49,6 +59,8 @@ interface SessionScope {
   readonly authorizedRoot: string;
   readonly attachmentsRoot?: string;
   readonly marketing?: MarketingToolHandler;
+  /** Builds and checks the project as a website and shows a Publish card in the chat. */
+  readonly prepareSite?: () => Promise<unknown>;
 }
 
 interface JsonRpcRequest {
@@ -81,6 +93,20 @@ interface ToolDefinition {
 
 const TOOLS: ReadonlyArray<ToolDefinition> = [
   ...COMPUTER_TOOLS,
+  {
+    name: "djl_publish_site",
+    description:
+      'Get the website in this project ready to publish on slcor.site. Runs the project\'s build (Next.js must use output: "export"), checks every file the way DJL Cloud will, and shows a Publish card in the chat. Publishing itself happens only when the user taps Publish on that card. Call it once the site is finished; on failure, fix what the error says and call it again.',
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      title: "Prepare website to publish",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    _meta: { "djl/tool-classification": "write-new" },
+  },
   {
     name: "djl_system_info",
     description:
@@ -502,6 +528,10 @@ async function executeTool(
     );
   }
   switch (name) {
+    case "djl_publish_site": {
+      if (!scope.prepareSite) throw new Error("Publishing sites is unavailable in this runtime.");
+      return scope.prepareSite();
+    }
     case "djl_system_info": {
       const processors = cpus();
       const disk = await statfs(scope.authorizedRoot);
@@ -806,6 +836,58 @@ const make = (
   Effect.gen(function* () {
     if (multiPostSql) yield* Effect.promise(() => getMultiPost(multiPostSql));
     const computerService = yield* Effect.serviceOption(ComputerService);
+    const engine = yield* Effect.serviceOption(OrchestrationEngineService);
+    const serverConfig = yield* Effect.serviceOption(ServerConfig);
+    const sitePublisher = Option.isSome(serverConfig)
+      ? new SitePublisher({ secretsDir: serverConfig.value.secretsDir })
+      : null;
+    /** Build and check the site, then put a Publish card in the chat. Never publishes. */
+    const prepareSiteForChat = async (threadId: ThreadId, root: string) => {
+      const prepared = await sitePublisher!.prepare(root).catch((error: unknown) => {
+        if (error instanceof SitePublishError)
+          throw new Error(error.log ? `${error.message}\n\n${error.log}` : error.message);
+        throw error;
+      });
+      const payload: SiteReadyActivityPayload = {
+        fileCount: prepared.files.length,
+        bytes: prepared.bytes,
+        suggestedName: prepared.suggestedName,
+        linkedSiteName: prepared.link?.name ?? null,
+        linkedSiteUrl: prepared.link?.url ?? null,
+      };
+      if (Option.isSome(engine)) {
+        const createdAt = new Date().toISOString();
+        const id = randomBytes(12).toString("hex");
+        await Effect.runPromise(
+          engine.value.dispatch({
+            type: "thread.activity.append",
+            commandId: CommandId.makeUnsafe(`site-ready:${id}`),
+            threadId,
+            activity: {
+              id: EventId.makeUnsafe(`site-ready-${id}`),
+              tone: "info",
+              kind: SITE_READY_ACTIVITY_KIND,
+              summary: prepared.link
+                ? `Ready to update ${prepared.link.url}`
+                : "Website ready to publish",
+              payload,
+              turnId: null,
+              createdAt,
+            },
+            createdAt,
+          }),
+        );
+      }
+      return {
+        ready: true,
+        files: payload.fileCount,
+        bytes: payload.bytes,
+        ...(prepared.link
+          ? { publishesTo: prepared.link.url }
+          : { suggestedName: payload.suggestedName }),
+        next: "A Publish card is now in the chat. Tell the user in one short sentence to tap Publish on it. Do not claim the site is online.",
+      };
+    };
     const cuaEnabled = process.env.DJL_COMPUTER_ENGINE === "cua";
     const addressRef = yield* Ref.make<string | null>(null);
     const scopes = new Map<string, SessionScope>();
@@ -975,6 +1057,9 @@ const make = (
             authorizedRoot: root,
             ...(marketing ? { marketing } : {}),
             ...(attachmentsRoot ? { attachmentsRoot } : {}),
+            ...(sitePublisher
+              ? { prepareSite: () => prepareSiteForChat(input.threadId, root) }
+              : {}),
           });
           const multipost =
             multiPostSql && process.env.DJL_COMPUTER_QA_PROFILE !== "1"

@@ -237,7 +237,7 @@ export class AdminService {
     if (!input.reason?.trim()) throw new ApiError(400, "bad_request", "A reason is required.");
     const before = await this.deps.db.query.user.findFirst({ where: eq(schema.user.id, userId) });
     if (!before) throw new ApiError(404, "not_found", "User not found.");
-    await this.deps.db.transaction(async (tx) => {
+    const ended = await this.deps.db.transaction(async (tx) => {
       await tx
         .update(schema.user)
         .set({
@@ -246,7 +246,12 @@ export class AdminService {
           banExpires: null,
         })
         .where(eq(schema.user.id, userId));
-      if (input.suspend) await tx.delete(schema.session).where(eq(schema.session.userId, userId));
+      const sessions = input.suspend
+        ? await tx
+            .delete(schema.session)
+            .where(eq(schema.session.userId, userId))
+            .returning({ id: schema.session.id })
+        : [];
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -257,7 +262,10 @@ export class AdminService {
         after: { banned: input.suspend },
         reason: input.reason,
       });
+      return sessions.map((r) => r.id);
     });
+    // Access tokens minted from those sessions stop working too, not only at refresh.
+    await this.deps.revocations.revoke(ended);
   }
 
   /** Soft delete: locks the account and starts the 30-day grace the worker purges after. */
@@ -266,12 +274,15 @@ export class AdminService {
     if (!reason?.trim()) throw new ApiError(400, "bad_request", "A reason is required.");
     const before = await this.deps.db.query.user.findFirst({ where: eq(schema.user.id, userId) });
     if (!before) throw new ApiError(404, "not_found", "User not found.");
-    await this.deps.db.transaction(async (tx) => {
+    const ended = await this.deps.db.transaction(async (tx) => {
       await tx
         .update(schema.user)
         .set({ banned: true, banReason: "self_delete", banExpires: null, deletedAt: new Date() })
         .where(eq(schema.user.id, userId));
-      await tx.delete(schema.session).where(eq(schema.session.userId, userId));
+      const sessions = await tx
+        .delete(schema.session)
+        .where(eq(schema.session.userId, userId))
+        .returning({ id: schema.session.id });
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -282,7 +293,9 @@ export class AdminService {
         after: { deletedAt: new Date().toISOString() },
         reason,
       });
+      return sessions.map((r) => r.id);
     });
+    await this.deps.revocations.revoke(ended);
   }
 
   async revokeSessions(p: AdminPrincipal, userId: string) {
@@ -339,15 +352,16 @@ export class AdminService {
       idempotencyKey: `admin:${p.adminId}:${orgId}:${crypto.randomUUID()}`,
       actor: `admin:${p.adminId}`,
       reason: input.reason,
-    });
-    await writeAudit(this.deps.db, {
-      actorType: "admin",
-      actorId: p.adminId,
-      action: "credits.grant",
-      targetType: "org",
-      targetId: orgId,
-      after: { credits: input.credits },
-      reason: input.reason,
+      alsoInTransaction: (tx) =>
+        writeAudit(tx, {
+          actorType: "admin",
+          actorId: p.adminId,
+          action: "credits.grant",
+          targetType: "org",
+          targetId: orgId,
+          after: { credits: input.credits },
+          reason: input.reason,
+        }),
     });
     return balances;
   }
@@ -622,7 +636,7 @@ export class AdminService {
 
   async setKillSwitch(
     p: AdminPrincipal,
-    name: "gateway" | "billing" | "sync",
+    name: "gateway" | "billing" | "sync" | "sites",
     engaged: boolean,
     reason: string,
   ) {
@@ -835,6 +849,15 @@ export class AdminService {
       row.id,
       p.adminId,
       row.commerceRole ? { actorId: p.adminId, reason: why } : undefined,
+      {
+        actorType: "admin",
+        actorId: p.adminId,
+        action: "admin.admin.invite",
+        targetType: "admin",
+        targetId: row.id,
+        after: { resend: true },
+        reason: why,
+      },
     );
     await this.deps.email.send(
       adminInvite(
@@ -844,15 +867,6 @@ export class AdminService {
         "en",
       ),
     );
-    await writeAudit(this.deps.db, {
-      actorType: "admin",
-      actorId: p.adminId,
-      action: "admin.admin.invite",
-      targetType: "admin",
-      targetId: row.id,
-      after: { resend: true },
-      reason: why,
-    });
   }
 
   async updateAdmin(
@@ -981,8 +995,7 @@ export class AdminService {
     requirePermission(p, "admins.write");
     const why = needReason(reason);
     await this.liveAdmin(adminId);
-    await this.deps.auth.revokeSessions(adminId, adminId === p.adminId ? p.sessionId : undefined);
-    await writeAudit(this.deps.db, {
+    await this.deps.auth.revokeSessions(adminId, adminId === p.adminId ? p.sessionId : undefined, {
       actorType: "admin",
       actorId: p.adminId,
       action: "admin.admin.revoke_sessions",

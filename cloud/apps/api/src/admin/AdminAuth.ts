@@ -8,7 +8,7 @@ import { schema, type DjlDatabase } from "@djl/db";
 import { commerceStaffCan, type CommerceStaffRole } from "@djl/domain";
 import * as OTPAuth from "otpauth";
 
-import { hashIp, writeAudit } from "../audit/AuditLog.ts";
+import { hashIp, writeAudit, type AuditEventInput } from "../audit/AuditLog.ts";
 import { hashPassword, verifyPassword } from "../auth/password.ts";
 import { ApiError } from "../http/errors.ts";
 import type { Lockouts } from "../security/throttle.ts";
@@ -261,6 +261,8 @@ export class AdminAuth {
     adminId: string,
     createdBy: string | null,
     audit?: { readonly actorId: string; readonly reason: string },
+    /** Another audit row to write in the same transaction (e.g. a resend). */
+    alsoAudit?: AuditEventInput,
   ): Promise<string> {
     const token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
     await this.db
@@ -284,9 +286,10 @@ export class AdminAuth {
             targetId: adminId,
             reason: audit.reason,
           });
+        if (alsoAudit) await writeAudit(tx, alsoAudit);
       })
       .catch((error: unknown) => {
-        if (audit) throw new ApiError(500, "admin_error", "Admin operation failed.");
+        if (audit || alsoAudit) throw new ApiError(500, "admin_error", "Admin operation failed.");
         throw error;
       });
     return token;
@@ -440,30 +443,35 @@ export class AdminAuth {
     await notAFailure();
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    const [session] = await this.db
-      .insert(schema.adminSessions)
-      .values({
-        adminId: live.id,
-        tokenHash: await sha256(token),
-        ipHash: (await hashIp(input.ip, this.ipSalt)) ?? "",
-        userAgent: input.userAgent,
-        mfaVerifiedAt: mfaVerified ? new Date() : null,
-        expiresAt,
-      })
-      .returning({ id: schema.adminSessions.id });
-    await this.db
-      .update(schema.admins)
-      .set({ lastLoginAt: new Date(), lastLoginIp: input.ip })
-      .where(eq(schema.admins.id, live.id));
-    await record("success");
-    await writeAudit(this.db, {
-      actorType: "admin",
-      actorId: live.id,
-      action: "admin.login",
-      targetType: "admin",
-      targetId: live.id,
-      ipHash: await hashIp(input.ip, this.ipSalt),
+    const ipHash = await hashIp(input.ip, this.ipSalt);
+    const tokenHash = await sha256(token);
+    const session = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(schema.adminSessions)
+        .values({
+          adminId: live.id,
+          tokenHash,
+          ipHash: ipHash ?? "",
+          userAgent: input.userAgent,
+          mfaVerifiedAt: mfaVerified ? new Date() : null,
+          expiresAt,
+        })
+        .returning({ id: schema.adminSessions.id });
+      await tx
+        .update(schema.admins)
+        .set({ lastLoginAt: new Date(), lastLoginIp: input.ip })
+        .where(eq(schema.admins.id, live.id));
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: live.id,
+        action: "admin.login",
+        targetType: "admin",
+        targetId: live.id,
+        ipHash,
+      });
+      return created;
     });
+    await record("success");
     return {
       token,
       expiresAt,
@@ -479,17 +487,21 @@ export class AdminAuth {
   }
 
   /** Revoke every live session of an admin, optionally sparing one (the caller's own). */
-  async revokeSessions(adminId: string, except?: string): Promise<void> {
-    await this.db
-      .update(schema.adminSessions)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(schema.adminSessions.adminId, adminId),
-          isNull(schema.adminSessions.revokedAt),
-          ...(except ? [ne(schema.adminSessions.id, except)] : []),
-        ),
-      );
+  /** `audit`, when given, is written in the same transaction as the revocation. */
+  async revokeSessions(adminId: string, except?: string, audit?: AuditEventInput): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.adminSessions)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(schema.adminSessions.adminId, adminId),
+            isNull(schema.adminSessions.revokedAt),
+            ...(except ? [ne(schema.adminSessions.id, except)] : []),
+          ),
+        );
+      if (audit) await writeAudit(tx, audit);
+    });
   }
 
   /** Revoke every live session that was opened from the given IP (used when banning it). */
@@ -539,10 +551,21 @@ export class AdminAuth {
   }
 
   async logout(sessionId: string): Promise<void> {
-    await this.db
-      .update(schema.adminSessions)
-      .set({ revokedAt: new Date() })
-      .where(eq(schema.adminSessions.id, sessionId));
+    await this.db.transaction(async (tx) => {
+      const [ended] = await tx
+        .update(schema.adminSessions)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(schema.adminSessions.id, sessionId), isNull(schema.adminSessions.revokedAt)))
+        .returning({ adminId: schema.adminSessions.adminId });
+      if (ended)
+        await writeAudit(tx, {
+          actorType: "admin",
+          actorId: ended.adminId,
+          action: "admin.logout",
+          targetType: "admin",
+          targetId: ended.adminId,
+        });
+    });
   }
 
   /**
@@ -669,6 +692,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
     "limits.reset",
     "trials.review",
     "reports.review",
+    "sites.moderate",
     "usage.read",
     "stats.read",
     "audit.read",

@@ -18,6 +18,8 @@ export interface ApiEnv {
   readonly ipHashSalt: string;
   /** WebAuthn relying party: the registrable parent domain shared by app and api hosts. */
   readonly passkeyRpId: string;
+  /** Domain user sites are served under, e.g. slcor.site. */
+  readonly sitesDomain: string;
   readonly mockExternals: boolean;
   readonly smsEnabled: boolean;
   readonly trustedOrigins: readonly string[];
@@ -90,6 +92,7 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     betterAuthSecret: secret,
     ipHashSalt: required("IP_HASH_SALT", env, "local-ip-hash-salt"),
     passkeyRpId: env.PASSKEY_RP_ID?.trim() || (isLocal ? "localhost" : "slcor.com"),
+    sitesDomain: env.SITES_DOMAIN?.trim() || "slcor.site",
     mockExternals,
     smsEnabled: env.SMS_ENABLED === "true",
     trustedOrigins: [

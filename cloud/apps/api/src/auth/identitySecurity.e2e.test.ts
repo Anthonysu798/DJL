@@ -302,6 +302,30 @@ describe("personal organization marker", () => {
       );
     expect(personal).toEqual([{ id: orgId }]);
   });
+
+  it("cannot invite anyone into a personal organization, while team invites still work", async () => {
+    const client = TestClient.for(api);
+    const { orgId } = await client.signUp(api, "org-invite");
+    const invite = (organizationId: string) =>
+      post(
+        "/organization/invite-member",
+        { email: freshEmail("invitee"), role: "member", organizationId },
+        client,
+      );
+    expect((await invite(orgId)).status).toBe(403);
+    const invitations = await api.db.query.invitation.findMany({
+      where: eq(schema.invitation.organizationId, orgId),
+    });
+    expect(invitations).toEqual([]);
+
+    const created = await post(
+      "/organization/create",
+      { name: "Team", slug: `team-${crypto.randomUUID().slice(0, 8)}` },
+      client,
+    );
+    const team = (await created.json()) as { id: string };
+    expect((await invite(team.id)).status).toBe(200);
+  });
 });
 
 describe("phone numbers", () => {

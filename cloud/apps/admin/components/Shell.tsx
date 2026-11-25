@@ -5,6 +5,7 @@ import {
   Boxes,
   Flag,
   Gauge,
+  Globe,
   LayoutDashboard,
   LogOut,
   ScrollText,
@@ -48,6 +49,7 @@ export const NAV_MAIN = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/trials", label: "Trial queue", icon: BadgePercent },
   { href: "/reports", label: "Reports", icon: Flag },
+  { href: "/sites", label: "Sites", icon: Globe },
   { href: "/audit", label: "Audit log", icon: ScrollText },
 ] as const;
 export const NAV_PLATFORM = [

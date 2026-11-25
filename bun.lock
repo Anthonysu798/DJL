@@ -303,6 +303,7 @@
         "better-auth": "^1.7.4",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
+        "fflate": "0.8.3",
         "ioredis": "^6.0.0",
         "jose": "^6.2.3",
         "otpauth": "^9.5.2",
@@ -317,6 +318,23 @@
         "@effect/vitest": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
+    "cloud/apps/sites": {
+      "name": "@djl/sites",
+      "version": "0.1.0",
+      "dependencies": {
+        "@djl/api": "workspace:*",
+        "@djl/contracts": "workspace:*",
+        "@djl/db": "workspace:*",
+        "drizzle-orm": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "fflate": "0.8.3",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -860,6 +878,8 @@
     "@djl/scripts": ["@djl/scripts@workspace:scripts"],
 
     "@djl/shared": ["@djl/shared@workspace:packages/shared"],
+
+    "@djl/sites": ["@djl/sites@workspace:cloud/apps/sites"],
 
     "@djl/stats-worker": ["@djl/stats-worker@workspace:apps/stats-worker"],
 
