@@ -129,6 +129,49 @@ describe("site moderation", () => {
     ]);
   });
 
+  it("never lets an upload opened before a takedown go live", async () => {
+    const mod = await admin("employee");
+    const { p, site, live } = await heldSite();
+    const zip = zipSync({ "index.html": text("<h1>unreviewed</h1>") });
+    const sha256 = Buffer.from(await crypto.subtle.digest("SHA-256", zip as BufferSource)).toString(
+      "hex",
+    );
+    const { deploy } = await sites.createDeploy(p, site.id, { size: zip.byteLength, sha256 });
+    blobs.put(uploadKey(p.orgId, site.id, deploy.id), zip);
+
+    await moderation.setStatus(mod, site.id, "disabled", "Reported for phishing");
+    const open = await db.query.siteDeploys.findFirst({
+      where: eq(schema.siteDeploys.id, deploy.id),
+    });
+    expect(open?.status).toBe("rejected");
+    const refused = await failure(sites.completeDeploy(p, site.id, deploy.id));
+    expect([refused.status, refused.code]).toEqual([403, "site_disabled"]);
+    const row = await db.query.sites.findFirst({ where: eq(schema.sites.id, site.id) });
+    expect(row?.liveDeployId).toBe(live);
+
+    // Restoring the site does not bring the abandoned upload back.
+    await moderation.setStatus(mod, site.id, "active", "Cleared");
+    expect((await failure(sites.completeDeploy(p, site.id, deploy.id))).status).toBe(400);
+    expect(
+      (await db.query.sites.findFirst({ where: eq(schema.sites.id, site.id) }))?.liveDeployId,
+    ).toBe(live);
+  });
+
+  it("refuses to approve a held deploy on a site that was taken down", async () => {
+    const mod = await admin("employee");
+    const { site, live, held } = await heldSite();
+    await moderation.setStatus(mod, site.id, "disabled", "Reported for phishing");
+    const refused = await failure(moderation.review(mod, held, "approve", "Looks fine"));
+    expect([refused.status, refused.code]).toEqual([403, "site_disabled"]);
+    const row = await db.query.sites.findFirst({ where: eq(schema.sites.id, site.id) });
+    expect(row?.liveDeployId).toBe(live);
+    const deploy = await db.query.siteDeploys.findFirst({
+      where: eq(schema.siteDeploys.id, held),
+    });
+    expect(deploy).toMatchObject({ status: "held", reviewedBy: null });
+    expect(await audits(held)).toEqual([]);
+  });
+
   it("deletes a site with its files and keeps the audit row", async () => {
     const mod = await admin("admin");
     const { site, live } = await heldSite();

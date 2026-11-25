@@ -44,6 +44,8 @@ const REPORTS_PER_IP = [
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const notFound = () => new ApiError(404, "not_found", "Not found.");
+const disabled = () =>
+  new ApiError(403, "site_disabled", "This site can't be published right now.");
 const invalid = (reason: string) => new ApiError(400, "site_upload_invalid", reason);
 
 export const uploadKey = (orgId: string, siteId: string, deployId: string) =>
@@ -190,8 +192,7 @@ export class SiteService {
   ): Promise<typeof CloudCreateSiteDeployResponse.Encoded> {
     await this.assertEnabled();
     const site = await this.own(p, siteId);
-    if (site.status !== "active")
-      throw new ApiError(403, "site_disabled", "This site can't be published right now.");
+    if (site.status !== "active") throw disabled();
     const { maxZipBytes } = await this.limits(p.orgId);
     if (input.size > maxZipBytes)
       throw new ApiError(
@@ -228,6 +229,7 @@ export class SiteService {
   ): Promise<typeof CloudSite.Encoded> {
     await this.assertEnabled();
     const site = await this.own(p, siteId);
+    if (site.status !== "active") throw disabled();
     if (!UUID.test(deployId)) throw notFound();
     const deploy = await this.db.query.siteDeploys.findFirst({
       where: and(
@@ -328,8 +330,14 @@ export class SiteService {
     tx?: Parameters<Parameters<DjlDatabase["transaction"]>[0]>[0],
   ) {
     const run = async (db: NonNullable<typeof tx>) => {
-      const site = await db.query.sites.findFirst({ where: eq(schema.sites.id, siteId) });
+      // Locked so a takedown that commits while this deploy was being checked is seen here.
+      const [site] = await db
+        .select()
+        .from(schema.sites)
+        .where(eq(schema.sites.id, siteId))
+        .for("update");
       if (!site) throw notFound();
+      if (site.status !== "active") throw disabled();
       await db
         .update(schema.siteDeploys)
         .set({ status: "live", completedAt: new Date(), ...facts })

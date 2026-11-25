@@ -127,6 +127,14 @@ export class SiteAdminService {
         .update(schema.sites)
         .set({ status, disabledReason: status === "disabled" ? why : null })
         .where(eq(schema.sites.id, siteId));
+      // Close uploads still open so none can finish into the site once it is restored.
+      if (status === "disabled")
+        await tx
+          .update(schema.siteDeploys)
+          .set({ status: "rejected", reason: "The site was taken down.", completedAt: new Date() })
+          .where(
+            and(eq(schema.siteDeploys.siteId, siteId), eq(schema.siteDeploys.status, "uploading")),
+          );
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
