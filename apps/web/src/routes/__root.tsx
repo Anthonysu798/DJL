@@ -1,3 +1,4 @@
+import { useGroupGuestSync } from "../multiAgents/groupGuestSync";
 import { useComputerEventBridge } from "../hooks/useComputerEventBridge";
 import { useStartupSnapshot } from "../startup/useStartupSnapshot";
 import { useStartupRouteReady } from "../startup/useStartupRouteReady";
@@ -210,6 +211,7 @@ function RootRouteView() {
           <EventRouter />
           <ProviderStatusRefreshCoordinator />
           <GlobalShortcutsDialog />
+          <GroupGuestSync />
           <GlobalWhatsNewSurface />
           <TaskCompletionNotifications />
           <ServerCommandApprovalSurface />
@@ -541,6 +543,12 @@ function ProviderUpdateNotifications() {
     updateAll,
   ]);
 
+  return null;
+}
+
+/** Keeps invited guests' connections open from app start, whatever screen is showing. */
+function GroupGuestSync() {
+  useGroupGuestSync();
   return null;
 }
 

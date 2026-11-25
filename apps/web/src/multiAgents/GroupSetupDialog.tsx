@@ -1,5 +1,6 @@
 // FILE: GroupSetupDialog.tsx
-// Purpose: Two-step setup for a new group: pick agents (not-ready ones offer Set up), then name it.
+// Purpose: Two-step setup for a new group: pick a team template or the agents yourself (not-ready
+//          ones offer Set up), then name it.
 // Layer: UI component
 
 import { PROVIDER_DISPLAY_NAMES, type Group, type GroupMemberProvider } from "@djl/contracts";
@@ -24,7 +25,16 @@ import { ensureNativeApi } from "~/nativeApi";
 
 import { GroupAgentAvatar } from "./GroupAgentAvatar";
 
-import { canCreate, defaultGroupName, memberChoices } from "./GroupSetupDialog.logic";
+import { roleLabel } from "./groupLabels";
+import {
+  GROUP_TEMPLATES,
+  canCreate,
+  defaultGroupName,
+  fillTemplate,
+  memberChoices,
+  templateDefaultRecipient,
+  type GroupTemplateId,
+} from "./GroupSetupDialog.logic";
 
 const selectable = (ready: boolean | null) => ready !== false;
 
@@ -44,6 +54,7 @@ export function GroupSetupDialog(props: {
   const navigate = useNavigate();
   const [step, setStep] = useState<"pick" | "name">("pick");
   const [selected, setSelected] = useState<GroupMemberProvider[]>([]);
+  const [template, setTemplate] = useState<GroupTemplateId | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,17 +72,21 @@ export function GroupSetupDialog(props: {
     if (!props.open) {
       setStep("pick");
       setSelected([]);
+      setTemplate(null);
       setName("");
       setError(null);
     }
   }, [props.open]);
 
-  const toggle = (provider: GroupMemberProvider) =>
+  const toggle = (provider: GroupMemberProvider) => {
+    // Picking agents by hand leaves the template behind.
+    setTemplate(null);
     setSelected((current) =>
       current.includes(provider)
         ? current.filter((entry) => entry !== provider)
         : [...current, provider],
     );
+  };
 
   const create = async () => {
     // Only selectable agents can be ticked, so the picked list is the member list; re-checking
@@ -80,9 +95,11 @@ export function GroupSetupDialog(props: {
     setCreating(true);
     setError(null);
     try {
+      const recipient = template ? templateDefaultRecipient(template) : undefined;
       const group = await ensureNativeApi().groups.create({
-        name: name.trim() || defaultGroupName(ready),
-        members: ready.map((provider) => ({ provider })),
+        name: name.trim() || placeholderName,
+        members: templateMembers ?? ready.map((provider) => ({ provider })),
+        ...(recipient ? { defaultRecipient: recipient } : {}),
       });
       props.onCreated(group);
       props.onOpenChange(false);
@@ -101,6 +118,31 @@ export function GroupSetupDialog(props: {
   const ready = choices.filter((choice) => selectable(choice.ready));
   const notReady = choices.filter((choice) => !selectable(choice.ready));
   const canContinue = canCreate(selected, accounts, check);
+  const templateMembers = template
+    ? fillTemplate(
+        template,
+        ready.map((choice) => choice.provider),
+      )
+    : null;
+  const placeholderName = template
+    ? t(`multiAgents.templates.${template}.name`)
+    : defaultGroupName(selected);
+  const pickTemplate = (id: GroupTemplateId) => {
+    if (template === id) {
+      setTemplate(null);
+      setSelected([]);
+      return;
+    }
+    setTemplate(id);
+    setSelected([
+      ...new Set(
+        fillTemplate(
+          id,
+          ready.map((choice) => choice.provider),
+        ).map((m) => m.provider),
+      ),
+    ]);
+  };
   const openAccounts = () => {
     props.onOpenChange(false);
     void navigate({ to: "/settings", search: { section: "accounts" } });
@@ -131,6 +173,46 @@ export function GroupSetupDialog(props: {
         <DialogPanel className="max-h-[min(58vh,480px)] px-3 pt-1 pb-3">
           {step === "pick" ? (
             <div key="pick" className="flex flex-col">
+              {!checking && ready.length > 0 ? (
+                <div className="flex flex-col gap-1.5 px-2 pb-3">
+                  <span className="text-xs text-muted-foreground">
+                    {t("multiAgents.templates.title")}
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {GROUP_TEMPLATES.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        aria-pressed={template === entry.id}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 rounded-xl border border-[color:var(--color-border-light)] px-3 py-2 text-left transition-[border-color,background-color,transform] duration-150 ease-out hover:border-[color:var(--color-border)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.98]",
+                          template === entry.id &&
+                            "border-foreground/40 bg-[var(--color-background-button-secondary-hover)]",
+                        )}
+                        onClick={() => pickTemplate(entry.id)}
+                      >
+                        <span className="text-[13px] font-medium">
+                          {t(`multiAgents.templates.${entry.id}.name`)}
+                        </span>
+                        <span className="text-[11px] leading-snug text-muted-foreground">
+                          {t(`multiAgents.templates.${entry.id}.body`)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {templateMembers && templateMembers.length > 0 ? (
+                    <p className="text-[11px] leading-relaxed text-[var(--color-text-foreground-secondary)]">
+                      {templateMembers
+                        .map((member) =>
+                          member.role
+                            ? `${PROVIDER_DISPLAY_NAMES[member.provider]} · ${roleLabel(t, member.role)}`
+                            : PROVIDER_DISPLAY_NAMES[member.provider],
+                        )
+                        .join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <ul className="flex flex-col gap-0.5">
                 {(checking ? choices : ready).map((choice, index) => {
                   const picked = selected.includes(choice.provider);
@@ -253,7 +335,7 @@ export function GroupSetupDialog(props: {
               <Input
                 autoFocus
                 value={name}
-                placeholder={defaultGroupName(selected) || t("multiAgents.setup.namePlaceholder")}
+                placeholder={placeholderName || t("multiAgents.setup.namePlaceholder")}
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void create();

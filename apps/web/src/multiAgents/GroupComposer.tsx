@@ -52,7 +52,14 @@ import { detectComposerTrigger } from "~/composer-logic";
 import type { ComposerFileAttachment, ComposerImageAttachment } from "~/composerDraftStore";
 import { useTheme } from "~/hooks/useTheme";
 import { COMPOSER_ATTACHMENT_ACCEPT } from "~/lib/composerSend";
-import { ComposerSendArrowIcon, PaperclipIcon, PlusIcon, SkillCubeIcon } from "~/lib/icons";
+import {
+  ComposerSendArrowIcon,
+  FlagIcon,
+  PaperclipIcon,
+  PlusIcon,
+  SkillCubeIcon,
+  XIcon,
+} from "~/lib/icons";
 import {
   buildSkillSearchFields,
   normalizeProviderDiscoveryText,
@@ -64,17 +71,28 @@ import { parseGroupMentions } from "@djl/shared/groupChat";
 
 import { GroupAgentAvatar } from "./GroupAgentAvatar";
 import type { GroupSendInput } from "./GroupChatView";
-import { shouldConfirmAll } from "./groupChat.logic";
+import { shouldConfirmAll, type GroupMemberRow } from "./groupChat.logic";
 import {
   activeMentionQuery,
   composerTokens,
   insertMention,
   insertSkillToken,
   mentionMenuItems,
+  plainExcerpt,
+  replyMessageText,
   referencedSkills,
 } from "./groupComposer.logic";
 
-export type GroupComposerHandle = { setText: (text: string) => void; focus: () => void };
+type ReplyTarget = Pick<GroupMemberRow, "handle" | "provider" | "text">;
+
+export type GroupComposerHandle = {
+  setText: (text: string) => void;
+  focus: () => void;
+  /** Switches the composer to mission mode, where Send plans a mission for the team. */
+  startMission: () => void;
+  /** Reply to one answer: a chip names who is being answered; the input stays the user's own. */
+  replyTo: (row: ReplyTarget) => void;
+};
 
 type SkillRange = { query: string; rangeStart: number; rangeEnd: number };
 type ComposerMenu =
@@ -109,6 +127,8 @@ export function GroupComposer(props: {
   send: (input: GroupSendInput) => Promise<boolean>;
   onExpandImage: (preview: ExpandedImagePreview) => void;
   handle?: Ref<GroupComposerHandle>;
+  /** Plans a mission for the goal; resolves true once the planner has it. */
+  onMission?: ((goal: string) => Promise<boolean>) | undefined;
 }) {
   const { t } = useTranslation("shell");
   const { t: tChat } = useTranslation("chat");
@@ -126,6 +146,8 @@ export function GroupComposer(props: {
   const [chosenSkills, setChosenSkills] = useState<ProviderSkillDescriptor[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [missionMode, setMissionMode] = useState(false);
+  const [reply, setReply] = useState<ReplyTarget | null>(null);
 
   const skillsQuery = useQuery({
     queryKey: ["multi-agents", "skills", group.folder],
@@ -160,15 +182,28 @@ export function GroupComposer(props: {
     tokenStart += token.text.length;
     return { kind: token.kind, text: token.text, start };
   });
-  // Who this message will wake, shown beside Send while the user types.
-  const mentioned = parseGroupMentions(text, handles);
-  const recipients = mentioned.all
-    ? group.members
-    : mentioned.handles.flatMap((handle) => membersByHandle.get(handle) ?? []);
+  // Who this message will wake, shown beside Send while the user types. Without an @, the
+  // group's lead or "everyone" setting decides; "whoever answered last" is left unsaid.
+  const mentioned = parseGroupMentions(reply ? `@${reply.handle} ${text}` : text, handles);
+  const lead = group.members.find((member) => member.id === group.defaultRecipient);
+  const toEveryone =
+    mentioned.all ||
+    (mentioned.handles.length === 0 && !lead && group.defaultRecipient === "all" && !!text.trim());
+  // Muted members sit out rounds that go to everyone, unless nobody else is left.
+  const unmuted = group.members.filter((member) => !member.muted);
+  const recipients = toEveryone
+    ? unmuted.length > 0
+      ? unmuted
+      : group.members
+    : mentioned.handles.length > 0
+      ? mentioned.handles.flatMap((handle) => membersByHandle.get(handle) ?? [])
+      : lead && text.trim()
+        ? [lead]
+        : [];
   const recipientsLabel =
     recipients.length === 0
       ? null
-      : mentioned.all
+      : toEveryone
         ? t("multiAgents.composer.sendsToAll")
         : t("multiAgents.composer.sendsTo", {
             names: recipients.map((member) => member.handle).join(", "),
@@ -189,6 +224,15 @@ export function GroupComposer(props: {
       placeCursor(value, value.length);
     },
     focus: () => textareaRef.current?.focus(),
+    startMission: () => {
+      setMissionMode(true);
+      textareaRef.current?.focus();
+    },
+    replyTo: (row) => {
+      setMissionMode(false);
+      setReply(row);
+      textareaRef.current?.focus();
+    },
   }));
 
   const updateMenu = (value: string, cursor: number) => {
@@ -259,6 +303,15 @@ export function GroupComposer(props: {
   const submit = async (confirmed = false) => {
     const value = text.trim();
     if (!value) return;
+    if (missionMode && props.onMission) {
+      if (await props.onMission(value)) {
+        setText("");
+        setReply(null);
+        setMissionMode(false);
+        setMenu(null);
+      }
+      return;
+    }
     if (!confirmed && shouldConfirmAll(group, value)) {
       setConfirming(true);
       return;
@@ -274,13 +327,14 @@ export function GroupComposer(props: {
     );
     const skills = referencedSkills(value, chosenSkills).map(({ name, path }) => ({ name, path }));
     const sent = await props.send({
-      text: value,
+      text: reply ? replyMessageText(reply, value) : value,
       attachments,
       ...(skills.length > 0 ? { skills } : {}),
     });
     if (sent) {
       for (const image of images) URL.revokeObjectURL(image.previewUrl);
       setText("");
+      setReply(null);
       setImages([]);
       setFiles([]);
       setChosenSkills([]);
@@ -386,6 +440,32 @@ export function GroupComposer(props: {
                 )}
               </div>
             ) : null}
+            {reply ? (
+              <div
+                data-testid="group-composer-reply"
+                className="mb-2 flex animate-in items-center gap-2 rounded-xl bg-[var(--glass-control-fill)] py-1.5 pr-1.5 pl-2.5 text-xs duration-200 fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
+              >
+                <GroupAgentAvatar provider={reply.provider} size="xs" />
+                <span className="shrink-0 font-medium text-foreground">
+                  {t("multiAgents.reply.replyingTo", { name: reply.handle })}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {plainExcerpt(reply.text, 140)}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t("multiAgents.reply.cancelReply")}
+                  title={t("multiAgents.reply.cancelReply")}
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--glass-control-fill-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.94]"
+                  onClick={() => {
+                    setReply(null);
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </div>
+            ) : null}
             <ComposerReferenceAttachments
               assistantSelections={[]}
               fileComments={[]}
@@ -428,7 +508,11 @@ export function GroupComposer(props: {
               <textarea
                 ref={textareaRef}
                 data-testid="group-composer-input"
-                aria-label={t("multiAgents.chat.placeholder")}
+                aria-label={
+                  missionMode
+                    ? t("multiAgents.mission.placeholder")
+                    : t("multiAgents.chat.placeholder")
+                }
                 className={cn(
                   "relative m-0 block max-h-[200px] w-full resize-none overflow-y-auto border-0 bg-transparent p-0 text-transparent caret-[var(--color-text-foreground)] [field-sizing:content] [scrollbar-width:none] focus:outline-none [&::-webkit-scrollbar]:hidden",
                   COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
@@ -437,7 +521,11 @@ export function GroupComposer(props: {
                 )}
                 rows={2}
                 value={text}
-                placeholder={t("multiAgents.chat.placeholder")}
+                placeholder={
+                  missionMode
+                    ? t("multiAgents.mission.placeholder")
+                    : t("multiAgents.chat.placeholder")
+                }
                 onScroll={(event) => {
                   if (mirrorRef.current)
                     mirrorRef.current.scrollTop = event.currentTarget.scrollTop;
@@ -534,6 +622,33 @@ export function GroupComposer(props: {
                   <TooltipPopup side="top">{label}</TooltipPopup>
                 </Tooltip>
               ))}
+              {props.onMission ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label={t("multiAgents.mission.toggle")}
+                        aria-pressed={missionMode}
+                        data-testid="group-composer-mission"
+                        className={cn(
+                          "flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.94] [&_svg]:size-3.5",
+                          missionMode &&
+                            "bg-[var(--color-background-button-secondary-hover)] text-foreground",
+                        )}
+                        onClick={() => {
+                          setMissionMode((on) => !on);
+                          textareaRef.current?.focus();
+                        }}
+                      />
+                    }
+                  >
+                    <FlagIcon />
+                    {missionMode ? t("multiAgents.mission.mode") : null}
+                  </TooltipTrigger>
+                  <TooltipPopup side="top">{t("multiAgents.mission.toggleHint")}</TooltipPopup>
+                </Tooltip>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2.5">
               {recipientsLabel ? (

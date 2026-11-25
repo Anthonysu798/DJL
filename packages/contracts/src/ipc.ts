@@ -104,6 +104,16 @@ import type {
   GroupMemberRef,
   GroupRef,
   GroupResolvePauseInput,
+  GroupUndoRoundInput,
+  GroupMission,
+  GroupMissionPlanInput,
+  GroupMissionRef,
+  GroupGuestRef,
+  GroupInviteGuestInput,
+  GroupMissionRemoveStepInput,
+  GroupUpdateGuestInput,
+  GroupMissionStartInput,
+  GroupReactInput,
   GroupUpdateInput,
   GroupUpdateMemberInput,
 } from "./groups";
@@ -504,6 +514,57 @@ export interface DesktopRemoteReachabilityState {
   onBattery: boolean;
 }
 
+/** One invited guest the desktop should hold a relay connection open for. */
+export interface DesktopGroupGuestInvite {
+  guestId: string;
+  groupId: string;
+  /** The group's thread, which the guest's connection is limited to. */
+  threadId: string;
+  groupName: string;
+  name: string;
+  role: "viewer" | "chat" | "agent";
+}
+
+export type DesktopGroupGuestLinkStatus =
+  | "starting"
+  | "waiting"
+  | "connected"
+  | "offline"
+  | "error";
+
+/** The live state of one guest's connection. Keys and secrets never cross IPC. */
+export interface DesktopGroupGuestLink {
+  guestId: string;
+  groupId: string;
+  status: DesktopGroupGuestLinkStatus;
+  /** The code the guest types into the DJL phone app, while it is valid. */
+  pairingCode: string | null;
+  /** The same invite as a QR payload. */
+  pairingPayloadJson: string | null;
+  pairingExpiresAt: number | null;
+  message: string | null;
+}
+
+export type DesktopAgentLinkStatus = "connecting" | "connected" | "offline" | "refused";
+
+/** One of this computer's agents, lent to someone else's Multi agents group. */
+export interface DesktopAgentLink {
+  id: string;
+  /** Which agent is lent (a group member provider) and the model it answers with. */
+  provider: string;
+  model: string | null;
+  status: DesktopAgentLinkStatus;
+  /** The other person's group, as their computer names it; null until first connected. */
+  hostName: string | null;
+  groupName: string | null;
+  /** The name the agent has in that group. */
+  handle: string | null;
+  /** The agent is answering a message right now. */
+  busy: boolean;
+  message: string | null;
+  createdAt: number;
+}
+
 export interface DesktopWindowState {
   isMaximized: boolean;
   isFullscreen: boolean;
@@ -644,6 +705,25 @@ export interface DesktopBridge {
     refreshPairing: () => Promise<DesktopRemoteGatewayState>;
     resetPairing: () => Promise<DesktopRemoteGatewayState>;
     onState: (listener: (state: DesktopRemoteGatewayState) => void) => () => void;
+    /**
+     * Tells the desktop which guests exist; it opens a connection for each new one and closes
+     * the connections of guests no longer listed.
+     */
+    syncGroupGuests?: (guests: DesktopGroupGuestInvite[]) => Promise<DesktopGroupGuestLink[]>;
+    /** A fresh invite code for a guest whose code expired or leaked. */
+    renewGroupGuestInvite?: (guestId: string) => Promise<DesktopGroupGuestLink[]>;
+    onGroupGuests?: (listener: (links: DesktopGroupGuestLink[]) => void) => () => void;
+    /** The agents this computer lends to other people's groups. */
+    listAgentLinks?: () => Promise<DesktopAgentLink[]>;
+    /** Lends an agent to the group an invite code belongs to. Rejects with a readable reason. */
+    joinGroupAsAgent?: (input: {
+      code: string;
+      provider: string;
+      model: string | null;
+    }) => Promise<DesktopAgentLink[]>;
+    /** Takes a lent agent back and forgets the other person's group. */
+    leaveAgentLink?: (id: string) => Promise<DesktopAgentLink[]>;
+    onAgentLinks?: (listener: (links: DesktopAgentLink[]) => void) => () => void;
     getReachability?: () => Promise<DesktopRemoteReachabilityState>;
     setReachability?: (change: {
       keepAwake?: DesktopRemoteKeepAwakeMode;
@@ -1003,6 +1083,16 @@ export interface NativeApi {
     removeMember: (input: GroupMemberRef) => Promise<Group>;
     stopMember: (input: GroupMemberRef) => Promise<void>;
     resolvePause: (input: GroupResolvePauseInput) => Promise<void>;
+    resetMember: (input: GroupMemberRef) => Promise<Group>;
+    undoRound: (input: GroupUndoRoundInput) => Promise<void>;
+    react: (input: GroupReactInput) => Promise<void>;
+    missionPlan: (input: GroupMissionPlanInput) => Promise<GroupMission>;
+    missionStart: (input: GroupMissionStartInput) => Promise<GroupMission>;
+    missionStop: (input: GroupMissionRef) => Promise<GroupMission>;
+    missionRemoveStep: (input: GroupMissionRemoveStepInput) => Promise<GroupMission>;
+    inviteGuest: (input: GroupInviteGuestInput) => Promise<Group>;
+    updateGuest: (input: GroupUpdateGuestInput) => Promise<Group>;
+    removeGuest: (input: GroupGuestRef) => Promise<Group>;
     onEvent: (callback: (event: GroupEvent) => void) => () => void;
   };
   automation: {

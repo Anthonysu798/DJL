@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import type { GroupDriverRuntime } from "../../../groups/Services/GroupDriverBridge";
 import type { NativeDriverFactory } from "../types";
 import { openChildSession, type ChildSession } from "./childSession";
+import { openGuestAgentChild } from "./guestAgentChild";
 import { startRound, type Round, type RoundExtras, type RoundHost } from "./groupRound";
 
 export const GROUP_MODELS = [{ slug: "group", name: "Group" }];
@@ -63,10 +64,17 @@ export function createGroupDriverFactory(deps: {
             await round?.stopAll();
             closeAll();
           },
+          resetMember: async (memberId: GroupMemberId) => {
+            if (round) await round.resetMember(memberId);
+            else closeChild(memberId);
+          },
+          post: async (text: string, messageId: string) =>
+            round ? round.post(text, { messageId }) : false,
         })
       : () => {};
 
     const roundExtras = async (turn: ProviderSendTurnInput): Promise<RoundExtras> => ({
+      ...(turn.messageId ? { messageId: turn.messageId } : {}),
       attachments: (turn.attachments ?? []).flatMap(
         (attachment) => deps.resolveAttachment(attachment) ?? [],
       ),
@@ -79,6 +87,12 @@ export function createGroupDriverFactory(deps: {
     });
 
     const openChild = async (member: GroupMember, resume: string | null, cwd: string) => {
+      // A visiting agent lives on the guest's computer; nothing is kept open for it here.
+      if (member.guestId) {
+        const runtime = deps.bridge();
+        if (!runtime) throw new Error("Multi agents is still starting. Try again in a moment.");
+        return openGuestAgentChild(runtime.guestAgents, member.guestId, resume);
+      }
       const existing = children.get(member.id);
       if (existing) return existing;
       const generation = generations.get(member.id) ?? 0;
@@ -161,8 +175,7 @@ export function createGroupDriverFactory(deps: {
       async steer(turn) {
         const target = round ?? (starting ? await starting : null);
         if (!target || target !== round) return false;
-        target.post(turn.input ?? "", await roundExtras(turn));
-        return true;
+        return target.post(turn.input ?? "", await roundExtras(turn));
       },
       async interrupt() {
         await round?.stopAll();

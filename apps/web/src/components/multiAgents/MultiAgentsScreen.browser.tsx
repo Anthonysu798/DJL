@@ -13,6 +13,7 @@ import { cleanup, render } from "vitest-browser-react";
 
 import { MultiAgentsScreen } from "~/multiAgents/MultiAgentsScreen";
 import { useGroupStore } from "~/multiAgents/groupStore";
+import "../../index.css";
 
 const state = vi.hoisted(() => ({ groups: [] as unknown[] }));
 
@@ -50,6 +51,10 @@ const group: Group = {
   hopLimit: 6,
   skipAllWarning: false,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   members: [
     {
       id: GroupMemberId.makeUnsafe("m1"),
@@ -59,6 +64,8 @@ const group: Group = {
       role: null,
       model: null,
       position: 0,
+      muted: false,
+      contextUsage: null,
     },
     {
       id: GroupMemberId.makeUnsafe("m2"),
@@ -68,6 +75,8 @@ const group: Group = {
       role: "reviewer",
       model: null,
       position: 1,
+      muted: false,
+      contextUsage: null,
     },
   ],
   createdAt: 1,
@@ -108,5 +117,23 @@ describe("MultiAgentsScreen", () => {
     await mount();
     await expect.element(page.getByText("Pick the agents for this group")).toBeVisible();
     await expect.element(page.getByText("Codex", { exact: true })).toBeVisible();
+  });
+
+  it("creates a group from a template, filling roles from the agents that are ready", async () => {
+    api.groups.create.mockResolvedValueOnce(group);
+    await mount();
+    await page.getByRole("button", { name: /Build & review/ }).click();
+    await expect.element(page.getByText("Codex · Builder, Codex · Reviewer")).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Create group" }).click();
+    await vi.waitFor(() =>
+      expect(api.groups.create).toHaveBeenCalledWith({
+        name: "Build & review",
+        members: [
+          { provider: "codex", role: "builder" },
+          { provider: "codex", role: "reviewer", reviewer: true },
+        ],
+      }),
+    );
   });
 });

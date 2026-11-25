@@ -70,6 +70,8 @@ const MUTATION_METHODS = new Set([
   "djl/groups/stop",
 ]);
 
+const { GUEST_DENIED_MESSAGE, guestAdapterRequest, redactGuestThread } = require("./guest-scope");
+
 function createElectronAppServerTransport({
   endpoint,
   backend = null,
@@ -78,6 +80,8 @@ function createElectronAppServerTransport({
   diagnostics = process.env.DJL_ELECTRON_BRIDGE_DIAGNOSTICS === "1",
   onMutationCommitted = null,
   fetchImpl = (url, init) => fetch(url, init),
+  // Set when this gateway serves one invited guest of one group (see guest-scope.js).
+  guestScope = null,
 } = {}) {
   const rpc = backend || createElectronBackendRpcClient({ endpoint });
   const listeners = createListenerBag();
@@ -109,6 +113,7 @@ function createElectronAppServerTransport({
     now,
     endpoint: typeof endpoint === "string" && endpoint.trim() ? endpoint.trim() : null,
     fetchImpl,
+    guestScope,
   });
 
   rpc.onStarted(() => {
@@ -541,7 +546,8 @@ function createElectronAppServerTransport({
     const message = safeParse(rawMessage);
     if (!message) return;
     if (typeof message.method !== "string") {
-      await handleApprovalResponse(message);
+      // A guest never answers approval prompts; those belong to the owner.
+      if (!guestScope) await handleApprovalResponse(message);
       return;
     }
     logDiagnostic(diagnostics, `request method=${message.method}`);
@@ -631,6 +637,13 @@ function createElectronAppServerTransport({
   }
 
   async function dispatchAppServerRequest(method, params, mutation) {
+    if (guestScope) {
+      const decision = guestAdapterRequest(guestScope, method, params);
+      if (decision.kind === "deny") throw new Error(GUEST_DENIED_MESSAGE);
+      if (decision.kind === "static") return decision.result;
+      if (method === "thread/read")
+        return redactGuestThread(readThread(await readSnapshot(), readThreadId(params)));
+    }
     switch (method) {
       case "initialize":
         return {

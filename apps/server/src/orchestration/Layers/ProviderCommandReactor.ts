@@ -1396,6 +1396,7 @@ const make = Effect.gen(function* () {
       const inputWithServers = appendSelectedServersBlock(messageText, selectedServers);
       return providerService.sendTurn({
         threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
         computerActivityHistory: allowActivityHistory,
         ...(input.computerControl ? { computerControl: input.computerControl } : {}),
         ...(inputWithServers ? { input: inputWithServers } : {}),
@@ -1472,6 +1473,7 @@ const make = Effect.gen(function* () {
       const steerInput = appendSelectedServersBlock(normalizedInput, selectedServers);
       yield* providerService.steerTurn({
         threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
         ...(steerInput ? { input: steerInput } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),

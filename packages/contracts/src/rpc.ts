@@ -97,6 +97,24 @@ import {
   GroupMemberRef,
   GroupRef,
   GroupResolvePauseInput,
+  GroupUndoRoundInput,
+  GroupMission,
+  GroupMissionPlanInput,
+  GroupMissionRef,
+  GroupGuestRef,
+  GroupGuestAgentDraftInput,
+  GroupGuestAgentJoinInput,
+  GroupGuestAgentReplyInput,
+  GroupGuestAgentTurnEvent,
+  GroupInviteGuestInput,
+  LentAgentAskEvent,
+  LentAgentAskInput,
+  LentAgentRef,
+  LentAgentSession,
+  GroupMissionRemoveStepInput,
+  GroupUpdateGuestInput,
+  GroupMissionStartInput,
+  GroupReactInput,
   GroupUpdateInput,
   GroupUpdateMemberInput,
 } from "./groups";
@@ -1487,6 +1505,93 @@ export const WsGroupsResolvePauseRpc = Rpc.make(WS_METHODS.groupsResolvePause, {
   success: Schema.Void,
   error: WsRpcError,
 });
+export const WsGroupsResetMemberRpc = Rpc.make(WS_METHODS.groupsResetMember, {
+  payload: GroupMemberRef,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsUndoRoundRpc = Rpc.make(WS_METHODS.groupsUndoRound, {
+  payload: GroupUndoRoundInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsGroupsReactRpc = Rpc.make(WS_METHODS.groupsReact, {
+  payload: GroupReactInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsGroupsMissionPlanRpc = Rpc.make(WS_METHODS.groupsMissionPlan, {
+  payload: GroupMissionPlanInput,
+  success: GroupMission,
+  error: WsRpcError,
+});
+export const WsGroupsMissionStartRpc = Rpc.make(WS_METHODS.groupsMissionStart, {
+  payload: GroupMissionStartInput,
+  success: GroupMission,
+  error: WsRpcError,
+});
+export const WsGroupsMissionStopRpc = Rpc.make(WS_METHODS.groupsMissionStop, {
+  payload: GroupMissionRef,
+  success: GroupMission,
+  error: WsRpcError,
+});
+export const WsGroupsMissionRemoveStepRpc = Rpc.make(WS_METHODS.groupsMissionRemoveStep, {
+  payload: GroupMissionRemoveStepInput,
+  success: GroupMission,
+  error: WsRpcError,
+});
+export const WsGroupsInviteGuestRpc = Rpc.make(WS_METHODS.groupsInviteGuest, {
+  payload: GroupInviteGuestInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsUpdateGuestRpc = Rpc.make(WS_METHODS.groupsUpdateGuest, {
+  payload: GroupUpdateGuestInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsRemoveGuestRpc = Rpc.make(WS_METHODS.groupsRemoveGuest, {
+  payload: GroupGuestRef,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsGuestAgentJoinRpc = Rpc.make(WS_METHODS.groupsGuestAgentJoin, {
+  payload: GroupGuestAgentJoinInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsGuestAgentReplyRpc = Rpc.make(WS_METHODS.groupsGuestAgentReply, {
+  payload: GroupGuestAgentReplyInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsGroupsGuestAgentDraftRpc = Rpc.make(WS_METHODS.groupsGuestAgentDraft, {
+  payload: GroupGuestAgentDraftInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsSubscribeGuestAgentTurnsRpc = Rpc.make(WS_METHODS.subscribeGuestAgentTurns, {
+  payload: GroupGuestRef,
+  success: GroupGuestAgentTurnEvent,
+  error: WsRpcError,
+  stream: true,
+});
+export const WsGroupsLentAgentOpenRpc = Rpc.make(WS_METHODS.groupsLentAgentOpen, {
+  payload: LentAgentRef,
+  success: LentAgentSession,
+  error: WsRpcError,
+});
+export const WsGroupsLentAgentCloseRpc = Rpc.make(WS_METHODS.groupsLentAgentClose, {
+  payload: LentAgentRef,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsSubscribeLentAgentAskRpc = Rpc.make(WS_METHODS.subscribeLentAgentAsk, {
+  payload: LentAgentAskInput,
+  success: LentAgentAskEvent,
+  error: WsRpcError,
+  stream: true,
+});
 export const WsSubscribeGroupEventsRpc = Rpc.make(WS_METHODS.subscribeGroupEvents, {
   payload: Schema.Struct({}),
   success: GroupEvent,
@@ -1908,16 +2013,6 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsServersResolveCommandRpc,
   WsServersListCommandsRpc,
   WsSubscribeServerEventsRpc,
-  WsGroupsListRpc,
-  WsGroupsCreateRpc,
-  WsGroupsUpdateRpc,
-  WsGroupsDeleteRpc,
-  WsGroupsAddMemberRpc,
-  WsGroupsUpdateMemberRpc,
-  WsGroupsRemoveMemberRpc,
-  WsGroupsStopMemberRpc,
-  WsGroupsResolvePauseRpc,
-  WsSubscribeGroupEventsRpc,
   WsAutomationListRpc,
   WsAutomationCreateRpc,
   WsAutomationUpdateRpc,
@@ -1964,8 +2059,39 @@ const WsModelAccessRpcGroup = RpcGroup.make(
   WsCodingPlansDisconnectRpc,
   WsCodingPlansImportFromOpenCodeRpc,
 );
+// Multi agents calls have their own group for the same reason.
+const WsGroupsRpcGroup = RpcGroup.make(
+  WsGroupsListRpc,
+  WsGroupsCreateRpc,
+  WsGroupsUpdateRpc,
+  WsGroupsDeleteRpc,
+  WsGroupsAddMemberRpc,
+  WsGroupsUpdateMemberRpc,
+  WsGroupsRemoveMemberRpc,
+  WsGroupsStopMemberRpc,
+  WsGroupsResolvePauseRpc,
+  WsGroupsResetMemberRpc,
+  WsGroupsUndoRoundRpc,
+  WsGroupsReactRpc,
+  WsGroupsMissionPlanRpc,
+  WsGroupsMissionStartRpc,
+  WsGroupsMissionStopRpc,
+  WsGroupsMissionRemoveStepRpc,
+  WsGroupsInviteGuestRpc,
+  WsGroupsUpdateGuestRpc,
+  WsGroupsRemoveGuestRpc,
+  WsGroupsGuestAgentJoinRpc,
+  WsGroupsGuestAgentReplyRpc,
+  WsGroupsGuestAgentDraftRpc,
+  WsSubscribeGuestAgentTurnsRpc,
+  WsGroupsLentAgentOpenRpc,
+  WsGroupsLentAgentCloseRpc,
+  WsSubscribeLentAgentAskRpc,
+  WsSubscribeGroupEventsRpc,
+);
 export const WsRpcGroup: RpcGroup.RpcGroup<
   | RpcGroup.Rpcs<typeof WsCoreRpcGroup>
   | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
   | RpcGroup.Rpcs<typeof WsModelAccessRpcGroup>
-> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup, WsModelAccessRpcGroup);
+  | RpcGroup.Rpcs<typeof WsGroupsRpcGroup>
+> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup, WsModelAccessRpcGroup, WsGroupsRpcGroup);

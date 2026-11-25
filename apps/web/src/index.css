@@ -468,6 +468,47 @@
     stroke-dashoffset: 0;
   }
 }
+/* Multi agents: a tapped reaction or a just-confirmed control pops once. */
+@keyframes group-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.4) rotate(-8deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Multi agents: the 👀 a member puts on a message glances side to side while it works. */
+@keyframes group-peek {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-1.5px);
+  }
+  70% {
+    transform: translateX(1.5px);
+  }
+}
+/* Multi agents: a finished mission card glows once. */
+@keyframes group-mission-complete {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, rgb(16 185 129) 45%, transparent);
+    transform: scale(0.985);
+  }
+  40% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, rgb(16 185 129) 12%, transparent);
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    transform: scale(1);
+  }
+}
 @keyframes servers-chip-enter {
   from {
     opacity: 0;
@@ -3299,6 +3340,52 @@ diffs-container {
 .djl-plugin-actions-menu [data-slot="menu-separator"] {
   background: var(--liquid-rule);
   margin: 5px -2px;
+}
+/* Multi agents menus (model picker, member options, add member, who answers, the "…" under an
+   answer): the avatar menu's roomy rows on liquid glass, for plain, radio, switch and submenu
+   rows alike. */
+.djl-group-menu [data-slot="menu-popup"] > div {
+  padding: 6px;
+}
+.djl-group-menu [data-slot="menu-item"],
+.djl-group-menu [data-slot="menu-radio-item"],
+.djl-group-menu [data-slot="menu-checkbox-item"],
+.djl-group-menu [data-slot="menu-sub-trigger"] {
+  gap: 10px;
+  padding: 7px 8px;
+  min-height: 36px;
+  font-size: 13px;
+  border-radius: 12px;
+  transition: background-color 120ms ease-out;
+}
+.djl-group-menu [data-slot="menu-item"] > svg,
+.djl-group-menu [data-slot="menu-sub-trigger"] > svg {
+  width: 16px;
+  height: 16px;
+  margin-inline: 2px;
+}
+.djl-group-menu [data-slot="menu-item"]:not([data-variant="destructive"]) > svg {
+  color: color-mix(in oklab, var(--foreground) 80%, transparent);
+  opacity: 1;
+}
+.djl-group-menu [data-slot="menu-item"][data-highlighted],
+.djl-group-menu [data-slot="menu-radio-item"][data-highlighted],
+.djl-group-menu [data-slot="menu-checkbox-item"][data-highlighted],
+.djl-group-menu [data-slot="menu-sub-trigger"][data-highlighted],
+.djl-group-menu [data-slot="menu-sub-trigger"][data-popup-open] {
+  background: var(--liquid-row-hover);
+}
+.djl-group-menu [data-slot="menu-item"][data-variant="destructive"][data-highlighted] {
+  background: color-mix(in oklab, var(--destructive) 14%, transparent);
+}
+.djl-group-menu [data-slot="menu-separator"] {
+  background: var(--liquid-rule);
+  margin: 5px -2px;
+}
+.djl-group-menu [data-slot="menu-label"] {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  color: color-mix(in oklab, var(--foreground) 55%, transparent);
 }
 .djl-desktop-update-button,
 .djl-desktop-update-button:hover {

@@ -27,9 +27,12 @@ import {
 import { createCursorDriver } from "./cursor";
 import { createGeminiDriver } from "./gemini";
 import { createGroupDriverFactory } from "./group/groupDriver";
+import { createLentAgents } from "./group/lentAgent";
 import { GroupDriverBridge } from "../../groups/Services/GroupDriverBridge";
 import { resolveAttachmentPath } from "../../attachmentStore";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { GroupMemberProvider } from "@djl/contracts";
 import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
 import { createIFlowDriver } from "./iflow";
@@ -328,26 +331,35 @@ const NativeGroupAdapterLive = Layer.effect(
     const settings = yield* ServerSettingsService;
     const bridge = yield* GroupDriverBridge;
     const config = yield* ServerConfig;
+    // Members run the plain drivers: DJL's work tools are registered per thread, and every
+    // member shares the group's thread.
+    const childFactories = {
+      codex: createCodexDriver,
+      claudeAgent: createGroupMemberClaudeDriver,
+      cursor: createCursorDriver,
+      gemini: createGeminiDriver,
+      grok: createGrokDriver,
+      kimi: createKimiDriver,
+      iflow: createIFlowDriver,
+      qwen: createQwenDriver,
+      codebuddy: createCodeBuddyDriver,
+      pi: createPiDriver,
+    };
+    const childOptions = async (provider: GroupMemberProvider) =>
+      nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings));
+    bridge.attachLentAgents(
+      createLentAgents({
+        childFactories,
+        childOptions,
+        workRoot: join(config.stateDir, "lent-agents"),
+      }),
+    );
     return yield* makeConfiguredNativeAdapter(
       "group",
       createGroupDriverFactory({
         bridge: () => bridge.current(),
-        // Members run the plain drivers: DJL's work tools are registered per thread, and every
-        // member shares the group's thread.
-        childFactories: {
-          codex: createCodexDriver,
-          claudeAgent: createGroupMemberClaudeDriver,
-          cursor: createCursorDriver,
-          gemini: createGeminiDriver,
-          grok: createGrokDriver,
-          kimi: createKimiDriver,
-          iflow: createIFlowDriver,
-          qwen: createQwenDriver,
-          codebuddy: createCodeBuddyDriver,
-          pi: createPiDriver,
-        },
-        childOptions: async (provider) =>
-          nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
+        childFactories,
+        childOptions,
         resolveAttachment: (attachment) =>
           resolveAttachmentPath({ attachmentsDir: config.attachmentsDir, attachment }),
         readSkill: async (path) =>

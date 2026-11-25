@@ -108,26 +108,67 @@ export function composerTokens(
   return tokens;
 }
 
-const quote = (text: string) =>
-  text
-    .slice(0, QUOTE_LIMIT)
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n");
+/**
+ * An answer as one plain line, for quoting it: no link targets, code blocks, markup or line
+ * breaks, and no "@", so a quoted answer never wakes the agents it names.
+ */
+export function plainExcerpt(text: string, limit = QUOTE_LIMIT): string {
+  const plain = text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*(?:#{1,6}|>|[-*+•]|\d+[.)])\s+/gm, "")
+    .replace(/\*\*|__|~~|`/g, "")
+    .replace(/@(?=[\p{L}\p{N}_-])/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain.length > limit ? `${plain.slice(0, limit - 1).trimEnd()}…` : plain;
+}
+
+const quoted = (lead: string, text: string) => {
+  const excerpt = plainExcerpt(text);
+  return excerpt ? `${lead}\n> ${excerpt}` : lead;
+};
 
 export function askAgainText(row: GroupMemberRow, answeredText: string): string {
   return `@${row.handle} ${answeredText}`;
 }
 
-export function replyToText(row: GroupMemberRow): string {
-  return `@${row.handle}\n${quote(row.text)}\n\n`;
+/** What is sent for a reply: the user's words to that member, then the answer it replies to. */
+export function replyMessageText(row: Pick<GroupMemberRow, "handle" | "text">, typed: string) {
+  return quoted(`@${row.handle} ${typed.trim()}`.trim(), row.text);
 }
 
 export function askAnotherText(row: GroupMemberRow, target: GroupMember, lead: string): string {
-  return `@${target.handle} ${lead}\n${quote(row.text)}`;
+  return quoted(`@${target.handle} ${lead}`, row.text);
+}
+
+const isQuote = (line: string) => line === ">" || line.startsWith("> ");
+
+/** A user's message split into what they wrote and the answer it quotes (its "> " lines). */
+export function splitQuotedMessage(text: string): { body: string; quote: string } {
+  const lines = text.split("\n");
+  if (!lines.some(isQuote)) return { body: text, quote: "" };
+  return {
+    body: lines
+      .filter((line) => !isQuote(line))
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+    quote: plainExcerpt(lines.filter(isQuote).join("\n")),
+  };
 }
 
 /** The nearest user message above a reply: what the reply answered. */
+/** "@Claude <combine>": one member merges the round's proposals into one plan. */
+export function combineText(target: GroupMember, instruction: string): string {
+  return `@${target.handle} ${instruction}`;
+}
+
+/** "@all <discuss>": everyone reads the others' answers and adds only what is new. */
+export function discussText(instruction: string): string {
+  return `@${GROUP_ALL_HANDLE} ${instruction}`;
+}
+
 export function answeredUserText(rows: readonly GroupChatRow[], rowId: string): string {
   const index = rows.findIndex((row) => row.id === rowId);
   for (let position = index - 1; position >= 0; position -= 1) {

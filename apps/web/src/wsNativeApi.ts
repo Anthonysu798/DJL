@@ -985,6 +985,16 @@ export function createWsNativeApi(): NativeApi {
       removeMember: (input) => transport.request(WS_METHODS.groupsRemoveMember, input),
       stopMember: (input) => transport.request(WS_METHODS.groupsStopMember, input),
       resolvePause: (input) => transport.request(WS_METHODS.groupsResolvePause, input),
+      resetMember: (input) => transport.request(WS_METHODS.groupsResetMember, input),
+      undoRound: (input) => transport.request(WS_METHODS.groupsUndoRound, input),
+      react: (input) => transport.request(WS_METHODS.groupsReact, input),
+      missionPlan: (input) => transport.request(WS_METHODS.groupsMissionPlan, input),
+      missionStart: (input) => transport.request(WS_METHODS.groupsMissionStart, input),
+      missionStop: (input) => transport.request(WS_METHODS.groupsMissionStop, input),
+      missionRemoveStep: (input) => transport.request(WS_METHODS.groupsMissionRemoveStep, input),
+      inviteGuest: (input) => transport.request(WS_METHODS.groupsInviteGuest, input),
+      updateGuest: (input) => transport.request(WS_METHODS.groupsUpdateGuest, input),
+      removeGuest: (input) => transport.request(WS_METHODS.groupsRemoveGuest, input),
       onEvent: (callback) => {
         groupEventListeners.add(callback);
         return () => {

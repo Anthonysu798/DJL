@@ -12,8 +12,17 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  GROUP_CUE_MESSAGE_PREFIX,
+  contextLevel,
+  contextShare,
+  missionProgress,
+  questProgress,
+  reactionSummary,
   deriveGroupChatRows,
+  planIntroText,
+  proposalRoundEnds,
   replyImages,
+  undoableRound,
   isLargeGroup,
   shouldConfirmAll,
   workChipCounts,
@@ -34,6 +43,8 @@ const member = (
   role: null,
   model: null,
   position,
+  muted: false,
+  contextUsage: null,
 });
 const groupOf = (count: number): Group => ({
   id: groupId,
@@ -45,6 +56,10 @@ const groupOf = (count: number): Group => ({
   hopLimit: 6,
   skipAllWarning: false,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   members: Array.from({ length: count }, (_, index) =>
     index === 0
       ? member("m1", "Claude", "claudeAgent", 0)
@@ -82,6 +97,7 @@ const reply = (overrides: Partial<GroupReply>): GroupReply => ({
 const memberRow = (work: { files: string[]; commands: string[] }): GroupChatRow => ({
   kind: "member",
   id: "x",
+  replyId: "x",
   memberId: GroupMemberId.makeUnsafe("m1"),
   handle: "Claude",
   provider: "claudeAgent",
@@ -89,6 +105,9 @@ const memberRow = (work: { files: string[]; commands: string[] }): GroupChatRow 
   text: "done",
   status: "ok",
   error: null,
+  passed: false,
+  proposeOnly: false,
+  turnId: null,
   ...work,
 });
 
@@ -222,5 +241,172 @@ describe("chips and warnings", () => {
   it("warns about large groups from eight members", () => {
     expect(isLargeGroup(groupOf(7))).toBe(false);
     expect(isLargeGroup(groupOf(8))).toBe(true);
+  });
+});
+
+const userRow = (id: string): GroupChatRow => ({
+  kind: "user",
+  id,
+  text: "@all ideas?",
+  images: [],
+  fileNames: [],
+});
+
+describe("group v2 rows", () => {
+  const proposal = (id: string, memberId: string, extra: Partial<GroupMemberRowFields> = {}) =>
+    ({
+      ...(memberRow({ files: [], commands: [] }) as GroupMemberRowFields),
+      id,
+      memberId: GroupMemberId.makeUnsafe(memberId),
+      handle: memberId === "m1" ? "Claude" : "Codex",
+      proposeOnly: true,
+      ...extra,
+    }) as GroupChatRow;
+  type GroupMemberRowFields = Extract<GroupChatRow, { kind: "member" }>;
+
+  it("marks passed and proposal replies and keeps the turn", () => {
+    const rows = deriveGroupChatRows(
+      [{ ...assistant("t1:gm.m1.r1", "…"), turnId: "turn-1" } as OrchestrationMessage],
+      group,
+      { r1: reply({ status: "empty", passed: true, proposeOnly: true }) },
+    );
+    expect(rows[0]).toMatchObject({ passed: true, proposeOnly: true, turnId: "turn-1" });
+  });
+
+  it("offers Combine and Discuss under the last reply of a round with two proposals", () => {
+    const rows = [
+      userRow("u1"),
+      proposal("a", "m1"),
+      proposal("b", "m2"),
+      proposal("c", "m1", { passed: true, status: "empty" }),
+      userRow("u2"),
+      proposal("d", "m1"),
+      proposal("e", "m1", { proposeOnly: false }),
+    ];
+    const ends = proposalRoundEnds(rows);
+    expect([...ends.keys()]).toEqual(["c"]);
+    expect(ends.get("c")?.map((row) => row.handle)).toEqual(["Claude", "Codex"]);
+  });
+
+  it("finds the newest round with file changes and puts Undo under its last reply", () => {
+    const rows = [
+      proposal("a", "m1", { turnId: "turn-1" }),
+      proposal("b", "m2", { turnId: "turn-2" }),
+      proposal("c", "m1", { turnId: "turn-2" }),
+      proposal("d", "m1", { turnId: "turn-3" }),
+    ];
+    expect(
+      undoableRound(rows, [
+        { turnId: "turn-1", files: [{}], checkpointTurnCount: 1, status: "ready" },
+        { turnId: "turn-2", files: [{}, {}], checkpointTurnCount: 2, status: "ready" },
+        { turnId: "turn-3", files: [], checkpointTurnCount: 3, status: "ready" },
+      ]),
+    ).toEqual({ rowId: "c", turnCount: 2, files: 2 });
+    expect(
+      undoableRound(rows, [
+        { turnId: "turn-1", files: [{}], checkpointTurnCount: 1, status: "error" },
+      ]),
+    ).toBeNull();
+  });
+
+  it("grades how full a member's context is", () => {
+    expect(contextShare(null)).toBeNull();
+    expect(contextShare({ usedTokens: 10, maxTokens: null })).toBeNull();
+    expect(contextShare({ usedTokens: 75, maxTokens: 100 })).toBe(0.75);
+    expect(contextLevel(0.5)).toBe("ok");
+    expect(contextLevel(0.75)).toBe("high");
+    expect(contextLevel(0.9)).toBe("full");
+    expect(contextLevel(null)).toBe("ok");
+  });
+});
+
+describe("mission mode rows", () => {
+  it("hides the messages DJL posted for the user", () => {
+    const rows = deriveGroupChatRows(
+      [user(`${GROUP_CUE_MESSAGE_PREFIX}1`, "@Claude 👎 try again"), user("u1", "hello")],
+      group,
+      {},
+    );
+    expect(rows.map((row) => row.id)).toEqual(["u1"]);
+  });
+
+  it("groups members' status reactions apart from the user's own", () => {
+    const summary = reactionSummary([
+      { groupId, targetId: "r1", actor: "m1", kind: "seen", createdAt: 1 },
+      { groupId, targetId: "r1", actor: "m2", kind: "done", createdAt: 2 },
+      { groupId, targetId: "r1", actor: "user", kind: "like", createdAt: 3 },
+    ]);
+    expect(summary.members).toEqual([
+      { memberId: "m1", kind: "seen" },
+      { memberId: "m2", kind: "done" },
+    ]);
+    expect([...summary.user]).toEqual(["like"]);
+  });
+
+  it("ticks quests off from what happened in the group", () => {
+    const rows = deriveGroupChatRows(
+      [user("u1", "@all hi"), assistant("t1:gm.m1.r1", "hello")],
+      group,
+      {},
+    );
+    const none = questProgress({ group, rows: [], reactions: {}, missions: [] });
+    expect(Object.values(none)).toEqual([false, false, false, false]);
+    const some = questProgress({
+      group,
+      rows,
+      reactions: { r1: [{ groupId, targetId: "r1", actor: "user", kind: "like", createdAt: 1 }] },
+      missions: [],
+    });
+    expect(some).toEqual({ meet: true, askOne: false, react: true, mission: false });
+  });
+
+  it("counts mission progress without skipped steps", () => {
+    const mission = {
+      steps: [
+        { text: "a", memberId: "m1", status: "done" },
+        { text: "b", memberId: "m2", status: "skipped" },
+        { text: "c", memberId: "m1", status: "running" },
+      ],
+    } as unknown as Parameters<typeof missionProgress>[0];
+    expect(missionProgress(mission)).toEqual({ done: 1, total: 2 });
+  });
+});
+
+describe("planIntroText", () => {
+  it("keeps a plan's intro and drops the checklist the mission card shows", () => {
+    const plan = [
+      "Plan: build a mini-game.",
+      "",
+      "- [ ] @Codex define the game",
+      "- [ ] @Cursor build it in `index.html`",
+      "2. **@Codex** check it",
+      "",
+      "- a note that names no agent stays",
+    ].join("\n");
+    expect(planIntroText(plan)).toBe(
+      "Plan: build a mini-game.\n\n- a note that names no agent stays",
+    );
+    expect(planIntroText("- [ ] @Codex only steps")).toBe("");
+  });
+});
+
+describe("guest messages", () => {
+  const guestId = "a1b2c3d4e5f60718";
+  const message = (id: string) => ({ id, role: "user" as const, text: "hi" });
+
+  it("carry the guest's name, or an empty name once the guest was removed", () => {
+    const withGuest = {
+      ...group,
+      guests: [{ id: guestId, name: "Alex", role: "chat", createdAt: 1 }],
+    };
+    const rows = deriveGroupChatRows(
+      [message(`group-guest-${guestId}-m1`), message("owner-message")],
+      withGuest as unknown as Group,
+      {},
+    );
+    expect(rows[0]).toMatchObject({ kind: "user", guest: "Alex" });
+    expect(rows[1]).not.toHaveProperty("guest");
+    const afterRemoval = deriveGroupChatRows([message(`group-guest-${guestId}-m1`)], group, {});
+    expect(afterRemoval[0]).toMatchObject({ kind: "user", guest: "" });
   });
 });

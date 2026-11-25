@@ -3602,7 +3602,10 @@
         "tryAgain": "重試",
         "removedAgent": "已移除的智慧體",
         "members": "成員",
-        "allMembers": "群組裡的所有人"
+        "allMembers": "群組裡的所有人",
+        "passed": "{{name}} 沒有要補充的。",
+        "handoffs": "交接 {{used}} / {{limit}}",
+        "quiet": "3 分鐘沒有動靜"
       },
       "pause": {
         "title": "智慧體之間已經互相轉交了 {{count}} 次。",
@@ -3629,7 +3632,21 @@
         "workCommands_one": "執行了 {{count}} 條指令",
         "workCommands_other": "執行了 {{count}} 條指令",
         "filesHeading": "檔案",
-        "commandsHeading": "指令"
+        "commandsHeading": "指令",
+        "goWith": "就用這個",
+        "goWithText": "請按你的方案去做。",
+        "combine": "合併",
+        "combineWho": "由誰合併？",
+        "combineText": "請把上面的方案合併成一個計畫。",
+        "discuss": "討論",
+        "discussText": "請看看上面其他人的回答。只有在你不同意或有補充時才回覆；否則回覆 [PASS]。",
+        "undo": "復原變更",
+        "undoConfirm_one": "復原這一輪變更的 {{count}} 個檔案？它會回到之前的樣子。",
+        "undoConfirm_other": "復原這一輪變更的 {{count}} 個檔案？它們會回到之前的樣子。",
+        "undoFailed": "無法復原變更。",
+        "more": "更多",
+        "replyingTo": "回覆 {{name}}",
+        "cancelReply": "取消回覆"
       },
       "composer": {
         "mention": "提及代理",
@@ -3662,7 +3679,31 @@
           "working": "處理中",
           "waiting": "等待中",
           "failed": "需要處理"
-        }
+        },
+        "mute": "靜音",
+        "muteHint": "只有你 @ 它的名字時才回答。",
+        "context": "已用上下文",
+        "contextUnknown": "尚未回報",
+        "contextTokens": "{{tokens}} 個 token",
+        "startFresh": "重新開始",
+        "startFreshHint": "停止這個代理並開始新工作階段。它會收到最近 40 則訊息。",
+        "brief": "群組公告",
+        "briefPlaceholder": "這個群組是做什麼的，代理應該怎樣工作",
+        "briefHint": "每個代理回答前都會先讀這段話。",
+        "recipient": "不帶 @ 的訊息傳給",
+        "recipientLast": "上一個回答的人",
+        "recipientAll": "所有人（只提方案，不改檔案）",
+        "recipientLead": "{{name}}（負責人）",
+        "review": "自動檢查變更",
+        "reviewOff": "關閉",
+        "reviewBy": "由 {{name}} 檢查",
+        "reviewHint": "有代理改了檔案後，檢查者會閱讀這些檔案並把需要修改的地方傳回去。",
+        "recipientLastShort": "上一位回答者",
+        "recipientAllShort": "所有人",
+        "more": "更多設定",
+        "options": "{{name}} 的選項",
+        "noMatch": "沒有符合的項目",
+        "modelSearch": "搜尋模型"
       },
       "roles": {
         "planner": "規劃者",
@@ -3675,6 +3716,196 @@
         "createFailed": "無法建立群組。",
         "sendFailed": "訊息傳送失敗。",
         "updateFailed": "無法更新群組。"
+      },
+      "templates": {
+        "title": "從一個團隊開始",
+        "buildReview": {
+          "name": "開發與檢查",
+          "body": "一個代理負責開發，另一個檢查每次變更。"
+        },
+        "planBuildReview": {
+          "name": "規劃、開發、檢查",
+          "body": "負責人做計畫並分配工作，變更會被檢查。"
+        },
+        "researchWrite": {
+          "name": "調研與寫作",
+          "body": "一個代理查資料，另一個負責寫成文。"
+        },
+        "secondOpinions": {
+          "name": "多方意見",
+          "body": "同時問所有人，比較他們的回答。"
+        }
+      },
+      "stage": {
+        "ready": "就緒",
+        "from": "來自 {{name}}",
+        "muted": "已靜音",
+        "mission": "任務 {{done}}/{{total}}",
+        "kind": {
+          "thinking": "思考中…",
+          "planning": "規劃中…",
+          "reviewing": "檢查中…",
+          "reading": "閱讀中…",
+          "editing": "編輯中…",
+          "running": "正在執行指令…",
+          "writing": "撰寫中…",
+          "waiting": "等待輪到它…"
+        },
+        "with": {
+          "reading": "正在閱讀 {{detail}}",
+          "editing": "正在編輯 {{detail}}",
+          "running": "正在執行 {{detail}}"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} 正在處理",
+          "done": "{{name}} 已回答",
+          "passed": "{{name}} 沒有要補充的",
+          "failed": "{{name}} 無法回答"
+        },
+        "label": {
+          "like": "很好",
+          "dislike": "不太對",
+          "doIt": "就這麼做",
+          "simpler": "說簡單點"
+        },
+        "text": {
+          "dislike": "這個回答不太對。請換個思路，給出更好的回答。",
+          "doIt": "請直接去做。",
+          "simpler": "請用淺顯易懂的話重新解釋你的回答，寫給不懂技術的人，幾句話就好。"
+        },
+        "failed": "無法傳送這個回應。"
+      },
+      "quests": {
+        "title": "新手任務",
+        "allDone": "全部完成！",
+        "progress": "{{done}} / {{total}}",
+        "hide": "隱藏新手任務",
+        "tryIt": "試試看",
+        "meet": {
+          "title": "和大家打聲招呼",
+          "hint": "用 @all 開頭傳一則訊息",
+          "prompt": "請大家自我介紹，說說自己最擅長什麼"
+        },
+        "askOne": {
+          "title": "問一個代理",
+          "hint": "用 @ 加名字開頭傳訊息",
+          "prompt": "你能幫我做些什麼？"
+        },
+        "react": {
+          "title": "對回答按個回應",
+          "hint": "在回答下面點 👍 👎 ✅ 或 🤔"
+        },
+        "mission": {
+          "title": "發起一個任務",
+          "hint": "點小旗子，給團隊一個目標"
+        }
+      },
+      "mission": {
+        "placeholder": "描述你想讓團隊完成的目標…",
+        "toggle": "任務",
+        "toggleHint": "給團隊一個目標，他們會拆成步驟",
+        "mode": "任務",
+        "planText": "請為這個任務做計畫：{{goal}}",
+        "label": "任務",
+        "completeTitle": "任務完成",
+        "status": {
+          "planning": "規劃中",
+          "ready": "可以開始",
+          "running": "進行中",
+          "paused": "已暫停",
+          "done": "已完成",
+          "stopped": "已停止",
+          "failed": "未能規劃"
+        },
+        "planning": "{{name}} 正在規劃步驟…",
+        "removeStep": "刪除步驟",
+        "planUnreadable": "DJL 沒能從計畫中讀出步驟。請重新規劃，或在聊天裡問一下。",
+        "pausedOn": "在第 {{step}} 步暫停。可以重試、略過或停止。",
+        "start": "開始任務",
+        "cancel": "取消",
+        "stop": "停止任務",
+        "retry": "重試這一步",
+        "skip": "略過這一步",
+        "planAgain": "重新規劃",
+        "startText": "開始任務：{{goal}}",
+        "retryText": "請重新做這一步。",
+        "skipText": "略過這一步，繼續任務。",
+        "failedAction": "沒有成功，請再試一次。",
+        "copySummary": "複製摘要",
+        "copied": "已複製",
+        "statsFiles_one": "變更了 {{count}} 個檔案",
+        "statsFiles_other": "變更了 {{count}} 個檔案",
+        "statsCommands_one": "{{count}} 個指令",
+        "statsCommands_other": "{{count}} 個指令",
+        "statsReviews_one": "{{count}} 次檢查",
+        "statsReviews_other": "{{count}} 次檢查",
+        "durationSeconds_one": "{{count}} 秒",
+        "durationSeconds_other": "{{count}} 秒",
+        "durationMinutes_one": "{{count}} 分鐘",
+        "durationMinutes_other": "{{count}} 分鐘"
+      },
+      "guests": {
+        "title": "成員",
+        "add": "邀請成員",
+        "invite": "邀請",
+        "cancel": "取消",
+        "namePlaceholder": "對方的名字",
+        "roleLabel": "對方可以做什麼",
+        "roleFor": "{{name}} 可以做什麼",
+        "role": {
+          "chat": "可以聊天",
+          "viewer": "只能查看",
+          "agent": "帶來一個智慧體"
+        },
+        "roleHint": {
+          "chat": "可以向你的代理提問。代理只會提出方案，在你核准之前不會更動任何內容。",
+          "viewer": "可以閱讀聊天內容，不能發言。",
+          "agent": "對方自己的智慧體從他們的電腦加入，用他們的訂閱回答。它能看到這個群組的訊息，但不能開啟或修改你的檔案。"
+        },
+        "status": {
+          "connected": "已連線",
+          "waiting": "等待對方加入",
+          "starting": "正在準備邀請…",
+          "expired": "邀請碼已過期",
+          "offline": "未連線",
+          "desktopOnly": "請開啟 DJL 桌面應用程式來連接訪客",
+          "agentAway": "對方的電腦不在線上"
+        },
+        "codeHelp": "{{name}} 開啟 DJL 手機 App，點一下「使用代碼配對」，然後輸入：",
+        "newCode": "新的邀請碼",
+        "remove": "移出群組",
+        "failed": "無法邀請此人。",
+        "full_one": "一個群組最多可有 {{count}} 位訪客。",
+        "full_other": "一個群組最多可有 {{count}} 位訪客。",
+        "tag": "訪客",
+        "removedName": "訪客",
+        "codeHelpAgent": "{{name}} 在自己的電腦上開啟 DJL，進入「多智慧體」，點選「加入群組」，然後輸入：",
+        "visitingHint": "這個智慧體在它主人的電腦上回答，使用對方選擇的模型。"
+      },
+      "lend": {
+        "join": "加入群組",
+        "title": "把智慧體借給一個群組",
+        "description": "有人邀請你的智慧體加入他們的群組。輸入對方的邀請碼，並選擇由你的哪個智慧體在那裡回答。",
+        "code": "邀請碼",
+        "agent": "智慧體",
+        "checking": "正在檢查你的智慧體…",
+        "noAgent": "請先設定一個智慧體",
+        "safety": "你的智慧體在這台電腦上用你的訂閱回答，並能看到那個群組的訊息。它不能修改你的檔案或執行指令，也被告知不要開啟你的檔案。只加入你信任的人的群組。",
+        "failed": "無法加入這個群組。",
+        "joining": "正在加入…",
+        "submit": "加入",
+        "section": "借給其他群組",
+        "unknownGroup": "正在加入群組…",
+        "leave": "退出這個群組",
+        "status": {
+          "connecting": "正在連線…",
+          "connected": "已連線",
+          "offline": "對方的電腦不在線上",
+          "refused": "邀請已失效",
+          "busy": "正在回答…"
+        }
       }
     },
     "navigation": {

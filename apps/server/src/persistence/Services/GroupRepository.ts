@@ -1,5 +1,10 @@
 import type {
   Group,
+  GroupContextUsage,
+  GroupGuest,
+  GroupMission,
+  GroupMissionId,
+  GroupReaction,
   GroupHandoff,
   GroupId,
   GroupMember,
@@ -24,6 +29,14 @@ export interface GroupLogEntry {
 export interface GroupMemberRuntime {
   readonly nativeSessionId: string | null;
   readonly readSeq: number;
+  /** The group brief revision this member last received. */
+  readonly setupRevSeen: number;
+}
+export interface GroupMemberRuntimePatch {
+  readonly nativeSessionId?: string | null;
+  readonly readSeq?: number;
+  readonly setupRevSeen?: number;
+  readonly contextUsage?: GroupContextUsage | null;
 }
 export interface GroupRoundState {
   readonly lastSpeakers: readonly GroupMemberId[];
@@ -39,11 +52,11 @@ export interface GroupRepositoryShape {
   readonly upsertMember: (member: GroupMember) => Op<void>;
   readonly deleteMember: (memberId: GroupMemberId) => Op<void>;
   readonly getMemberRuntime: (memberId: GroupMemberId) => Op<GroupMemberRuntime>;
-  readonly saveMemberRuntime: (
-    memberId: GroupMemberId,
-    patch: { readonly nativeSessionId?: string | null; readonly readSeq?: number },
-  ) => Op<void>;
+  readonly saveMemberRuntime: (memberId: GroupMemberId, patch: GroupMemberRuntimePatch) => Op<void>;
+  /** Forgets every member's CLI session (and context usage) in the group. */
   readonly resetMemberSessions: (groupId: GroupId) => Op<void>;
+  /** Forgets one member's CLI session and context usage, so its next wake starts fresh. */
+  readonly resetMemberSession: (memberId: GroupMemberId) => Op<void>;
   readonly appendLog: (
     groupId: GroupId,
     author: "user" | GroupMemberId,
@@ -60,6 +73,25 @@ export interface GroupRepositoryShape {
   ) => Op<void>;
   readonly isResumeRequested: (groupId: GroupId) => Op<boolean>;
   readonly recordReply: (reply: GroupReply) => Op<void>;
+  /** `slot` is "status" for a member's reaction and the kind for the user's. */
+  readonly setReaction: (reaction: GroupReaction, slot: string) => Op<void>;
+  readonly removeReaction: (
+    groupId: GroupId,
+    targetId: string,
+    actor: string,
+    slot: string,
+  ) => Op<void>;
+  readonly getReaction: (
+    groupId: GroupId,
+    targetId: string,
+    actor: string,
+    slot: string,
+  ) => Op<GroupReaction | null>;
+  readonly listReactions: (groupId?: GroupId) => Op<ReadonlyArray<GroupReaction>>;
+  readonly upsertMission: (mission: GroupMission) => Op<void>;
+  readonly setGuests: (groupId: GroupId, guests: ReadonlyArray<GroupGuest>) => Op<void>;
+  readonly getMission: (missionId: GroupMissionId) => Op<GroupMission | null>;
+  readonly listMissions: (groupId?: GroupId) => Op<ReadonlyArray<GroupMission>>;
   readonly listReplies: (groupId?: GroupId) => Op<ReadonlyArray<GroupReply>>;
 }
 

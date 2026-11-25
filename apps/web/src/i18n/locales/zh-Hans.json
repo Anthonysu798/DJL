@@ -3602,7 +3602,10 @@
         "tryAgain": "重试",
         "removedAgent": "已移除的智能体",
         "members": "成员",
-        "allMembers": "群里的所有人"
+        "allMembers": "群里的所有人",
+        "passed": "{{name}} 没有要补充的。",
+        "handoffs": "交接 {{used}} / {{limit}}",
+        "quiet": "3 分钟没有动静"
       },
       "pause": {
         "title": "智能体之间已经互相转交了 {{count}} 次。",
@@ -3629,7 +3632,21 @@
         "workCommands_one": "运行了 {{count}} 条命令",
         "workCommands_other": "运行了 {{count}} 条命令",
         "filesHeading": "文件",
-        "commandsHeading": "命令"
+        "commandsHeading": "命令",
+        "goWith": "就用这个",
+        "goWithText": "请按你的方案去做。",
+        "combine": "合并",
+        "combineWho": "由谁合并？",
+        "combineText": "请把上面的方案合并成一个计划。",
+        "discuss": "讨论",
+        "discussText": "请看看上面其他人的回答。只有在你不同意或有补充时才回复；否则回复 [PASS]。",
+        "undo": "撤销更改",
+        "undoConfirm_one": "撤销这一轮改动的 {{count}} 个文件？它会恢复到之前的样子。",
+        "undoConfirm_other": "撤销这一轮改动的 {{count}} 个文件？它们会恢复到之前的样子。",
+        "undoFailed": "无法撤销更改。",
+        "more": "更多",
+        "replyingTo": "回复 {{name}}",
+        "cancelReply": "取消回复"
       },
       "composer": {
         "mention": "提及智能体",
@@ -3662,7 +3679,31 @@
           "working": "处理中",
           "waiting": "等待中",
           "failed": "需要处理"
-        }
+        },
+        "mute": "静音",
+        "muteHint": "只有你 @ 它的名字时才回答。",
+        "context": "已用上下文",
+        "contextUnknown": "尚未报告",
+        "contextTokens": "{{tokens}} 个 token",
+        "startFresh": "重新开始",
+        "startFreshHint": "停止这个智能体并开始新会话。它会收到最近 40 条消息。",
+        "brief": "群公告",
+        "briefPlaceholder": "这个群是做什么的，智能体应该怎样工作",
+        "briefHint": "每个智能体回答前都会先读这段话。",
+        "recipient": "不带 @ 的消息发给",
+        "recipientLast": "上一个回答的人",
+        "recipientAll": "所有人（只提方案，不改文件）",
+        "recipientLead": "{{name}}（负责人）",
+        "review": "自动检查改动",
+        "reviewOff": "关闭",
+        "reviewBy": "由 {{name}} 检查",
+        "reviewHint": "有智能体改了文件后，检查者会阅读这些文件并把需要修改的地方发回去。",
+        "recipientLastShort": "上一位回答者",
+        "recipientAllShort": "所有人",
+        "more": "更多设置",
+        "options": "{{name}} 的选项",
+        "noMatch": "没有匹配项",
+        "modelSearch": "搜索模型"
       },
       "roles": {
         "planner": "规划者",
@@ -3675,6 +3716,196 @@
         "createFailed": "无法创建群聊。",
         "sendFailed": "消息发送失败。",
         "updateFailed": "无法更新群聊。"
+      },
+      "templates": {
+        "title": "从一个团队开始",
+        "buildReview": {
+          "name": "开发与检查",
+          "body": "一个智能体负责开发，另一个检查每次改动。"
+        },
+        "planBuildReview": {
+          "name": "规划、开发、检查",
+          "body": "负责人做计划并分配工作，改动会被检查。"
+        },
+        "researchWrite": {
+          "name": "调研与写作",
+          "body": "一个智能体查资料，另一个负责写成文。"
+        },
+        "secondOpinions": {
+          "name": "多方意见",
+          "body": "同时问所有人，比较他们的回答。"
+        }
+      },
+      "stage": {
+        "ready": "就绪",
+        "from": "来自 {{name}}",
+        "muted": "已静音",
+        "mission": "任务 {{done}}/{{total}}",
+        "kind": {
+          "thinking": "思考中…",
+          "planning": "规划中…",
+          "reviewing": "检查中…",
+          "reading": "阅读中…",
+          "editing": "编辑中…",
+          "running": "正在运行命令…",
+          "writing": "撰写中…",
+          "waiting": "等待轮到它…"
+        },
+        "with": {
+          "reading": "正在阅读 {{detail}}",
+          "editing": "正在编辑 {{detail}}",
+          "running": "正在运行 {{detail}}"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} 正在处理",
+          "done": "{{name}} 已回答",
+          "passed": "{{name}} 没有要补充的",
+          "failed": "{{name}} 无法回答"
+        },
+        "label": {
+          "like": "很好",
+          "dislike": "不太对",
+          "doIt": "就这么做",
+          "simpler": "说简单点"
+        },
+        "text": {
+          "dislike": "这个回答不太对。请换个思路，给出更好的回答。",
+          "doIt": "请直接去做。",
+          "simpler": "请用通俗易懂的话重新解释你的回答，写给不懂技术的人，几句话就好。"
+        },
+        "failed": "无法发送这个反应。"
+      },
+      "quests": {
+        "title": "新手任务",
+        "allDone": "全部完成！",
+        "progress": "{{done}} / {{total}}",
+        "hide": "隐藏新手任务",
+        "tryIt": "试一试",
+        "meet": {
+          "title": "和大家打个招呼",
+          "hint": "用 @all 开头发一条消息",
+          "prompt": "请大家做个自我介绍，说说自己最擅长什么"
+        },
+        "askOne": {
+          "title": "问一个智能体",
+          "hint": "用 @ 加名字开头发消息",
+          "prompt": "你能帮我做些什么？"
+        },
+        "react": {
+          "title": "给回答点个反应",
+          "hint": "在回答下面点 👍 👎 ✅ 或 🤔"
+        },
+        "mission": {
+          "title": "发起一个任务",
+          "hint": "点小旗子，给团队一个目标"
+        }
+      },
+      "mission": {
+        "placeholder": "描述你想让团队完成的目标…",
+        "toggle": "任务",
+        "toggleHint": "给团队一个目标，他们会拆成步骤",
+        "mode": "任务",
+        "planText": "请为这个任务做计划：{{goal}}",
+        "label": "任务",
+        "completeTitle": "任务完成",
+        "status": {
+          "planning": "规划中",
+          "ready": "可以开始",
+          "running": "进行中",
+          "paused": "已暂停",
+          "done": "已完成",
+          "stopped": "已停止",
+          "failed": "未能规划"
+        },
+        "planning": "{{name}} 正在规划步骤…",
+        "removeStep": "删除步骤",
+        "planUnreadable": "DJL 没能从计划中读出步骤。请重新规划，或在聊天里问一下。",
+        "pausedOn": "在第 {{step}} 步暂停。可以重试、跳过或停止。",
+        "start": "开始任务",
+        "cancel": "取消",
+        "stop": "停止任务",
+        "retry": "重试这一步",
+        "skip": "跳过这一步",
+        "planAgain": "重新规划",
+        "startText": "开始任务：{{goal}}",
+        "retryText": "请重新做这一步。",
+        "skipText": "跳过这一步，继续任务。",
+        "failedAction": "没有成功，请再试一次。",
+        "copySummary": "复制总结",
+        "copied": "已复制",
+        "statsFiles_one": "改动了 {{count}} 个文件",
+        "statsFiles_other": "改动了 {{count}} 个文件",
+        "statsCommands_one": "{{count}} 条命令",
+        "statsCommands_other": "{{count}} 条命令",
+        "statsReviews_one": "{{count}} 次检查",
+        "statsReviews_other": "{{count}} 次检查",
+        "durationSeconds_one": "{{count}} 秒",
+        "durationSeconds_other": "{{count}} 秒",
+        "durationMinutes_one": "{{count}} 分钟",
+        "durationMinutes_other": "{{count}} 分钟"
+      },
+      "guests": {
+        "title": "成员",
+        "add": "邀请成员",
+        "invite": "邀请",
+        "cancel": "取消",
+        "namePlaceholder": "对方的名字",
+        "roleLabel": "对方可以做什么",
+        "roleFor": "{{name}} 可以做什么",
+        "role": {
+          "chat": "可以聊天",
+          "viewer": "只能查看",
+          "agent": "带来一个智能体"
+        },
+        "roleHint": {
+          "chat": "可以向你的智能体提问。智能体只会给出方案，在你批准之前不会改动任何内容。",
+          "viewer": "可以阅读聊天内容，不能发言。",
+          "agent": "对方自己的智能体从他们的电脑加入，用他们的订阅回答。它能看到这个群的消息，但不能打开或修改你的文件。"
+        },
+        "status": {
+          "connected": "已连接",
+          "waiting": "等待对方加入",
+          "starting": "正在准备邀请…",
+          "expired": "邀请码已过期",
+          "offline": "未连接",
+          "desktopOnly": "请打开 DJL 桌面应用来连接访客",
+          "agentAway": "对方的电脑不在线"
+        },
+        "codeHelp": "{{name}} 打开 DJL 手机应用，点按“使用代码配对”，然后输入：",
+        "newCode": "新的邀请码",
+        "remove": "移出群组",
+        "failed": "无法邀请此人。",
+        "full_one": "一个群组最多可有 {{count}} 位访客。",
+        "full_other": "一个群组最多可有 {{count}} 位访客。",
+        "tag": "访客",
+        "removedName": "访客",
+        "codeHelpAgent": "{{name}} 在自己的电脑上打开 DJL，进入“多智能体”，点击“加入群组”，然后输入：",
+        "visitingHint": "这个智能体在它主人的电脑上回答，使用对方选择的模型。"
+      },
+      "lend": {
+        "join": "加入群组",
+        "title": "把智能体借给一个群",
+        "description": "有人邀请你的智能体加入他们的群。输入对方的邀请码，并选择由你的哪个智能体在那里回答。",
+        "code": "邀请码",
+        "agent": "智能体",
+        "checking": "正在检查你的智能体…",
+        "noAgent": "请先设置一个智能体",
+        "safety": "你的智能体在这台电脑上用你的订阅回答，并能看到那个群的消息。它不能修改你的文件或运行命令，也被告知不要打开你的文件。只加入你信任的人的群。",
+        "failed": "无法加入这个群。",
+        "joining": "正在加入…",
+        "submit": "加入",
+        "section": "借给其他群",
+        "unknownGroup": "正在加入群组…",
+        "leave": "退出这个群",
+        "status": {
+          "connecting": "正在连接…",
+          "connected": "已连接",
+          "offline": "对方的电脑不在线",
+          "refused": "邀请已失效",
+          "busy": "正在回答…"
+        }
       }
     },
     "navigation": {

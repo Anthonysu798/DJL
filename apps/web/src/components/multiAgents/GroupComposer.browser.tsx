@@ -44,6 +44,10 @@ const group: Group = {
   hopLimit: 6,
   skipAllWarning: true,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   members: [
     {
       id: GroupMemberId.makeUnsafe("m1"),
@@ -53,28 +57,33 @@ const group: Group = {
       role: null,
       model: null,
       position: 0,
+      muted: false,
+      contextUsage: null,
     },
   ],
   createdAt: 1,
   updatedAt: 1,
 };
 
-function Harness(props: { send: (input: GroupSendInput) => Promise<boolean> }) {
+function Harness(props: {
+  send: (input: GroupSendInput) => Promise<boolean>;
+  group?: Group | undefined;
+}) {
   const [preview, setPreview] = useState<ExpandedImagePreview | null>(null);
   return (
     <>
-      <GroupComposer group={group} send={props.send} onExpandImage={setPreview} />
+      <GroupComposer group={props.group ?? group} send={props.send} onExpandImage={setPreview} />
       <GroupImageViewer preview={preview} onChange={setPreview} />
     </>
   );
 }
 
-async function mount(send = vi.fn(async (_input: GroupSendInput) => true)) {
+async function mount(send = vi.fn(async (_input: GroupSendInput) => true), withGroup?: Group) {
   await render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <Harness send={send} />
+      <Harness send={send} group={withGroup} />
     </QueryClientProvider>,
   );
   return send;
@@ -116,6 +125,27 @@ describe("GroupComposer", () => {
     await expect
       .element(page.getByTestId("group-composer-recipients"))
       .toHaveTextContent("Sends to Claude");
+  });
+
+  it("says where a message without @ goes when the group has a lead or sends to everyone", async () => {
+    await mount(undefined, { ...group, defaultRecipient: group.members[0]!.id });
+    await userEvent.click(input());
+    await userEvent.keyboard("plan it");
+    await expect
+      .element(page.getByTestId("group-composer-recipients"))
+      .toHaveTextContent("Sends to Claude");
+    await cleanup();
+    await mount(undefined, { ...group, defaultRecipient: "all" });
+    await userEvent.click(input());
+    await userEvent.keyboard("ideas?");
+    await expect
+      .element(page.getByTestId("group-composer-recipients"))
+      .toHaveTextContent("Sends to everyone");
+    await cleanup();
+    await mount();
+    await userEvent.click(input());
+    await userEvent.keyboard("and then?");
+    await expect.element(page.getByTestId("group-composer-recipients")).not.toBeInTheDocument();
   });
 
   it("starts a mention from the @ button", async () => {

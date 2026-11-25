@@ -3602,7 +3602,10 @@
         "tryAgain": "Reintentar",
         "removedAgent": "Agente eliminado",
         "members": "Miembros",
-        "allMembers": "Todos en el grupo"
+        "allMembers": "Todos en el grupo",
+        "passed": "{{name}} no tenía nada que agregar.",
+        "handoffs": "Traspasos {{used}} de {{limit}}",
+        "quiet": "Sin actividad desde hace 3 min"
       },
       "pause": {
         "title": "Los agentes se han pasado el trabajo {{count}} veces.",
@@ -3629,7 +3632,21 @@
         "workCommands_one": "ejecutó {{count}} comando",
         "workCommands_other": "ejecutó {{count}} comandos",
         "filesHeading": "Archivos",
-        "commandsHeading": "Comandos"
+        "commandsHeading": "Comandos",
+        "goWith": "Seguir con esta",
+        "goWithText": "Adelante con tu propuesta.",
+        "combine": "Combinar",
+        "combineWho": "¿Quién combina?",
+        "combineText": "Combina las propuestas de arriba en un solo plan.",
+        "discuss": "Debatir",
+        "discussText": "Lean las respuestas de los demás. Respondan solo si no están de acuerdo o tienen algo que agregar; si no, respondan [PASS].",
+        "undo": "Deshacer cambios",
+        "undoConfirm_one": "¿Deshacer el {{count}} archivo que cambió en esta ronda? Vuelve a como estaba antes.",
+        "undoConfirm_other": "¿Deshacer los {{count}} archivos que cambiaron en esta ronda? Vuelven a como estaban antes.",
+        "undoFailed": "No se pudieron deshacer los cambios.",
+        "more": "Más",
+        "replyingTo": "Respondiendo a {{name}}",
+        "cancelReply": "Cancelar respuesta"
       },
       "composer": {
         "mention": "Mencionar a un agente",
@@ -3662,7 +3679,31 @@
           "working": "Trabajando",
           "waiting": "Esperando",
           "failed": "Requiere atención"
-        }
+        },
+        "mute": "Silenciar",
+        "muteHint": "Solo responde cuando lo mencionas con @ por su nombre.",
+        "context": "Contexto usado",
+        "contextUnknown": "Todavía sin datos",
+        "contextTokens": "{{tokens}} tokens usados",
+        "startFresh": "Empezar de cero",
+        "startFreshHint": "Detiene este agente y abre una sesión nueva. Recibe los últimos 40 mensajes.",
+        "brief": "Indicaciones del grupo",
+        "briefPlaceholder": "Para qué es este grupo y cómo deben trabajar los agentes",
+        "briefHint": "Cada agente lo lee antes de responder.",
+        "recipient": "Los mensajes sin @ van a",
+        "recipientLast": "Quien respondió último",
+        "recipientAll": "Todos (proponen, nadie edita)",
+        "recipientLead": "{{name}} como líder",
+        "review": "Revisar cambios automáticamente",
+        "reviewOff": "Desactivado",
+        "reviewBy": "Revisa {{name}}",
+        "reviewHint": "Cuando un agente cambia archivos, el revisor los lee y devuelve lo que hay que corregir.",
+        "recipientLastShort": "Quien respondió último",
+        "recipientAllShort": "Todos",
+        "more": "Más ajustes",
+        "options": "Opciones de {{name}}",
+        "noMatch": "Sin coincidencias",
+        "modelSearch": "Buscar modelos"
       },
       "roles": {
         "planner": "Planificador",
@@ -3675,6 +3716,196 @@
         "createFailed": "No se pudo crear el grupo.",
         "sendFailed": "No se pudo enviar el mensaje.",
         "updateFailed": "No se pudo actualizar el grupo."
+      },
+      "templates": {
+        "title": "Empezar con un equipo",
+        "buildReview": {
+          "name": "Crear y revisar",
+          "body": "Un agente construye y otro revisa cada cambio."
+        },
+        "planBuildReview": {
+          "name": "Planear, crear, revisar",
+          "body": "Un líder planea y reparte el trabajo; los cambios se revisan."
+        },
+        "researchWrite": {
+          "name": "Investigar y redactar",
+          "body": "Un agente investiga y otro lo redacta."
+        },
+        "secondOpinions": {
+          "name": "Segundas opiniones",
+          "body": "Pregunta a todos a la vez y compara sus respuestas."
+        }
+      },
+      "stage": {
+        "ready": "Listo",
+        "from": "de {{name}}",
+        "muted": "Silenciado",
+        "mission": "Misión {{done}}/{{total}}",
+        "kind": {
+          "thinking": "Pensando…",
+          "planning": "Planeando…",
+          "reviewing": "Revisando…",
+          "reading": "Leyendo…",
+          "editing": "Editando…",
+          "running": "Ejecutando un comando…",
+          "writing": "Escribiendo…",
+          "waiting": "Esperando su turno…"
+        },
+        "with": {
+          "reading": "Leyendo {{detail}}",
+          "editing": "Editando {{detail}}",
+          "running": "Ejecutando {{detail}}"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} está en eso",
+          "done": "{{name}} respondió",
+          "passed": "{{name}} no tenía nada que agregar",
+          "failed": "{{name}} no pudo responder"
+        },
+        "label": {
+          "like": "Bien",
+          "dislike": "No del todo",
+          "doIt": "Hazlo",
+          "simpler": "Explícalo más fácil"
+        },
+        "text": {
+          "dislike": "Esa respuesta no es del todo correcta. Intenta de nuevo con otra respuesta mejor.",
+          "doIt": "Adelante, hazlo.",
+          "simpler": "Vuelve a explicar tu respuesta con palabras sencillas, para alguien sin conocimientos técnicos, en pocas líneas."
+        },
+        "failed": "No se pudo enviar la reacción."
+      },
+      "quests": {
+        "title": "Primeros pasos",
+        "allDone": "¡Todo listo!",
+        "progress": "{{done}} de {{total}}",
+        "hide": "Ocultar primeros pasos",
+        "tryIt": "Probar",
+        "meet": {
+          "title": "Saluda a todos",
+          "hint": "Empieza un mensaje con @all",
+          "prompt": "preséntense y digan en qué son mejores"
+        },
+        "askOne": {
+          "title": "Pregúntale a un agente",
+          "hint": "Empieza un mensaje con @ y un nombre",
+          "prompt": "¿en qué me puedes ayudar?"
+        },
+        "react": {
+          "title": "Reacciona a una respuesta",
+          "hint": "Toca 👍 👎 ✅ o 🤔 debajo de una respuesta"
+        },
+        "mission": {
+          "title": "Lanza una misión",
+          "hint": "Toca la bandera y dale una meta al equipo"
+        }
+      },
+      "mission": {
+        "placeholder": "Describe la meta para el equipo…",
+        "toggle": "Misión",
+        "toggleHint": "Dale una meta al equipo; la convierten en pasos",
+        "mode": "Misión",
+        "planText": "planea esta misión: {{goal}}",
+        "label": "Misión",
+        "completeTitle": "Misión cumplida",
+        "status": {
+          "planning": "Planeando",
+          "ready": "Lista para empezar",
+          "running": "En curso",
+          "paused": "En pausa",
+          "done": "Terminada",
+          "stopped": "Detenida",
+          "failed": "Sin plan"
+        },
+        "planning": "{{name}} está planeando los pasos…",
+        "removeStep": "Quitar paso",
+        "planUnreadable": "DJL no pudo leer pasos en el plan. Planea de nuevo o pregunta en el chat.",
+        "pausedOn": "En pausa en el paso {{step}}. Reinténtalo, sáltalo o detén la misión.",
+        "start": "Empezar misión",
+        "cancel": "Cancelar",
+        "stop": "Detener misión",
+        "retry": "Reintentar paso",
+        "skip": "Saltar paso",
+        "planAgain": "Planear de nuevo",
+        "startText": "Empieza la misión: {{goal}}",
+        "retryText": "Intenta de nuevo ese paso de la misión.",
+        "skipText": "Salta ese paso y sigue con la misión.",
+        "failedAction": "No funcionó. Inténtalo de nuevo.",
+        "copySummary": "Copiar resumen",
+        "copied": "Copiado",
+        "statsFiles_one": "{{count}} archivo cambiado",
+        "statsFiles_other": "{{count}} archivos cambiados",
+        "statsCommands_one": "{{count}} comando",
+        "statsCommands_other": "{{count}} comandos",
+        "statsReviews_one": "{{count}} revisión",
+        "statsReviews_other": "{{count}} revisiones",
+        "durationSeconds_one": "{{count}} segundo",
+        "durationSeconds_other": "{{count}} segundos",
+        "durationMinutes_one": "{{count}} minuto",
+        "durationMinutes_other": "{{count}} minutos"
+      },
+      "guests": {
+        "title": "Personas",
+        "add": "Invitar a una persona",
+        "invite": "Invitar",
+        "cancel": "Cancelar",
+        "namePlaceholder": "Su nombre",
+        "roleLabel": "Qué puede hacer",
+        "roleFor": "Qué puede hacer {{name}}",
+        "role": {
+          "chat": "Puede chatear",
+          "viewer": "Solo puede ver",
+          "agent": "Trae un agente"
+        },
+        "roleHint": {
+          "chat": "Puede preguntar a tus agentes. Los agentes solo proponen; nada cambia hasta que lo apruebes.",
+          "viewer": "Puede leer el chat y no puede escribir.",
+          "agent": "Su propio agente se une desde su computadora y responde con su suscripción. Lee los mensajes de este grupo; no puede abrir ni cambiar tus archivos."
+        },
+        "status": {
+          "connected": "Conectado",
+          "waiting": "Esperando a que se una",
+          "starting": "Preparando la invitación…",
+          "expired": "El código de invitación venció",
+          "offline": "Sin conexión",
+          "desktopOnly": "Abre la app de escritorio de DJL para conectar invitados",
+          "agentAway": "Su computadora está desconectada"
+        },
+        "codeHelp": "{{name}} abre la app de DJL en su teléfono, toca Vincular con código e ingresa:",
+        "newCode": "Nuevo código de invitación",
+        "remove": "Quitar del grupo",
+        "failed": "No se pudo invitar a esta persona.",
+        "full_one": "Un grupo puede tener {{count}} invitado.",
+        "full_other": "Un grupo puede tener hasta {{count}} invitados.",
+        "tag": "invitado",
+        "removedName": "Invitado",
+        "codeHelpAgent": "{{name}} abre DJL en su computadora, va a Multiagentes, hace clic en Unirse a un grupo e ingresa:",
+        "visitingHint": "Este agente responde desde la computadora de su dueño, con el modelo que esa persona eligió."
+      },
+      "lend": {
+        "join": "Unirse a un grupo",
+        "title": "Prestar un agente a un grupo",
+        "description": "Alguien invitó a tu agente a su grupo. Ingresa su código de invitación y elige cuál de tus agentes responde allí.",
+        "code": "Código de invitación",
+        "agent": "Agente",
+        "checking": "Revisando tus agentes…",
+        "noAgent": "Primero configura un agente",
+        "safety": "Tu agente responde desde esta computadora con tu suscripción y lee los mensajes de ese grupo. No puede cambiar tus archivos ni ejecutar comandos, y se le indica que no abra tus archivos. Únete solo a grupos de personas en quienes confías.",
+        "failed": "No se pudo unir a ese grupo.",
+        "joining": "Uniéndose…",
+        "submit": "Unirse",
+        "section": "Prestados a otros grupos",
+        "unknownGroup": "Uniéndose a un grupo…",
+        "leave": "Salir de este grupo",
+        "status": {
+          "connecting": "Conectando…",
+          "connected": "Conectado",
+          "offline": "Su computadora está desconectada",
+          "refused": "Ya no tiene invitación",
+          "busy": "Respondiendo…"
+        }
       }
     },
     "navigation": {

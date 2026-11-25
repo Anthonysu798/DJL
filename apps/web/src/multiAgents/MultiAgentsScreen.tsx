@@ -9,11 +9,13 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { AdjustmentsIcon, PlusIcon } from "~/lib/icons";
+import { AdjustmentsIcon, LinkIcon, PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 import { GroupAvatarStack } from "./GroupAgentAvatar";
+import { canLendAgents, useAgentLinks } from "./agentLinks";
 import { GroupChatView } from "./GroupChatView";
+import { JoinGroupDialog, LentAgentsList } from "./GroupLending";
 import { GroupMembersPanel } from "./GroupMembersPanel";
 import { GroupSetupDialog } from "./GroupSetupDialog";
 import { useGroupEvents, useGroupStore } from "./groupStore";
@@ -34,6 +36,9 @@ export function MultiAgentsScreen(props: {
     (props.selectedGroupId ? groupsById[props.selectedGroupId] : undefined) ?? groups[0];
   const [setupOpen, setSetupOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const lent = useAgentLinks();
+  const lending = canLendAgents();
   const [notice, setNotice] = useState<string | null>(null);
   const showSetup = setupOpen || (loaded && groups.length === 0 && notice === null);
 
@@ -119,8 +124,21 @@ export function MultiAgentsScreen(props: {
             );
           })}
         </ul>
+        <LentAgentsList links={lent} />
+        {lending ? (
+          <div className="border-t border-[color:var(--color-border-light)] p-2">
+            <button
+              type="button"
+              className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.99]"
+              onClick={() => setJoinOpen(true)}
+            >
+              <LinkIcon className="size-4" />
+              {t("multiAgents.lend.join")}
+            </button>
+          </div>
+        ) : null}
       </nav>
-      <main className="flex min-h-0 min-w-0 flex-1">
+      <main className="relative flex min-h-0 min-w-0 flex-1">
         {selected ? (
           <>
             {props.renderChat ? (
@@ -153,8 +171,9 @@ export function MultiAgentsScreen(props: {
           </div>
         )}
       </main>
+      <JoinGroupDialog open={joinOpen} onOpenChange={setJoinOpen} />
       <GroupSetupDialog
-        open={showSetup}
+        open={showSetup && !joinOpen}
         onOpenChange={(open) => {
           setSetupOpen(open);
           if (!open && groups.length === 0) setNotice(t("multiAgents.emptyBody"));

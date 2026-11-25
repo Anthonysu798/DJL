@@ -2,7 +2,14 @@
 // Purpose: SQLite access for Multi agents groups, members, the group log and reply records.
 // Layer: Persistence
 
-import { Group, GroupMemberId, GroupReply, type GroupHandoff } from "@djl/contracts";
+import {
+  Group,
+  GroupMemberId,
+  GroupMission,
+  GroupReaction,
+  GroupReply,
+  type GroupHandoff,
+} from "@djl/contracts";
 import { Effect, Layer, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
@@ -17,9 +24,13 @@ type Row = Record<string, unknown>;
 
 const decodeGroup = Schema.decodeUnknownEffect(Group);
 const decodeReply = Schema.decodeUnknownEffect(GroupReply);
+const decodeReaction = Schema.decodeUnknownEffect(GroupReaction);
+const decodeMission = Schema.decodeUnknownEffect(GroupMission);
 const decodeMemberIds = Schema.decodeUnknownEffect(Schema.Array(GroupMemberId));
 
 const json = (value: unknown) => JSON.parse(String(value)) as unknown;
+const jsonOrNull = (value: unknown) =>
+  value === null || value === undefined ? null : (JSON.parse(String(value)) as unknown);
 
 const toEntries = (rows: ReadonlyArray<Row>): GroupLogEntry[] =>
   rows.map((row) => ({
@@ -44,6 +55,11 @@ const makeGroupRepository = Effect.gen(function* () {
       hopLimit: row.hop_limit,
       skipAllWarning: row.skip_all_warning === 1,
       pendingHandoffs: json(row.pending_handoffs_json),
+      brief: row.brief ?? "",
+      setupRev: row.setup_rev ?? 0,
+      defaultRecipient: row.default_recipient ?? "last",
+      reviewerMemberId: row.reviewer_member_id ?? null,
+      guests: json(row.guests_json ?? "[]"),
       members: members.map((member) => ({
         id: member.member_id,
         groupId: member.group_id,
@@ -52,6 +68,9 @@ const makeGroupRepository = Effect.gen(function* () {
         role: member.role ?? null,
         model: member.model ?? null,
         position: member.position,
+        muted: member.muted === 1,
+        contextUsage: jsonOrNull(member.context_json),
+        ...(member.guest_id ? { guestId: member.guest_id } : {}),
       })),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -95,12 +114,14 @@ const makeGroupRepository = Effect.gen(function* () {
       sql`
         INSERT INTO groups (
           group_id, thread_id, project_id, name, folder, folder_is_auto, hop_limit,
-          skip_all_warning, pending_handoffs_json, created_at, updated_at
+          skip_all_warning, pending_handoffs_json, brief, setup_rev, default_recipient,
+          reviewer_member_id, created_at, updated_at
         )
         VALUES (
           ${row.id}, ${row.threadId}, ${row.projectId}, ${row.name}, ${row.folder},
           ${row.folderIsAuto ? 1 : 0}, ${row.hopLimit}, ${row.skipAllWarning ? 1 : 0},
-          ${JSON.stringify(row.pendingHandoffs)}, ${row.createdAt}, ${row.updatedAt}
+          ${JSON.stringify(row.pendingHandoffs)}, ${row.brief}, ${row.setupRev},
+          ${row.defaultRecipient}, ${row.reviewerMemberId}, ${row.createdAt}, ${row.updatedAt}
         )
         ON CONFLICT (group_id) DO UPDATE SET
           name = excluded.name,
@@ -109,6 +130,10 @@ const makeGroupRepository = Effect.gen(function* () {
           hop_limit = excluded.hop_limit,
           skip_all_warning = excluded.skip_all_warning,
           pending_handoffs_json = excluded.pending_handoffs_json,
+          brief = excluded.brief,
+          setup_rev = excluded.setup_rev,
+          default_recipient = excluded.default_recipient,
+          reviewer_member_id = excluded.reviewer_member_id,
           updated_at = excluded.updated_at
       `,
     ).pipe(Effect.asVoid);
@@ -121,6 +146,8 @@ const makeGroupRepository = Effect.gen(function* () {
           sql`DELETE FROM group_members WHERE group_id = ${groupId}`,
           sql`DELETE FROM group_log WHERE group_id = ${groupId}`,
           sql`DELETE FROM group_replies WHERE group_id = ${groupId}`,
+          sql`DELETE FROM group_reactions WHERE group_id = ${groupId}`,
+          sql`DELETE FROM group_missions WHERE group_id = ${groupId}`,
           sql`DELETE FROM groups WHERE group_id = ${groupId}`,
         ]),
       ),
@@ -130,16 +157,21 @@ const makeGroupRepository = Effect.gen(function* () {
     run(
       "upsertMember",
       sql`
-        INSERT INTO group_members (member_id, group_id, provider, handle, role, model, position)
+        INSERT INTO group_members (
+          member_id, group_id, provider, handle, role, model, position, muted, guest_id
+        )
         VALUES (
           ${member.id}, ${member.groupId}, ${member.provider}, ${member.handle},
-          ${member.role}, ${member.model}, ${member.position}
+          ${member.role}, ${member.model}, ${member.position}, ${member.muted ? 1 : 0},
+          ${member.guestId ?? null}
         )
         ON CONFLICT (member_id) DO UPDATE SET
+          provider = excluded.provider,
           handle = excluded.handle,
           role = excluded.role,
           model = excluded.model,
-          position = excluded.position
+          position = excluded.position,
+          muted = excluded.muted
       `,
     ).pipe(Effect.asVoid);
 
@@ -151,11 +183,15 @@ const makeGroupRepository = Effect.gen(function* () {
   const getMemberRuntime: GroupRepositoryShape["getMemberRuntime"] = (memberId) =>
     run(
       "getMemberRuntime",
-      sql<Row>`SELECT native_session_id, read_seq FROM group_members WHERE member_id = ${memberId}`,
+      sql<Row>`
+        SELECT native_session_id, read_seq, setup_rev_seen FROM group_members
+        WHERE member_id = ${memberId}
+      `,
     ).pipe(
       Effect.map((rows) => ({
         nativeSessionId: (rows[0]?.native_session_id as string | null | undefined) ?? null,
         readSeq: Number(rows[0]?.read_seq ?? 0),
+        setupRevSeen: Number(rows[0]?.setup_rev_seen ?? 0),
       })),
     );
 
@@ -165,20 +201,41 @@ const makeGroupRepository = Effect.gen(function* () {
       const nativeSessionId =
         patch.nativeSessionId === undefined ? current.nativeSessionId : patch.nativeSessionId;
       const readSeq = patch.readSeq ?? current.readSeq;
+      const setupRevSeen = patch.setupRevSeen ?? current.setupRevSeen;
       yield* run(
         "saveMemberRuntime",
         sql`
           UPDATE group_members
-          SET native_session_id = ${nativeSessionId}, read_seq = ${readSeq}
+          SET native_session_id = ${nativeSessionId}, read_seq = ${readSeq},
+              setup_rev_seen = ${setupRevSeen}
           WHERE member_id = ${memberId}
         `,
       );
+      if (patch.contextUsage !== undefined) {
+        const contextJson = patch.contextUsage === null ? null : JSON.stringify(patch.contextUsage);
+        yield* run(
+          "saveMemberContext",
+          sql`UPDATE group_members SET context_json = ${contextJson} WHERE member_id = ${memberId}`,
+        );
+      }
     });
 
   const resetMemberSessions: GroupRepositoryShape["resetMemberSessions"] = (groupId) =>
     run(
       "resetMemberSessions",
-      sql`UPDATE group_members SET native_session_id = NULL WHERE group_id = ${groupId}`,
+      sql`
+        UPDATE group_members SET native_session_id = NULL, context_json = NULL
+        WHERE group_id = ${groupId}
+      `,
+    ).pipe(Effect.asVoid);
+
+  const resetMemberSession: GroupRepositoryShape["resetMemberSession"] = (memberId) =>
+    run(
+      "resetMemberSession",
+      sql`
+        UPDATE group_members SET native_session_id = NULL, context_json = NULL
+        WHERE member_id = ${memberId}
+      `,
     ).pipe(Effect.asVoid);
 
   const appendLog: GroupRepositoryShape["appendLog"] = (groupId, author, text) =>
@@ -271,11 +328,13 @@ const makeGroupRepository = Effect.gen(function* () {
       "recordReply",
       sql`
         INSERT OR REPLACE INTO group_replies (
-          reply_id, group_id, member_id, status, error, files_json, commands_json
+          reply_id, group_id, member_id, status, error, files_json, commands_json,
+          propose_only, passed
         )
         VALUES (
           ${reply.replyId}, ${reply.groupId}, ${reply.memberId}, ${reply.status}, ${reply.error},
-          ${JSON.stringify(reply.files)}, ${JSON.stringify(reply.commands)}
+          ${JSON.stringify(reply.files)}, ${JSON.stringify(reply.commands)},
+          ${reply.proposeOnly ? 1 : 0}, ${reply.passed ? 1 : 0}
         )
       `,
     ).pipe(Effect.asVoid);
@@ -297,10 +356,105 @@ const makeGroupRepository = Effect.gen(function* () {
             error: row.error ?? null,
             files: json(row.files_json),
             commands: json(row.commands_json),
+            ...(row.propose_only === 1 ? { proposeOnly: true } : {}),
+            ...(row.passed === 1 ? { passed: true } : {}),
           }).pipe(Effect.mapError(toPersistenceDecodeError("GroupRepository.listReplies"))),
         ),
       ),
     );
+
+  const toReaction = (row: Row) =>
+    decodeReaction({
+      groupId: row.group_id,
+      targetId: row.target_id,
+      actor: row.actor,
+      kind: row.kind,
+      createdAt: row.created_at,
+    }).pipe(Effect.mapError(toPersistenceDecodeError("GroupRepository.toReaction")));
+
+  const setReaction: GroupRepositoryShape["setReaction"] = (reaction, slot) =>
+    run(
+      "setReaction",
+      sql`
+        INSERT INTO group_reactions (group_id, target_id, actor, slot, kind, created_at)
+        VALUES (
+          ${reaction.groupId}, ${reaction.targetId}, ${reaction.actor}, ${slot}, ${reaction.kind},
+          ${reaction.createdAt}
+        )
+        ON CONFLICT (group_id, target_id, actor, slot) DO UPDATE SET
+          kind = excluded.kind,
+          created_at = excluded.created_at
+      `,
+    ).pipe(Effect.asVoid);
+
+  const removeReaction: GroupRepositoryShape["removeReaction"] = (groupId, targetId, actor, slot) =>
+    run(
+      "removeReaction",
+      sql`
+        DELETE FROM group_reactions
+        WHERE group_id = ${groupId} AND target_id = ${targetId} AND actor = ${actor}
+          AND slot = ${slot}
+      `,
+    ).pipe(Effect.asVoid);
+
+  const getReaction: GroupRepositoryShape["getReaction"] = (groupId, targetId, actor, slot) =>
+    run(
+      "getReaction",
+      sql<Row>`
+        SELECT * FROM group_reactions
+        WHERE group_id = ${groupId} AND target_id = ${targetId} AND actor = ${actor}
+          AND slot = ${slot}
+      `,
+    ).pipe(Effect.flatMap((rows) => (rows[0] ? toReaction(rows[0]) : Effect.succeed(null))));
+
+  const listReactions: GroupRepositoryShape["listReactions"] = (groupId) =>
+    run(
+      "listReactions",
+      groupId === undefined
+        ? sql<Row>`SELECT * FROM group_reactions ORDER BY created_at ASC`
+        : sql<Row>`
+            SELECT * FROM group_reactions WHERE group_id = ${groupId} ORDER BY created_at ASC
+          `,
+    ).pipe(Effect.flatMap((rows) => Effect.forEach(rows, toReaction)));
+
+  const toMission = (row: Row) =>
+    decodeMission(json(row.mission_json)).pipe(
+      Effect.mapError(toPersistenceDecodeError("GroupRepository.toMission")),
+    );
+
+  const upsertMission: GroupRepositoryShape["upsertMission"] = (mission) =>
+    run(
+      "upsertMission",
+      sql`
+        INSERT INTO group_missions (mission_id, group_id, mission_json, created_at)
+        VALUES (${mission.id}, ${mission.groupId}, ${JSON.stringify(mission)}, ${mission.createdAt})
+        ON CONFLICT (mission_id) DO UPDATE SET mission_json = excluded.mission_json
+      `,
+    ).pipe(Effect.asVoid);
+
+  // Guests are saved on their own, so the many writers of a group row never drop them.
+  const setGuests: GroupRepositoryShape["setGuests"] = (groupId, guests) =>
+    run(
+      "setGuests",
+      sql`UPDATE groups SET guests_json = ${JSON.stringify(guests)} WHERE group_id = ${groupId}`,
+    ).pipe(Effect.asVoid);
+
+  const getMission: GroupRepositoryShape["getMission"] = (missionId) =>
+    run(
+      "getMission",
+      sql<Row>`SELECT mission_json FROM group_missions WHERE mission_id = ${missionId}`,
+    ).pipe(Effect.flatMap((rows) => (rows[0] ? toMission(rows[0]) : Effect.succeed(null))));
+
+  const listMissions: GroupRepositoryShape["listMissions"] = (groupId) =>
+    run(
+      "listMissions",
+      groupId === undefined
+        ? sql<Row>`SELECT mission_json FROM group_missions ORDER BY created_at ASC`
+        : sql<Row>`
+            SELECT mission_json FROM group_missions WHERE group_id = ${groupId}
+            ORDER BY created_at ASC
+          `,
+    ).pipe(Effect.flatMap((rows) => Effect.forEach(rows, toMission)));
 
   return {
     listGroups,
@@ -313,6 +467,7 @@ const makeGroupRepository = Effect.gen(function* () {
     getMemberRuntime,
     saveMemberRuntime,
     resetMemberSessions,
+    resetMemberSession,
     appendLog,
     logAfter,
     logTail,
@@ -322,6 +477,14 @@ const makeGroupRepository = Effect.gen(function* () {
     isResumeRequested,
     recordReply,
     listReplies,
+    setReaction,
+    removeReaction,
+    getReaction,
+    listReactions,
+    upsertMission,
+    setGuests,
+    getMission,
+    listMissions,
   } satisfies GroupRepositoryShape;
 });
 
