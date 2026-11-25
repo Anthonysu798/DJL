@@ -11,6 +11,7 @@ import { CentralIcon } from "~/lib/central-icons";
 import { cn } from "~/lib/utils";
 import { settingRowAnchorId } from "~/settingsNavigation";
 import { RemoteHero } from "./remote/RemoteHero";
+import { RemoteReachabilityCard } from "./remote/RemoteReachabilityCard";
 import "./remote/remoteSettings.css";
 
 const STATUS_TONE: Record<DesktopRemoteGatewayState["status"], string> = {
@@ -342,6 +343,7 @@ export function RemoteSettingsPanel() {
           </div>
         </div>
       </section>
+      <RemoteReachabilityCard refreshKey={`${state?.enabled}:${state?.status}`} />
       <p className="remote-security">
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path d="M8 1.5 13 3v4.5c0 3-5 6.5-5 6.5S3 10.5 3 7.5V3Z" />

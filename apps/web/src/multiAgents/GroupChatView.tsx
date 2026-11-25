@@ -1,6 +1,7 @@
 // FILE: GroupChatView.tsx
-// Purpose: The chat of one Multi agents group: labelled member replies, who is working, the
-//          hop-limit Continue / Stop card, and the composer.
+// Purpose: The chat of one Multi agents group: labelled member replies, who is working (and who
+//          has gone quiet), hand-offs used this round, the hop-limit Continue / Stop card, and the
+//          composer.
 // Layer: UI component
 
 import {
@@ -22,12 +23,24 @@ import { useStore } from "~/store";
 import { createThreadSelector } from "~/storeSelectors";
 import { useRetainVisibleThreadDetails } from "~/threadDetailSubscriptionRetention";
 
-import { GroupAgentAvatar, GroupAvatarStack } from "./GroupAgentAvatar";
-import { deriveGroupChatRows } from "./groupChat.logic";
+import { GroupAgentAvatar } from "./GroupAgentAvatar";
+import {
+  deriveGroupChatRows,
+  groupMissions,
+  planIntroText,
+  proposalRoundEnds,
+  questProgress,
+  undoableRound,
+  type QuestId,
+} from "./groupChat.logic";
 import { GroupComposer, type GroupComposerHandle } from "./GroupComposer";
 import { GroupEmptyChat } from "./GroupEmptyChat";
 import { GroupImageViewer } from "./GroupImageViewer";
 import { GroupMessageRow } from "./GroupMessageRow";
+import { GroupMissionCard } from "./GroupMissionCard";
+import { GroupQuests } from "./GroupQuests";
+import { GroupMemberReactions } from "./GroupReactions";
+import { GroupMissionPill, GroupStage, GroupWorkingLabel } from "./GroupStage";
 import { GroupReplyActions } from "./GroupReplyActions";
 import { useGroupStore } from "./groupStore";
 
@@ -79,16 +92,66 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
   const replies = useGroupStore((state) => state.replies);
   const memberStates = useGroupStore((state) => state.memberStates);
   const drafts = useGroupStore((state) => state.drafts);
+  const progress = useGroupStore((state) => state.rounds[group.id]);
+  const activities = useGroupStore((state) => state.activities);
+  const reactions = useGroupStore((state) => state.reactions);
+  const allMissions = useGroupStore((state) => state.missions);
+  const missions = useMemo(() => groupMissions(allMissions, group.id), [allMissions, group.id]);
   const rows = useMemo(
     () => deriveGroupChatRows(thread?.messages ?? [], group, replies),
     [group, replies, thread?.messages],
   );
   const running = thread?.session?.status === "running";
+  const roundEnds = useMemo(() => proposalRoundEnds(rows), [rows]);
+  const undo = useMemo(
+    () => undoableRound(rows, thread?.turnDiffSummaries ?? []),
+    [rows, thread?.turnDiffSummaries],
+  );
+  const quiet = new Set<string>(running ? (progress?.quiet ?? []) : []);
+  const quests = useMemo(
+    () => questProgress({ group, rows, reactions, missions }),
+    [group, rows, reactions, missions],
+  );
+  // Missions show under their plan reply; ones still planning (or failed before a plan) at the end.
+  const missionByPlanReply = new Map(
+    missions.flatMap((mission) => (mission.planReplyId ? [[mission.planReplyId, mission]] : [])),
+  );
+  const looseMissions = missions.filter(
+    (mission) =>
+      !mission.planReplyId && (mission.status === "planning" || mission.status === "failed"),
+  );
+  const runningMission = missions.findLast((mission) => mission.status === "running") ?? null;
   const busyMembers = group.members.filter((member) => {
     const state = memberStates[member.id];
     return running && (state === "working" || state === "waiting");
   });
   const { send: sendQueued, error } = useGroupSend(group);
+  const planMission = async (goal: string) => {
+    try {
+      await ensureNativeApi().groups.missionPlan({
+        groupId: group.id,
+        goal,
+        message: t("multiAgents.mission.planText", { goal }),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const tryQuest = (quest: QuestId) => {
+    const composer = composerRef.current;
+    if (quest === "mission") return composer?.startMission();
+    if (quest === "meet") return composer?.setText(`@all ${t("multiAgents.quests.meet.prompt")}`);
+    const first = group.members[0];
+    if (quest === "askOne" && first)
+      return composer?.setText(`@${first.handle} ${t("multiAgents.quests.askOne.prompt")}`);
+    // React: bring the latest answer into view, where the reaction buttons are.
+    const last = rows.findLast((row) => row.kind === "member");
+    if (!last) return composer?.setText(`@all ${t("multiAgents.quests.meet.prompt")}`);
+    document
+      .querySelector(`[data-row-id="${CSS.escape(last.id)}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
   // While a round runs, a new message joins it instead of waiting for it to end.
   const send = (input: GroupSendInput) =>
     sendQueued({ dispatchMode: running ? "steer" : "queue", ...input });
@@ -121,13 +184,23 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-[color:var(--color-border-light)] px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <GroupAvatarStack members={group.members} size="sm" />
+          <GroupStage
+            group={group}
+            activities={activities}
+            busy={new Set(busyMembers.map((member) => member.id))}
+          />
           <h2 className="truncate text-[13px] font-medium">{group.name}</h2>
-          <span className="shrink-0 text-xs text-muted-foreground/70 tabular-nums">
-            {group.members.length}
-          </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {running && progress && progress.hops > 0 ? (
+            <span className="px-1 text-xs text-muted-foreground tabular-nums">
+              {t("multiAgents.chat.handoffs", {
+                used: progress.hops,
+                limit: progress.hopLimit,
+              })}
+            </span>
+          ) : null}
+          {runningMission ? <GroupMissionPill mission={runningMission} /> : null}
           {running ? (
             <button
               type="button"
@@ -143,32 +216,72 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto" data-testid="group-chat-rows">
         <div className={cn(CHAT_COLUMN_FRAME_CLASS_NAME, "min-h-full px-4 pt-2 pb-6")}>
+          <GroupQuests group={group} progress={quests} onTry={tryQuest} />
           {thread && rows.length === 0 && busyMembers.length === 0 ? (
             <GroupEmptyChat group={group} onPick={(value) => composerRef.current?.setText(value)} />
           ) : null}
           {rows.map((row) => (
-            <GroupMessageRow
-              key={row.id}
-              row={row}
-              cwd={group.folder}
-              onExpandImage={setExpandedImage}
-              onSetUp={
-                row.kind === "member" && row.status === "failed"
-                  ? () => void navigate({ to: "/settings", search: { section: "accounts" } })
-                  : undefined
-              }
-              footer={
-                row.kind === "member" ? (
-                  <GroupReplyActions
-                    group={group}
-                    row={row}
-                    rows={rows}
-                    send={send}
-                    prefill={(value) => composerRef.current?.setText(value)}
-                  />
-                ) : undefined
-              }
-            />
+            <div key={row.id} data-row-id={row.id}>
+              <GroupMessageRow
+                // A mission's plan shows once: as the card, not also as the reply's checklist.
+                row={
+                  row.kind === "member" && missionByPlanReply.has(row.replyId)
+                    ? { ...row, text: planIntroText(row.text) }
+                    : row
+                }
+                cwd={group.folder}
+                onExpandImage={setExpandedImage}
+                reactions={
+                  row.kind === "user" ? (
+                    <GroupMemberReactions
+                      group={group}
+                      reactions={reactions[row.id]}
+                      className="justify-end"
+                    />
+                  ) : undefined
+                }
+                onSetUp={
+                  // A visiting agent is set up on its owner's computer, not in these settings.
+                  row.kind === "member" &&
+                  row.status === "failed" &&
+                  !group.members.find((member) => member.id === row.memberId)?.guestId
+                    ? () => void navigate({ to: "/settings", search: { section: "accounts" } })
+                    : undefined
+                }
+                footer={
+                  row.kind === "member" ? (
+                    <>
+                      {missionByPlanReply.get(row.replyId) ? (
+                        <GroupMissionCard
+                          group={group}
+                          mission={missionByPlanReply.get(row.replyId)!}
+                        />
+                      ) : null}
+                      <GroupReplyActions
+                        group={group}
+                        row={row}
+                        rows={rows}
+                        send={send}
+                        onReply={(target) => composerRef.current?.replyTo(target)}
+                        proposalAuthors={roundEnds.get(row.id)}
+                        undo={
+                          undo?.rowId === row.id
+                            ? { turnCount: undo.turnCount, files: undo.files }
+                            : undefined
+                        }
+                        busy={running}
+                        reactions={reactions[row.replyId]}
+                      />
+                    </>
+                  ) : undefined
+                }
+              />
+            </div>
+          ))}
+          {looseMissions.map((mission) => (
+            <div key={mission.id} className="pl-10">
+              <GroupMissionCard group={group} mission={mission} />
+            </div>
           ))}
           {busyMembers.map((member) => (
             <div
@@ -184,15 +297,36 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
                   {drafts[member.id]}
                 </span>
               ) : (
-                <span className="shimmer text-[13px] text-[var(--color-text-foreground-secondary)]">
-                  {memberStates[member.id] === "waiting"
-                    ? t("multiAgents.chat.waiting", { name: member.handle })
-                    : t("multiAgents.chat.working", { name: member.handle })}
-                </span>
+                <GroupWorkingLabel
+                  group={group}
+                  member={member}
+                  activity={activities[member.id]}
+                  waiting={memberStates[member.id] === "waiting"}
+                />
               )}
+              {quiet.has(member.id) ? (
+                <span className="flex shrink-0 items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  {t("multiAgents.chat.quiet")}
+                  <button
+                    type="button"
+                    className="flex h-6 items-center rounded-md px-1.5 text-xs text-muted-foreground transition-[color,background-color] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    title={t("multiAgents.members.startFreshHint")}
+                    onClick={() =>
+                      void ensureNativeApi()
+                        .groups.resetMember({ groupId: group.id, memberId: member.id })
+                        .catch(() => undefined)
+                    }
+                  >
+                    {t("multiAgents.members.startFresh")}
+                  </button>
+                </span>
+              ) : null}
               <button
                 type="button"
-                className="flex h-6 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground opacity-0 transition-[color,background-color,opacity] duration-150 ease-out group-hover/busy:opacity-100 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className={cn(
+                  "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground opacity-0 transition-[color,background-color,opacity] duration-150 ease-out group-hover/busy:opacity-100 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  quiet.has(member.id) && "opacity-100",
+                )}
                 onClick={() =>
                   void ensureNativeApi()
                     .groups.stopMember({ groupId: group.id, memberId: member.id })
@@ -235,6 +369,7 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
         send={send}
         handle={composerRef}
         onExpandImage={setExpandedImage}
+        onMission={planMission}
       />
       <GroupImageViewer preview={expandedImage} onChange={setExpandedImage} />
     </div>

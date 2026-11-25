@@ -319,6 +319,7 @@
   "chatUiDismissSearch": "検索を閉じる",
   "chatUiStatusConnecting": "接続中",
   "chatUiStatusDeviceOffline": "デバイスがオフライン",
+  "chatUiStatusDeviceOfflineSince": "{time} からスリープ中またはオフライン",
   "chatUiStatusOffline": "オフライン",
   "chatUiConnectionStatus": "接続状態：{status}",
   "chatUiGroups": "グループ",

@@ -2497,7 +2497,28 @@
         "starting": "Starting…",
         "unavailable": "Unavailable"
       },
-      "unavailable": "Remote access is not configured in this desktop build."
+      "unavailable": "Remote access is not configured in this desktop build.",
+      "reach": {
+        "title": "Stay reachable",
+        "description": "Your phone can only reach this computer while it is awake.",
+        "keepAwake": {
+          "label": "Keep this computer awake",
+          "never": "Never",
+          "pluggedIn": "While plugged in",
+          "always": "Always"
+        },
+        "status": {
+          "awake": "DJL is keeping this computer awake for your phone.",
+          "normal": "This computer sleeps as usual."
+        },
+        "login": {
+          "label": "Start DJL when I sign in",
+          "hint": "DJL opens in the background, ready for your phone.",
+          "unsupported": "Available in the installed app on macOS and Windows."
+        },
+        "limits": "A laptop still sleeps when its lid is closed, and a sleeping computer cannot be woken from the phone.",
+        "saveFailed": "Could not save this setting."
+      }
     },
     "route": {
       "advanced": {
@@ -3581,7 +3602,10 @@
         "tryAgain": "Try again",
         "removedAgent": "Removed agent",
         "members": "Members",
-        "allMembers": "Everyone in the group"
+        "allMembers": "Everyone in the group",
+        "passed": "{{name}} had nothing to add.",
+        "handoffs": "Hand-offs {{used}} of {{limit}}",
+        "quiet": "No activity for 3 min"
       },
       "pause": {
         "title": "The agents have handed off to each other {{count}} times.",
@@ -3608,7 +3632,21 @@
         "workCommands_one": "ran {{count}} command",
         "workCommands_other": "ran {{count}} commands",
         "filesHeading": "Files",
-        "commandsHeading": "Commands"
+        "commandsHeading": "Commands",
+        "goWith": "Go with this",
+        "goWithText": "Go ahead with your proposal.",
+        "combine": "Combine",
+        "combineWho": "Who combines?",
+        "combineText": "Combine the proposals above into one plan.",
+        "discuss": "Discuss",
+        "discussText": "Read each other's answers above. Reply only if you disagree or have something to add; otherwise reply [PASS].",
+        "undo": "Undo changes",
+        "undoConfirm_one": "Undo the {{count}} file changed in this round? It goes back to how it was before.",
+        "undoConfirm_other": "Undo the {{count}} files changed in this round? They go back to how they were before.",
+        "undoFailed": "Could not undo the changes.",
+        "more": "More",
+        "replyingTo": "Replying to {{name}}",
+        "cancelReply": "Cancel reply"
       },
       "composer": {
         "mention": "Mention an agent",
@@ -3641,7 +3679,31 @@
           "working": "Working",
           "waiting": "Waiting",
           "failed": "Needs attention"
-        }
+        },
+        "mute": "Mute",
+        "muteHint": "Answers only when you @ it by name.",
+        "context": "Context used",
+        "contextUnknown": "Not reported yet",
+        "contextTokens": "{{tokens}} tokens",
+        "startFresh": "Start fresh",
+        "startFreshHint": "Stop this agent and start a new session. It gets the last 40 messages.",
+        "brief": "Group brief",
+        "briefPlaceholder": "What this group is for, and how the agents should work",
+        "briefHint": "Every agent reads this before it answers.",
+        "recipient": "Messages without @ go to",
+        "recipientLast": "Whoever answered last",
+        "recipientAll": "Everyone (they propose, nobody edits)",
+        "recipientLead": "{{name}} as the lead",
+        "review": "Check changes automatically",
+        "reviewOff": "Off",
+        "reviewBy": "{{name}} reviews",
+        "reviewHint": "After an agent changes files, the reviewer reads them and sends fixes back.",
+        "recipientLastShort": "Last to answer",
+        "recipientAllShort": "Everyone",
+        "more": "More settings",
+        "options": "Options for {{name}}",
+        "noMatch": "No matches",
+        "modelSearch": "Search models"
       },
       "roles": {
         "planner": "Planner",
@@ -3654,6 +3716,197 @@
         "createFailed": "Could not create the group.",
         "sendFailed": "Could not send the message.",
         "updateFailed": "Could not update the group."
+      },
+      "templates": {
+        "title": "Start from a team",
+        "buildReview": {
+          "name": "Build & review",
+          "body": "One agent builds, another checks every change."
+        },
+        "planBuildReview": {
+          "name": "Plan, build, review",
+          "body": "A lead plans and hands out the work; changes get checked."
+        },
+        "researchWrite": {
+          "name": "Research & write",
+          "body": "One agent looks things up, another writes it up."
+        },
+        "secondOpinions": {
+          "name": "Second opinions",
+          "body": "Ask everyone at once and compare their answers."
+        }
+      },
+      "stage": {
+        "ready": "Ready",
+        "from": "from {{name}}",
+        "muted": "Muted",
+        "mission": "Mission {{done}}/{{total}}",
+        "kind": {
+          "thinking": "Thinking…",
+          "planning": "Planning…",
+          "reviewing": "Reviewing…",
+          "reading": "Reading…",
+          "editing": "Editing…",
+          "running": "Running a command…",
+          "writing": "Writing…",
+          "waiting": "Waiting for its turn…"
+        },
+        "with": {
+          "reading": "Reading {{detail}}",
+          "editing": "Editing {{detail}}",
+          "running": "Running {{detail}}"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} is on it",
+          "done": "{{name}} answered",
+          "passed": "{{name}} had nothing to add",
+          "failed": "{{name}} could not answer"
+        },
+        "label": {
+          "like": "Good",
+          "dislike": "Not quite",
+          "doIt": "Do it",
+          "simpler": "Explain simpler"
+        },
+        "text": {
+          "dislike": "That answer is not quite right. Try again with a different, better answer.",
+          "doIt": "Go ahead and do it.",
+          "simpler": "Explain your answer again in plain words for someone non-technical, in a few short lines."
+        },
+        "failed": "Could not send the reaction."
+      },
+      "quests": {
+        "title": "Getting started",
+        "allDone": "You're all set!",
+        "progress": "{{done}} of {{total}}",
+        "hide": "Hide getting started",
+        "tryIt": "Try it",
+        "meet": {
+          "title": "Say hi to everyone",
+          "hint": "Start a message with @all",
+          "prompt": "introduce yourselves and say what you are best at"
+        },
+        "askOne": {
+          "title": "Ask one agent",
+          "hint": "Start a message with @ and a name",
+          "prompt": "what can you help me with?"
+        },
+        "react": {
+          "title": "React to an answer",
+          "hint": "Tap 👍 👎 ✅ or 🤔 under an answer"
+        },
+        "mission": {
+          "title": "Run a mission",
+          "hint": "Tap the flag and give the team a goal"
+        }
+      },
+      "mission": {
+        "placeholder": "Describe the goal for the team…",
+        "toggle": "Mission",
+        "toggleHint": "Give the team a goal; they plan it into steps",
+        "mode": "Mission",
+        "planText": "plan this mission: {{goal}}",
+        "label": "Mission",
+        "completeTitle": "Mission complete",
+        "status": {
+          "planning": "Planning",
+          "ready": "Ready to start",
+          "running": "In progress",
+          "paused": "Paused",
+          "done": "Done",
+          "stopped": "Stopped",
+          "failed": "Not planned"
+        },
+        "planning": "{{name}} is planning the steps…",
+        "removeStep": "Remove step",
+        "planUnreadable": "The plan had no steps DJL could read. Plan again, or ask in the chat.",
+        "pausedOn": "Paused on step {{step}}. Try it again, skip it, or stop.",
+        "start": "Start mission",
+        "cancel": "Cancel",
+        "stop": "Stop mission",
+        "retry": "Retry step",
+        "skip": "Skip step",
+        "planAgain": "Plan again",
+        "startText": "Start the mission: {{goal}}",
+        "retryText": "Try that mission step again.",
+        "skipText": "Skip that step and go on with the mission.",
+        "failedAction": "That did not work. Try again.",
+        "copySummary": "Copy summary",
+        "copied": "Copied",
+        "statsFiles_one": "{{count}} file changed",
+        "statsFiles_other": "{{count}} files changed",
+        "statsCommands_one": "{{count}} command",
+        "statsCommands_other": "{{count}} commands",
+        "statsReviews_one": "{{count}} review",
+        "statsReviews_other": "{{count}} reviews",
+        "durationSeconds_one": "{{count}} second",
+        "durationSeconds_other": "{{count}} seconds",
+        "durationMinutes_one": "{{count}} minute",
+        "durationMinutes_other": "{{count}} minutes"
+      },
+      "guests": {
+        "title": "People",
+        "add": "Invite a person",
+        "invite": "Invite",
+        "cancel": "Cancel",
+        "namePlaceholder": "Their name",
+        "roleLabel": "What they can do",
+        "roleFor": "What {{name}} can do",
+        "role": {
+          "chat": "Can chat",
+          "viewer": "Can watch",
+          "agent": "Brings an agent"
+        },
+        "roleHint": {
+          "chat": "Can ask your agents. The agents only propose; nothing changes until you approve.",
+          "viewer": "Can read the chat, and cannot write.",
+          "agent": "Their own agent joins from their computer and answers with their subscription. It reads this group's messages; it cannot open or change your files."
+        },
+        "status": {
+          "connected": "Connected",
+          "waiting": "Waiting for them to join",
+          "starting": "Preparing the invite…",
+          "expired": "The invite code expired",
+          "offline": "Not connected",
+          "desktopOnly": "Open the DJL desktop app to connect guests",
+          "agentAway": "Their computer is offline"
+        },
+        "codeHelp": "{{name}} opens the DJL phone app, taps Pair with code, and enters:",
+        "newCode": "New invite code",
+        "remove": "Remove from group",
+        "failed": "Could not invite this person.",
+        "full_one": "A group can have {{count}} guest.",
+        "full_other": "A group can have up to {{count}} guests.",
+        "tag": "guest",
+        "removedName": "Guest",
+        "codeHelpAgent": "{{name}} opens DJL on their computer, goes to Multi agents, clicks Join a group, and enters:",
+        "visitingHint": "This agent answers from its owner's computer, with the model they chose."
+      },
+      "lend": {
+        "join": "Join a group",
+        "title": "Lend an agent to a group",
+        "description": "Someone invited your agent into their group. Enter their invite code and pick which of your agents answers there.",
+        "code": "Invite code",
+        "agent": "Agent",
+        "checking": "Checking your agents…",
+        "noAgent": "Set up an agent first",
+        "safety": "Your agent answers from this computer with your subscription and reads that group's messages. It runs with no tools: it cannot open files, run commands or browse. Join only groups of people you trust.",
+        "failed": "Could not join that group.",
+        "joining": "Joining…",
+        "submit": "Join",
+        "section": "Lent to other groups",
+        "unknownGroup": "Joining a group…",
+        "leave": "Leave this group",
+        "status": {
+          "connecting": "Connecting…",
+          "connected": "Connected",
+          "offline": "Their computer is offline",
+          "refused": "No longer invited",
+          "busy": "Answering…"
+        },
+        "onlyClaude": "Only Claude can be lent for now."
       }
     },
     "navigation": {

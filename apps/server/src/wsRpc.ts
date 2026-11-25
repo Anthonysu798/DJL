@@ -2059,6 +2059,8 @@ export const makeWsRpcLayer = () =>
               groups: groupService.list(),
               replies: groupService.listReplies(),
               live: Effect.sync(groupService.live),
+              reactions: groupService.listReactions(),
+              missions: groupService.listMissions(),
             }),
             "Failed to list groups",
           ),
@@ -2078,6 +2080,38 @@ export const makeWsRpcLayer = () =>
           rpcEffect(groupService.stopMember(input), "Failed to stop member"),
         [WS_METHODS.groupsResolvePause]: (input) =>
           rpcEffect(groupService.resolvePause(input), "Failed to continue group"),
+        [WS_METHODS.groupsResetMember]: (input) =>
+          rpcEffect(groupService.resetMember(input), "Failed to start a fresh session"),
+        [WS_METHODS.groupsUndoRound]: (input) =>
+          rpcEffect(groupService.undoRound(input), "Failed to undo the changes"),
+        [WS_METHODS.groupsReact]: (input) =>
+          rpcEffect(groupService.react(input), "Failed to react"),
+        [WS_METHODS.groupsMissionPlan]: (input) =>
+          rpcEffect(groupService.missionPlan(input), "Failed to plan the mission"),
+        [WS_METHODS.groupsMissionStart]: (input) =>
+          rpcEffect(groupService.missionStart(input), "Failed to start the mission"),
+        [WS_METHODS.groupsMissionStop]: (input) =>
+          rpcEffect(groupService.missionStop(input), "Failed to stop the mission"),
+        [WS_METHODS.groupsMissionRemoveStep]: (input) =>
+          rpcEffect(groupService.missionRemoveStep(input), "Failed to change the mission"),
+        [WS_METHODS.groupsInviteGuest]: (input) =>
+          rpcEffect(groupService.inviteGuest(input), "Failed to invite the guest"),
+        [WS_METHODS.groupsUpdateGuest]: (input) =>
+          rpcEffect(groupService.updateGuest(input), "Failed to change the guest"),
+        [WS_METHODS.groupsRemoveGuest]: (input) =>
+          rpcEffect(groupService.removeGuest(input), "Failed to remove the guest"),
+        [WS_METHODS.groupsGuestAgentJoin]: (input) =>
+          rpcEffect(groupService.guestAgentJoin(input), "Failed to bring the agent in"),
+        [WS_METHODS.groupsGuestAgentReply]: (input) =>
+          rpcEffect(groupService.guestAgentReply(input), "Failed to take the agent's answer"),
+        [WS_METHODS.groupsGuestAgentDraft]: (input) =>
+          rpcEffect(groupService.guestAgentDraft(input), "Failed to take the agent's draft"),
+        [WS_METHODS.subscribeGuestAgentTurns]: (input) => groupService.guestAgentTurns(input),
+        [WS_METHODS.groupsLentAgentOpen]: (input) =>
+          rpcEffect(groupService.lentAgentOpen(input), "Failed to open the lent agent"),
+        [WS_METHODS.groupsLentAgentClose]: (input) =>
+          rpcEffect(groupService.lentAgentClose(input), "Failed to close the lent agent"),
+        [WS_METHODS.subscribeLentAgentAsk]: (input) => groupService.lentAgentAsk(input),
         [WS_METHODS.subscribeGroupEvents]: () =>
           Stream.merge(
             Stream.fromEffect(
@@ -2085,14 +2119,9 @@ export const makeWsRpcLayer = () =>
                 groups: groupService.list(),
                 replies: groupService.listReplies(),
                 live: Effect.sync(groupService.live),
-              }).pipe(
-                Effect.map(({ groups, replies, live }) => ({
-                  type: "snapshot" as const,
-                  groups,
-                  replies,
-                  live,
-                })),
-              ),
+                reactions: groupService.listReactions(),
+                missions: groupService.listMissions(),
+              }).pipe(Effect.map((snapshot) => ({ type: "snapshot" as const, ...snapshot }))),
             ),
             groupService.streamEvents,
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Group event stream failed"))),

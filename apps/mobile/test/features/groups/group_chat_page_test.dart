@@ -1,6 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/network/cloud_client.dart';
+import 'package:djl_mobile/core/security/credential_store.dart';
+import 'package:djl_mobile/features/reports/data/content_reporter.dart';
 import 'package:djl_mobile/features/groups/presentation/group_chat_page.dart';
 import 'package:djl_mobile/features/groups/presentation/groups_controller.dart';
 import 'package:djl_mobile/features/groups/presentation/groups_page.dart';
@@ -27,17 +34,28 @@ FakeGroupsLink mac({int pendingHandoffs = 0, int members = 2}) {
     );
 }
 
+class _NoCredentials implements CredentialStore {
+  @override
+  Future<String?> read(String key) async => null;
+  @override
+  Future<void> write(String key, String? value) async {}
+}
+
 Future<GroupsController> open(
   WidgetTester tester,
   FakeGroupsLink link, {
   Brightness brightness = Brightness.light,
+  ContentReporter? reporter,
 }) async {
   final controller = GroupsController(link);
   addTearDown(controller.dispose);
+  final Widget page = GroupChatPage(controller: controller, groupId: 'g1');
   await tester.pumpWidget(
     MaterialApp(
       theme: djlTheme(brightness),
-      home: GroupChatPage(controller: controller, groupId: 'g1'),
+      home: reporter == null
+          ? page
+          : ContentReportScope(reporter: reporter, child: page),
     ),
   );
   await tester.pump();
@@ -74,6 +92,50 @@ void main() {
     expect(find.text('Received'), findsNWidgets(2));
     expect(find.text('Claude'), findsOneWidget);
     expect(find.text('Codex'), findsOneWidget);
+  });
+
+  testWidgets('holding an agent reply reports it; no flag under the reply', (
+    tester,
+  ) async {
+    final sent = <Map<String, dynamic>>[];
+    final reporter = ContentReporter(
+      CloudClient(
+        baseUrl: Uri.parse('https://cloud.test/'),
+        credentials: _NoCredentials(),
+        client: MockClient((request) async {
+          sent.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(
+            jsonEncode({
+              'report': {'id': 'r1', 'createdAt': '2026-11-24T00:00:00Z'},
+            }),
+            201,
+          );
+        }),
+      ),
+    );
+    final link = mac()
+      ..history['thread-g1'] = [
+        fakeUserItem('u1', '@claude say pineapple'),
+        fakeReplyItem('claude', 'r1', 'pineapple'),
+      ];
+    await open(tester, link, reporter: reporter);
+    expect(find.byKey(const Key('report.answer')), findsNothing);
+
+    // Holding your own message does nothing.
+    await tester.longPress(find.text('@claude say pineapple'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('report.send')), findsNothing);
+
+    await tester.longPress(find.text('pineapple'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('report.reason.wrong')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('report.send')));
+    await tester.pumpAndSettle();
+
+    expect(sent.single['text'], 'pineapple');
+    expect(sent.single['reason'], 'wrong');
+    expect(find.text("Thanks. We'll review this answer."), findsOneWidget);
   });
 
   testWidgets('a reply is drawn as it is written, then settles in place', (

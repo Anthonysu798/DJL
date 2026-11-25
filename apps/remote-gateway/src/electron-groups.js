@@ -11,8 +11,22 @@ const GROUPS = {
   stopMember: "groups.stopMember",
   resolvePause: "groups.resolvePause",
   subscribe: "groups.subscribe",
+  guestAgentJoin: "groups.guestAgentJoin",
+  guestAgentReply: "groups.guestAgentReply",
+  guestAgentDraft: "groups.guestAgentDraft",
+  guestAgentTurns: "groups.guestAgentTurns",
 };
+const AGENT_TURNS_RETRY_MS = 1_000;
+// GROUP_GUEST_AGENT_TEXT_LIMIT in packages/contracts: longer text would be refused by the
+// backend, and the turn would then wait for an answer that never arrives.
+const AGENT_TEXT_LIMIT = 200_000;
 const HARNESSES_LIST_ACCOUNTS = "harnesses.listAccounts";
+const {
+  GUEST_DENIED_MESSAGE,
+  filterGuestGroupEvent,
+  filterGuestGroupsList,
+  guestMessageId,
+} = require("./guest-scope");
 // The desktop's member kinds and their names (GROUP_MEMBER_PROVIDERS and
 // PROVIDER_DISPLAY_NAMES in packages/contracts), in the desktop's order.
 const GROUP_MEMBER_AGENTS = [
@@ -58,13 +72,21 @@ function createElectronGroups({
   now,
   endpoint = null,
   fetchImpl = (url, init) => fetch(url, init),
+  // Set when this gateway serves one invited guest: it then shows and accepts only that
+  // guest's group (see guest-scope.js). The adapter refuses every other group method first.
+  guestScope = null,
 }) {
   let unsubscribe = null;
+  let stopAgentTurns = null;
+  let stopped = false;
   const uploads = new Map();
   const downloads = new Map();
+  const lendsAgent = guestScope?.role === "agent";
 
   function start() {
-    if (unsubscribe) return;
+    stopped = false;
+    // A guest who lends an agent is not shown the chat; its turns carry what it needs.
+    if (unsubscribe || lendsAgent) return;
     unsubscribe = subscribe(
       GROUPS.subscribe,
       {},
@@ -85,6 +107,9 @@ function createElectronGroups({
   }
 
   function stop() {
+    stopped = true;
+    stopAgentTurns?.();
+    stopAgentTurns = null;
     unsubscribe?.();
     unsubscribe = null;
     uploads.clear();
@@ -92,7 +117,8 @@ function createElectronGroups({
   }
 
   // Drafts get their own method so the outbound coalescer can merge a burst.
-  function forward(event) {
+  function forward(rawEvent) {
+    const event = guestScope ? filterGuestGroupEvent(guestScope, rawEvent) : rawEvent;
     if (!event || typeof event !== "object") return;
     if (event.type === "reply.draft") {
       emit("djl/groups/draft", {
@@ -129,17 +155,26 @@ function createElectronGroups({
   // a round is running joins it instead of waiting for it to end.
   async function send(params, mutation) {
     const text = typeof params.text === "string" ? params.text.trim() : "";
-    const attachments = readAttachmentReferences(params.attachments);
+    // A guest sends text only; files are the owner's to add.
+    const attachments = guestScope ? [] : readAttachmentReferences(params.attachments);
     if (!text && attachments.length === 0) throw new Error("A message is required.");
+    if (guestScope) await requireGuestMayWrite();
     const threadId = await groupThreadId(params.groupId);
     const thread = await findThread(threadId);
     await dispatchCommand(
       {
         type: "thread.turn.start",
-        commandId: mutation.commandId("group-send"),
+        // A guest's ids are namespaced, so a guest cannot pick an id that collides with (and so
+        // swallows) one of the owner's own commands.
+        commandId: guestScope
+          ? `${mutation.commandId("group-send")}-g${guestScope.guestId}`
+          : mutation.commandId("group-send"),
         threadId,
         message: {
-          messageId: mutation.entityId("djl-message", "message"),
+          // The server reads who wrote the message, and what it may do, from this id.
+          messageId: guestScope
+            ? guestMessageId(guestScope, mutation.entityId("djl-message", "message"))
+            : mutation.entityId("djl-message", "message"),
           role: "user",
           text,
           attachments,
@@ -153,6 +188,80 @@ function createElectronGroups({
       mutation,
     );
     return {};
+  }
+
+  // --- A guest's own agent (role "agent") ----------------------------------------------------
+  // The guest's computer announces its agent and repeats that while it stays connected. From
+  // the first announcement on, this gateway passes the agent's turns out and its answers in.
+  const agentRef = () => ({ groupId: guestScope.groupId, guestId: guestScope.guestId });
+
+  async function agentJoin(params) {
+    const group = await request(GROUPS.guestAgentJoin, {
+      ...agentRef(),
+      provider: params.provider,
+      model:
+        typeof params.model === "string" && params.model.trim()
+          ? params.model.trim().slice(0, 120)
+          : null,
+      sessionId: params.sessionId,
+    });
+    listenForAgentTurns();
+    const member = (group?.members || []).find((entry) => entry.guestId === guestScope.guestId);
+    // The guest's app shows where its agent went; nothing else about the group leaves.
+    return { groupName: group?.name ?? "", handle: member?.handle ?? "" };
+  }
+
+  function listenForAgentTurns() {
+    if (stopAgentTurns || stopped) return;
+    const retry = () => {
+      stopAgentTurns = null;
+      if (!stopped) setTimeout(listenForAgentTurns, AGENT_TURNS_RETRY_MS).unref?.();
+    };
+    stopAgentTurns = subscribe(GROUPS.guestAgentTurns, agentRef(), {
+      onChunk(values) {
+        for (const value of values) {
+          if (value?.type === "turn")
+            emit("djl/groups/agent/turn", { turnId: value.turnId, prompt: value.prompt });
+          else if (value?.type === "cancel")
+            emit("djl/groups/agent/cancel", { turnId: value.turnId });
+          else if (value?.type === "removed") emit("djl/groups/agent/removed", {});
+        }
+      },
+      onEnd: retry,
+      onError: retry,
+    });
+  }
+
+  const agentReply = (params) =>
+    request(GROUPS.guestAgentReply, {
+      ...agentRef(),
+      turnId: params.turnId,
+      status: params.status === "ok" ? "ok" : "failed",
+      text: typeof params.text === "string" ? params.text.slice(0, AGENT_TEXT_LIMIT) : "",
+    }).then(() => ({}));
+
+  const agentDraft = (params) =>
+    request(GROUPS.guestAgentDraft, {
+      ...agentRef(),
+      turnId: params.turnId,
+      delta: typeof params.delta === "string" ? params.delta.slice(0, AGENT_TEXT_LIMIT) : "",
+      restart: params.restart === true,
+    }).then(() => ({}));
+
+  function handleAgentRequest(method, params) {
+    if (!lendsAgent) throw new Error(GUEST_DENIED_MESSAGE);
+    if (method === "djl/groups/agent/join") return agentJoin(params);
+    if (method === "djl/groups/agent/reply") return agentReply(params);
+    return agentDraft(params);
+  }
+
+  // Asked fresh on every message: a guest who was removed, or changed to watch-only, a moment
+  // ago must not get one more message in before this gateway is shut down.
+  async function requireGuestMayWrite() {
+    const { groups } = await request(GROUPS.list, {});
+    const group = groups.find((entry) => entry.id === guestScope.groupId);
+    const guest = (group?.guests || []).find((entry) => entry.id === guestScope.guestId);
+    if (!guest || guest.role !== "chat") throw new Error(GUEST_DENIED_MESSAGE);
   }
 
   async function stopAll(params, mutation) {
@@ -308,7 +417,13 @@ function createElectronGroups({
   function handleRequest(method, params, mutation) {
     switch (method) {
       case "djl/groups/list":
-        return request(GROUPS.list, {});
+        return guestScope
+          ? request(GROUPS.list, {}).then((result) => filterGuestGroupsList(guestScope, result))
+          : request(GROUPS.list, {});
+      case "djl/groups/agent/join":
+      case "djl/groups/agent/reply":
+      case "djl/groups/agent/draft":
+        return handleAgentRequest(method, params || {});
       case "djl/groups/agents":
         return listAgents();
       case "djl/groups/create":

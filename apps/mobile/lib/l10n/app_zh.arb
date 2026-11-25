@@ -319,6 +319,7 @@
   "chatUiDismissSearch": "关闭搜索",
   "chatUiStatusConnecting": "正在连接",
   "chatUiStatusDeviceOffline": "设备离线",
+  "chatUiStatusDeviceOfflineSince": "自 {time} 起睡眠或离线",
   "chatUiStatusOffline": "离线",
   "chatUiConnectionStatus": "连接状态：{status}",
   "chatUiGroups": "群聊",

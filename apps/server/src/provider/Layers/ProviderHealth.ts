@@ -92,11 +92,13 @@ import {
 } from "../providerStatusCache";
 import { makeProviderMaintenanceCommandCoordinator } from "../providerMaintenanceCommandCoordinator";
 import {
+  describeUpdateCommandFailure,
   enrichProviderStatusWithVersionAdvisory,
   makeProviderMaintenanceCapabilities,
   normalizeCommandPath,
   parseGenericCliVersion,
   resolveProviderMaintenanceCapabilitiesEffect,
+  verifyProviderUpdate,
   type PackageManagedProviderMaintenanceDefinition,
 } from "../providerMaintenance";
 import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
@@ -2522,6 +2524,9 @@ export const ProviderHealthLive = Layer.effect(
 
       const run = Effect.gen(function* () {
         const startedAt = yield* nowIso;
+        const versionBefore =
+          (yield* Ref.get(statusesRef)).find((status) => status.provider === provider)?.version ??
+          null;
         yield* setProviderUpdateState(
           provider,
           makeUpdateState({
@@ -2548,7 +2553,9 @@ export const ProviderHealthLive = Layer.effect(
               status: "failed",
               startedAt,
               finishedAt,
-              message: describeUpdateCommandError(commandResult.failure),
+              message: isCommandMissingCause(commandResult.failure)
+                ? `\`${update.executable}\` was not found on DJL's PATH, so \`${update.command}\` could not start.`
+                : describeUpdateCommandError(commandResult.failure),
             }),
           );
           return { providers };
@@ -2561,7 +2568,12 @@ export const ProviderHealthLive = Layer.effect(
         if (failed) {
           const message = Option.isNone(result)
             ? "Update timed out."
-            : `Update command exited with code ${result.value.exitCode}.`;
+            : describeUpdateCommandFailure({ command: update.command, ...result.value });
+          yield* Effect.logWarning("Provider update command failed", {
+            provider,
+            command: update.command,
+            exitCode: Option.isSome(result) ? result.value.exitCode : null,
+          });
           const providers = yield* setProviderUpdateState(
             provider,
             makeUpdateState({
@@ -2575,18 +2587,31 @@ export const ProviderHealthLive = Layer.effect(
           return { providers };
         }
 
+        // Exit code 0 is not proof of an update: read the CLI's version again and judge by that.
         const providers = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
         const refreshed = providers.find((status) => status.provider === provider);
-        const stillOutdated = refreshed?.versionAdvisory?.status === "behind_latest";
+        const versionAfter = refreshed?.version ?? null;
+        const verification = verifyProviderUpdate({
+          command: update.command,
+          cliPath: capabilities.commandPath ?? update.executable,
+          versionBefore,
+          versionAfter,
+          latestVersion: refreshed?.versionAdvisory?.latestVersion ?? null,
+        });
+        yield* Effect.logInfo("Provider update command finished", {
+          provider,
+          command: update.command,
+          status: verification.status,
+          versionBefore,
+          versionAfter,
+        });
         const finalProviders = yield* setProviderUpdateState(
           provider,
           makeUpdateState({
-            status: stillOutdated ? "unchanged" : "succeeded",
+            status: verification.status,
             startedAt,
             finishedAt,
-            message: stillOutdated
-              ? "Update command completed, but DJL still detects an outdated provider version."
-              : "Provider updated.",
+            message: verification.message,
             output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
           }),
         );

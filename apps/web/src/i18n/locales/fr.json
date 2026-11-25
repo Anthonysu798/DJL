@@ -2497,7 +2497,28 @@
         "starting": "Démarrage…",
         "unavailable": "Indisponible"
       },
-      "unavailable": "L’accès à distance n’est pas configuré dans cette version de bureau."
+      "unavailable": "L’accès à distance n’est pas configuré dans cette version de bureau.",
+      "reach": {
+        "title": "Rester joignable",
+        "description": "Votre téléphone ne peut joindre cet ordinateur que lorsqu’il est en éveil.",
+        "keepAwake": {
+          "label": "Garder cet ordinateur en éveil",
+          "never": "Jamais",
+          "pluggedIn": "Sur secteur uniquement",
+          "always": "Toujours"
+        },
+        "status": {
+          "awake": "DJL garde cet ordinateur en éveil pour votre téléphone.",
+          "normal": "Cet ordinateur se met en veille comme d’habitude."
+        },
+        "login": {
+          "label": "Ouvrir DJL à l’ouverture de session",
+          "hint": "DJL s’ouvre en arrière-plan, prêt pour votre téléphone.",
+          "unsupported": "Disponible dans l’app installée sur macOS et Windows."
+        },
+        "limits": "Un portable se met en veille quand son écran est rabattu, et un ordinateur en veille ne peut pas être réveillé depuis le téléphone.",
+        "saveFailed": "Impossible d’enregistrer ce réglage."
+      }
     },
     "route": {
       "advanced": {
@@ -3581,7 +3602,10 @@
         "tryAgain": "Réessayer",
         "removedAgent": "Agent retiré",
         "members": "Membres",
-        "allMembers": "Tout le groupe"
+        "allMembers": "Tout le groupe",
+        "passed": "{{name}} n’avait rien à ajouter.",
+        "handoffs": "Relais {{used}} sur {{limit}}",
+        "quiet": "Aucune activité depuis 3 min"
       },
       "pause": {
         "title": "Les agents se sont passé la main {{count}} fois.",
@@ -3608,7 +3632,21 @@
         "workCommands_one": "{{count}} commande lancée",
         "workCommands_other": "{{count}} commandes lancées",
         "filesHeading": "Fichiers",
-        "commandsHeading": "Commandes"
+        "commandsHeading": "Commandes",
+        "goWith": "Retenir celle-ci",
+        "goWithText": "Vas-y avec ta proposition.",
+        "combine": "Combiner",
+        "combineWho": "Qui combine ?",
+        "combineText": "Combine les propositions ci-dessus en un seul plan.",
+        "discuss": "Débattre",
+        "discussText": "Lisez les réponses des autres ci-dessus. Répondez seulement si vous n’êtes pas d’accord ou avez quelque chose à ajouter ; sinon répondez [PASS].",
+        "undo": "Annuler les modifications",
+        "undoConfirm_one": "Annuler le {{count}} fichier modifié pendant ce tour ? Il revient à son état d’avant.",
+        "undoConfirm_other": "Annuler les {{count}} fichiers modifiés pendant ce tour ? Ils reviennent à leur état d’avant.",
+        "undoFailed": "Impossible d’annuler les modifications.",
+        "more": "Plus",
+        "replyingTo": "Réponse à {{name}}",
+        "cancelReply": "Annuler la réponse"
       },
       "composer": {
         "mention": "Mentionner un agent",
@@ -3641,7 +3679,31 @@
           "working": "Au travail",
           "waiting": "En attente",
           "failed": "À vérifier"
-        }
+        },
+        "mute": "Mettre en sourdine",
+        "muteHint": "Ne répond que si vous le mentionnez avec @ par son nom.",
+        "context": "Contexte utilisé",
+        "contextUnknown": "Pas encore signalé",
+        "contextTokens": "{{tokens}} jetons",
+        "startFresh": "Repartir à zéro",
+        "startFreshHint": "Arrête cet agent et ouvre une nouvelle session. Il reçoit les 40 derniers messages.",
+        "brief": "Consignes du groupe",
+        "briefPlaceholder": "À quoi sert ce groupe et comment les agents doivent travailler",
+        "briefHint": "Chaque agent les lit avant de répondre.",
+        "recipient": "Les messages sans @ vont à",
+        "recipientLast": "Celui qui a répondu en dernier",
+        "recipientAll": "Tout le monde (propositions seulement, aucune modification)",
+        "recipientLead": "{{name}} comme responsable",
+        "review": "Vérifier les modifications automatiquement",
+        "reviewOff": "Désactivé",
+        "reviewBy": "Vérifié par {{name}}",
+        "reviewHint": "Quand un agent modifie des fichiers, le vérificateur les lit et renvoie ce qu’il faut corriger.",
+        "recipientLastShort": "Dernier à répondre",
+        "recipientAllShort": "Tout le monde",
+        "more": "Plus de réglages",
+        "options": "Options de {{name}}",
+        "noMatch": "Aucun résultat",
+        "modelSearch": "Rechercher un modèle"
       },
       "roles": {
         "planner": "Planificateur",
@@ -3654,6 +3716,197 @@
         "createFailed": "Impossible de créer le groupe.",
         "sendFailed": "Impossible d'envoyer le message.",
         "updateFailed": "Impossible de mettre à jour le groupe."
+      },
+      "templates": {
+        "title": "Partir d’une équipe",
+        "buildReview": {
+          "name": "Créer et vérifier",
+          "body": "Un agent construit, un autre vérifie chaque modification."
+        },
+        "planBuildReview": {
+          "name": "Planifier, créer, vérifier",
+          "body": "Un responsable planifie et répartit le travail ; les modifications sont vérifiées."
+        },
+        "researchWrite": {
+          "name": "Rechercher et rédiger",
+          "body": "Un agent cherche, un autre rédige."
+        },
+        "secondOpinions": {
+          "name": "Deuxièmes avis",
+          "body": "Interrogez tout le monde à la fois et comparez leurs réponses."
+        }
+      },
+      "stage": {
+        "ready": "Prêt",
+        "from": "de {{name}}",
+        "muted": "En sourdine",
+        "mission": "Mission {{done}} sur {{total}}",
+        "kind": {
+          "thinking": "Réfléchit…",
+          "planning": "Planifie…",
+          "reviewing": "Vérifie…",
+          "reading": "Lit…",
+          "editing": "Modifie…",
+          "running": "Lance une commande…",
+          "writing": "Écrit…",
+          "waiting": "Attend son tour…"
+        },
+        "with": {
+          "reading": "Lit {{detail}}",
+          "editing": "Modifie {{detail}}",
+          "running": "Lance {{detail}}"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} s’en occupe",
+          "done": "{{name}} a répondu",
+          "passed": "{{name}} n’avait rien à ajouter",
+          "failed": "{{name}} n’a pas pu répondre"
+        },
+        "label": {
+          "like": "Bien",
+          "dislike": "Pas tout à fait",
+          "doIt": "Vas-y",
+          "simpler": "Plus simplement"
+        },
+        "text": {
+          "dislike": "Cette réponse n’est pas tout à fait juste. Réessaie avec une autre réponse, meilleure.",
+          "doIt": "Vas-y, fais-le.",
+          "simpler": "Réexplique ta réponse avec des mots simples, pour quelqu’un qui n’est pas technique, en quelques lignes."
+        },
+        "failed": "Impossible d’envoyer la réaction."
+      },
+      "quests": {
+        "title": "Premiers pas",
+        "allDone": "Tout est prêt !",
+        "progress": "{{done}} sur {{total}}",
+        "hide": "Masquer les premiers pas",
+        "tryIt": "Essayer",
+        "meet": {
+          "title": "Dire bonjour à tout le monde",
+          "hint": "Commencez un message par @all",
+          "prompt": "présentez-vous et dites ce que vous faites le mieux"
+        },
+        "askOne": {
+          "title": "Demander à un agent",
+          "hint": "Commencez un message par @ et un nom",
+          "prompt": "en quoi peux-tu m’aider ?"
+        },
+        "react": {
+          "title": "Réagir à une réponse",
+          "hint": "Touchez 👍 👎 ✅ ou 🤔 sous une réponse"
+        },
+        "mission": {
+          "title": "Lancer une mission",
+          "hint": "Touchez le drapeau et donnez un objectif à l’équipe"
+        }
+      },
+      "mission": {
+        "placeholder": "Décrivez l’objectif de l’équipe…",
+        "toggle": "Mission d’équipe",
+        "toggleHint": "Donnez un objectif à l’équipe ; elle le découpe en étapes",
+        "mode": "Mode mission",
+        "planText": "planifie cette mission : {{goal}}",
+        "label": "Mission d’équipe",
+        "completeTitle": "Mission accomplie",
+        "status": {
+          "planning": "Planification",
+          "ready": "Prête à démarrer",
+          "running": "En cours",
+          "paused": "En pause",
+          "done": "Terminée",
+          "stopped": "Arrêtée",
+          "failed": "Non planifiée"
+        },
+        "planning": "{{name}} planifie les étapes…",
+        "removeStep": "Retirer l’étape",
+        "planUnreadable": "DJL n’a trouvé aucune étape lisible dans le plan. Replanifiez ou demandez dans le chat.",
+        "pausedOn": "En pause à l’étape {{step}}. Réessayez, passez-la ou arrêtez.",
+        "start": "Démarrer la mission",
+        "cancel": "Annuler",
+        "stop": "Arrêter la mission",
+        "retry": "Réessayer l’étape",
+        "skip": "Passer l’étape",
+        "planAgain": "Replanifier",
+        "startText": "Démarre la mission : {{goal}}",
+        "retryText": "Réessaie cette étape de la mission.",
+        "skipText": "Passe cette étape et continue la mission.",
+        "failedAction": "Cela n’a pas marché. Réessayez.",
+        "copySummary": "Copier le résumé",
+        "copied": "Copié",
+        "statsFiles_one": "{{count}} fichier modifié",
+        "statsFiles_other": "{{count}} fichiers modifiés",
+        "statsCommands_one": "{{count}} commande",
+        "statsCommands_other": "{{count}} commandes",
+        "statsReviews_one": "{{count}} vérification",
+        "statsReviews_other": "{{count}} vérifications",
+        "durationSeconds_one": "{{count}} seconde",
+        "durationSeconds_other": "{{count}} secondes",
+        "durationMinutes_one": "{{count}} min",
+        "durationMinutes_other": "{{count}} min"
+      },
+      "guests": {
+        "title": "Personnes",
+        "add": "Inviter une personne",
+        "invite": "Inviter",
+        "cancel": "Annuler",
+        "namePlaceholder": "Son nom",
+        "roleLabel": "Ce qu’elle peut faire",
+        "roleFor": "Ce que {{name}} peut faire",
+        "role": {
+          "chat": "Peut discuter",
+          "viewer": "Peut regarder",
+          "agent": "Amène un agent"
+        },
+        "roleHint": {
+          "chat": "Peut interroger vos agents. Les agents ne font que proposer ; rien ne change sans votre accord.",
+          "viewer": "Peut lire la discussion, sans pouvoir écrire.",
+          "agent": "Son propre agent rejoint le groupe depuis son ordinateur et répond avec son abonnement. Il lit les messages de ce groupe ; il ne peut ni ouvrir ni modifier vos fichiers."
+        },
+        "status": {
+          "connected": "Connecté",
+          "waiting": "En attente de son arrivée",
+          "starting": "Préparation de l’invitation…",
+          "expired": "Le code d’invitation a expiré",
+          "offline": "Non connecté",
+          "desktopOnly": "Ouvrez l’app de bureau DJL pour connecter des invités",
+          "agentAway": "Son ordinateur est hors ligne"
+        },
+        "codeHelp": "{{name}} ouvre l’app DJL sur son téléphone, touche Associer avec un code et saisit :",
+        "newCode": "Nouveau code d’invitation",
+        "remove": "Retirer du groupe",
+        "failed": "Impossible d’inviter cette personne.",
+        "full_one": "Un groupe peut avoir {{count}} invité.",
+        "full_other": "Un groupe peut avoir jusqu’à {{count}} invités.",
+        "tag": "invité",
+        "removedName": "Invité",
+        "codeHelpAgent": "{{name}} ouvre DJL sur son ordinateur, va dans Multi-agents, clique sur Rejoindre un groupe et saisit :",
+        "visitingHint": "Cet agent répond depuis l’ordinateur de son propriétaire, avec le modèle que celui-ci a choisi."
+      },
+      "lend": {
+        "join": "Rejoindre un groupe",
+        "title": "Prêter un agent à un groupe",
+        "description": "Quelqu’un a invité votre agent dans son groupe. Saisissez son code d’invitation et choisissez lequel de vos agents y répond.",
+        "code": "Code d’invitation",
+        "agent": "Agent à prêter",
+        "checking": "Vérification de vos agents…",
+        "noAgent": "Configurez d’abord un agent",
+        "safety": "Votre agent répond depuis cet ordinateur avec votre abonnement et lit les messages de ce groupe. Il fonctionne sans aucun outil : il ne peut ni ouvrir de fichiers, ni exécuter de commandes, ni naviguer. Ne rejoignez que les groupes de personnes de confiance.",
+        "failed": "Impossible de rejoindre ce groupe.",
+        "joining": "Connexion au groupe…",
+        "submit": "Rejoindre",
+        "section": "Prêtés à d’autres groupes",
+        "unknownGroup": "Connexion à un groupe…",
+        "leave": "Quitter ce groupe",
+        "status": {
+          "connecting": "Connexion…",
+          "connected": "Connecté",
+          "offline": "Son ordinateur est hors ligne",
+          "refused": "Invitation retirée",
+          "busy": "En train de répondre…"
+        },
+        "onlyClaude": "Pour l’instant, seul Claude peut être prêté."
       }
     },
     "navigation": {

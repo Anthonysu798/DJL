@@ -319,6 +319,7 @@
   "chatUiDismissSearch": "Fermer la recherche",
   "chatUiStatusConnecting": "Connexion…",
   "chatUiStatusDeviceOffline": "Appareil hors ligne",
+  "chatUiStatusDeviceOfflineSince": "En veille ou hors ligne depuis {time}",
   "chatUiStatusOffline": "Hors ligne",
   "chatUiConnectionStatus": "État de la connexion : {status}",
   "chatUiGroups": "Groupes",

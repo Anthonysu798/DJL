@@ -7,6 +7,7 @@ import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@djl/co
 import { describe, expect, it } from "vitest";
 
 import {
+  didProviderUpdateSucceed,
   getVisibleProviderUpdateStatuses,
   isProviderUpdateActive,
   providerUpdateNotificationKey,
@@ -219,5 +220,23 @@ describe("isProviderUpdateActive", () => {
     expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(
       false,
     );
+  });
+});
+
+describe("didProviderUpdateSucceed", () => {
+  const finished = (status: "succeeded" | "failed" | "unchanged") =>
+    providerStatus("codex", {
+      updateState: { status, startedAt: null, finishedAt: null, message: null, output: null },
+    });
+
+  it("accepts only an update the server verified", () => {
+    expect(didProviderUpdateSucceed(finished("succeeded"))).toBe(true);
+    expect(didProviderUpdateSucceed(finished("failed"))).toBe(false);
+    expect(didProviderUpdateSucceed(finished("unchanged"))).toBe(false);
+  });
+
+  it("treats a missing provider or update state as a failure", () => {
+    expect(didProviderUpdateSucceed(undefined)).toBe(false);
+    expect(didProviderUpdateSucceed(providerStatus("codex"))).toBe(false);
   });
 });

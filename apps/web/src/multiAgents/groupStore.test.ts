@@ -13,6 +13,10 @@ const group: Group = {
   hopLimit: 6,
   skipAllWarning: false,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   members: [],
   createdAt: 1,
   updatedAt: 1,
@@ -124,5 +128,17 @@ describe("group store", () => {
     push(draft(m1, "new", true));
     push(state(m1, "idle"));
     expect(applied.slice(2)).toEqual([draft(m1, "new", true), state(m1, "idle")]);
+  });
+
+  it("keeps each group's round progress until the round ends", () => {
+    const store = () => useGroupStore.getState();
+    store().applyEvent({
+      type: "round.progress",
+      groupId: group.id,
+      progress: { hops: 2, hopLimit: 6, quiet: [m1] },
+    });
+    expect(store().rounds[group.id]).toEqual({ hops: 2, hopLimit: 6, quiet: [m1] });
+    store().applyEvent({ type: "round.progress", groupId: group.id, progress: null });
+    expect(store().rounds[group.id]).toBeUndefined();
   });
 });

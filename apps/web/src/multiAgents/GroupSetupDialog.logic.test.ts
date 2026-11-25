@@ -1,7 +1,13 @@
 import type { HarnessAccount } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
-import { canCreate, defaultGroupName, memberChoices } from "./GroupSetupDialog.logic";
+import {
+  canCreate,
+  defaultGroupName,
+  fillTemplate,
+  memberChoices,
+  templateDefaultRecipient,
+} from "./GroupSetupDialog.logic";
 
 const account = (id: HarnessAccount["id"], status: HarnessAccount["status"]): HarnessAccount => ({
   id,
@@ -42,5 +48,36 @@ describe("group setup", () => {
     expect(defaultGroupName(["claudeAgent", "codex", "gemini", "qwen"])).toBe(
       "Claude, Codex, Gemini +1",
     );
+  });
+});
+
+describe("group templates", () => {
+  it("gives each job a different ready agent, best suited first", () => {
+    expect(fillTemplate("buildReview", ["claudeAgent", "codex", "gemini"])).toEqual([
+      { provider: "codex", role: "builder" },
+      { provider: "claudeAgent", role: "reviewer", reviewer: true },
+    ]);
+    expect(fillTemplate("planBuildReview", ["claudeAgent", "codex", "gemini"])).toEqual([
+      { provider: "claudeAgent", role: "planner", lead: true },
+      { provider: "codex", role: "builder" },
+      { provider: "gemini", role: "reviewer", reviewer: true },
+    ]);
+  });
+
+  it("reuses an agent when too few are ready, except for second opinions", () => {
+    expect(fillTemplate("buildReview", ["claudeAgent"])).toEqual([
+      { provider: "claudeAgent", role: "builder" },
+      { provider: "claudeAgent", role: "reviewer", reviewer: true },
+    ]);
+    expect(fillTemplate("secondOpinions", ["kimi", "qwen"])).toEqual([
+      { provider: "kimi" },
+      { provider: "qwen" },
+    ]);
+    expect(fillTemplate("researchWrite", [])).toEqual([]);
+  });
+
+  it("sends second opinions to everyone by default", () => {
+    expect(templateDefaultRecipient("secondOpinions")).toBe("all");
+    expect(templateDefaultRecipient("buildReview")).toBeUndefined();
   });
 });

@@ -36,6 +36,12 @@ export function isProviderUpdateActive(provider: ServerProviderStatus): boolean 
   return provider.updateState?.status === "queued" || provider.updateState?.status === "running";
 }
 
+// A one-click update is done only when the server verified it ("succeeded"). A missing provider
+// or update state counts as a failure, so the UI never reports an update that nobody checked.
+export function didProviderUpdateSucceed(provider: ServerProviderStatus | undefined): boolean {
+  return provider?.updateState?.status === "succeeded";
+}
+
 function isProviderEnabled(
   provider: ProviderKind,
   serverSettings: Pick<ServerSettings, "providers"> | null | undefined,

@@ -13,6 +13,7 @@ const { createElectronAppServerTransport } = require("./electron-app-server-adap
 function createCodexTransport({
   endpoint = "",
   electronBackendEndpoint = "",
+  guestScope = null,
   onMutationCommitted = null,
   env = process.env,
   appPath = "",
@@ -24,6 +25,7 @@ function createCodexTransport({
     return createElectronAppServerTransport({
       endpoint: electronBackendEndpoint,
       onMutationCommitted,
+      guestScope,
     });
   }
 

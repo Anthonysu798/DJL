@@ -517,7 +517,13 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     final label = busy
         ? context.l10n.chatUiStatusConnecting
         : desktop.state == 'desktop offline'
-        ? context.l10n.chatUiStatusDeviceOffline
+        ? switch (desktop.hostOfflineSince) {
+            // Says since when, so a sleeping computer does not read as a lost connection.
+            final since? => context.l10n.chatUiStatusDeviceOfflineSince(
+              TimeOfDay.fromDateTime(since).format(context),
+            ),
+            null => context.l10n.chatUiStatusDeviceOffline,
+          }
         : context.l10n.chatUiStatusOffline;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

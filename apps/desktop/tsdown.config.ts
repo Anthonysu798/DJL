@@ -18,7 +18,7 @@ const shared = {
 export default defineConfig([
   {
     ...shared,
-    entry: ["src/main.ts", "src/remoteGatewayChild.ts"],
+    entry: ["src/main.ts", "src/remoteGatewayChild.ts", "src/agentLinkChild.ts"],
     clean: true,
     external: ["original-fs"],
     noExternal: (id) => id.startsWith("@djl/"),

@@ -1,3 +1,4 @@
+import { useGroupGuestSync } from "../multiAgents/groupGuestSync";
 import { useComputerEventBridge } from "../hooks/useComputerEventBridge";
 import { useStartupSnapshot } from "../startup/useStartupSnapshot";
 import { useStartupRouteReady } from "../startup/useStartupRouteReady";
@@ -96,6 +97,7 @@ import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useAppSettings } from "../appSettings";
 import { LocalModelSetupCoordinator } from "../localModelSetupCoordinator";
 import {
+  didProviderUpdateSucceed,
   getVisibleProviderUpdateStatuses,
   isProviderUpdateActive,
   providerUpdateNotificationKey,
@@ -209,6 +211,7 @@ function RootRouteView() {
           <EventRouter />
           <ProviderStatusRefreshCoordinator />
           <GlobalShortcutsDialog />
+          <GroupGuestSync />
           <GlobalWhatsNewSurface />
           <TaskCompletionNotifications />
           <ServerCommandApprovalSurface />
@@ -348,11 +351,11 @@ function ProviderUpdateNotifications() {
             const refreshed = result.providers.find(
               (entry) => entry.provider === provider.provider,
             );
-            const updateState = refreshed?.updateState;
-            if (updateState?.status === "failed" || updateState?.status === "unchanged") {
+            if (!didProviderUpdateSucceed(refreshed)) {
               failures.push({
                 provider,
-                reason: updateState.message ?? t("providerUpdates.errors.commandIncomplete"),
+                reason:
+                  refreshed?.updateState?.message ?? t("providerUpdates.errors.commandIncomplete"),
               });
             } else if (refreshed?.versionAdvisory?.status === "behind_latest") {
               failures.push({
@@ -478,9 +481,13 @@ function ProviderUpdateNotifications() {
       outdatedProviders.length === 1
         ? t("providerUpdates.availableNamed", { provider: providerName })
         : t("providerUpdates.availableCount", { count: outdatedProviders.length });
+    // One update: show the version change itself, which reads the same in every language.
+    const advisory = firstProvider.versionAdvisory;
     const description =
       outdatedProviders.length === 1
-        ? t("providerUpdates.availableNamedDescription", { provider: providerName })
+        ? advisory?.currentVersion && advisory.latestVersion
+          ? `${advisory.currentVersion} → ${advisory.latestVersion}`
+          : t("providerUpdates.availableNamedDescription", { provider: providerName })
         : t("providerUpdates.availableAdditional", {
             provider: providerName,
             count: additionalCount,
@@ -515,7 +522,10 @@ function ProviderUpdateNotifications() {
         providerUpdate: outdatedProviders.map((entry) => entry.provider),
         onClose: closeTrackedPrompt,
         secondaryActionProps: {
-          children: t("providerUpdates.updateAll"),
+          children:
+            oneClickProviders.length === 1
+              ? t("sidebar.updateButton.action")
+              : t("providerUpdates.updateAll"),
           onClick: () => {
             void updateAll(oneClickProviders);
           },
@@ -533,6 +543,12 @@ function ProviderUpdateNotifications() {
     updateAll,
   ]);
 
+  return null;
+}
+
+/** Keeps invited guests' connections open from app start, whatever screen is showing. */
+function GroupGuestSync() {
+  useGroupGuestSync();
   return null;
 }
 

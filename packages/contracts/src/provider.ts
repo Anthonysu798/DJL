@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { TrimmedNonEmptyString } from "./baseSchemas";
+import { MessageId, TrimmedNonEmptyString } from "./baseSchemas";
 import {
   ApprovalRequestId,
   EventId,
@@ -89,6 +89,8 @@ export const ProviderSendTurnInput = Schema.Struct({
   computerControl: Schema.optional(ComputerTurnControl),
   computerActivityHistory: Schema.optional(Schema.Boolean),
   threadId: ThreadId,
+  /** The user message this turn answers, for harnesses that react to it (Multi agents). */
+  messageId: Schema.optional(MessageId),
   input: Schema.optional(
     TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
   ),

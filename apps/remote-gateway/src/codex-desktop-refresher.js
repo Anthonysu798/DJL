@@ -609,6 +609,10 @@ function readBridgeConfig({
         : explicitKeepMacAwakeEnabled,
     codexEndpoint,
     electronBackendEndpoint,
+    // Set by the DJL desktop app for a gateway that serves one invited guest of one group.
+    guestScope: readFirstDefinedEnv(["DJL_GUEST_SCOPE"], "", env),
+    // What the phone shows as this computer's name; the host name when empty.
+    displayName: readFirstDefinedEnv(["DJL_BRIDGE_DISPLAY_NAME"], "", env),
     // The DJL desktop app's own version, reported to the phone in place of
     // this package's version when the bridge runs inside DJL.
     desktopAppVersion: readFirstDefinedEnv(["DJL_DESKTOP_VERSION"], "", env),

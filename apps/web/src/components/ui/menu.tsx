@@ -361,7 +361,7 @@ function MenuSubPopup({
   align?: MenuPrimitive.Positioner.Props["align"];
   sideOffset?: MenuPrimitive.Positioner.Props["sideOffset"];
   alignOffset?: MenuPrimitive.Positioner.Props["alignOffset"];
-  surface?: "default" | "composer";
+  surface?: "default" | "composer" | "liquid";
   pickerSize?: "small" | "normal";
 }) {
   const defaultAlignOffset = align !== "center" ? -5 : undefined;

@@ -1043,6 +1043,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatUiStatusDeviceOffline => '设备离线';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return '自 $time 起睡眠或离线';
+  }
+
+  @override
   String get chatUiStatusOffline => '离线';
 
   @override
@@ -5873,6 +5878,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatUiStatusDeviceOffline => '裝置離線';
+
+  @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return '自 $time 起睡眠或離線';
+  }
 
   @override
   String get chatUiStatusOffline => '離線';

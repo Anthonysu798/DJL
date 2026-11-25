@@ -419,6 +419,47 @@
   color: var(--destructive);
   overflow-wrap: anywhere;
 }
+.remote-reach {
+  margin-top: 16px;
+  padding: 6px 20px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+}
+.remote-reach-head {
+  padding: 12px 0 10px;
+}
+.remote-reach-head h2,
+.remote-reach-copy h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.remote-reach-head p,
+.remote-reach-copy p,
+.remote-reach-limits {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.remote-reach-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.remote-reach-copy {
+  min-width: 0;
+  flex: 1;
+}
+.remote-reach-limits {
+  padding-top: 12px;
+  margin-top: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
 .remote-security {
   display: flex;
   align-items: flex-start;

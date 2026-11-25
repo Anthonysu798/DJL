@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMemberPrompt, selectMissed, type PromptLogEntry } from "./groupPrompt";
+import { buildMemberPrompt, isPassReply, selectMissed, type PromptLogEntry } from "./groupPrompt";
 
 const claude = { id: "m1", handle: "Claude", providerName: "Claude", role: null };
 const codex = { id: "m2", handle: "Codex", providerName: "Codex", role: "Reviewer" };
@@ -19,7 +19,7 @@ const base = {
   missed: [] as PromptLogEntry[],
   skipped: 0,
   message: { fromLabel: "User", text: "hello" },
-  proposeOnly: false,
+  readOnly: null,
   attachments: [] as string[],
   pastedSkills: [] as { name: string; markdown: string }[],
 };
@@ -101,7 +101,69 @@ describe("buildMemberPrompt", () => {
   });
 
   it("says when files and commands are unavailable", () => {
-    expect(buildMemberPrompt({ ...base, proposeOnly: true })).toMatch(/propose/i);
-    expect(buildMemberPrompt({ ...base, proposeOnly: false })).not.toMatch(/propose/i);
+    expect(buildMemberPrompt({ ...base, readOnly: "all" })).toMatch(/propose/i);
+    expect(buildMemberPrompt({ ...base, readOnly: null })).not.toMatch(/propose/i);
+  });
+
+  it("puts the group brief in the briefing, and re-briefs a member when the setup changed", () => {
+    const briefed = buildMemberPrompt({ ...base, briefing: true, brief: "Use TypeScript only." });
+    expect(briefed).toContain("group brief");
+    expect(briefed).toContain("Use TypeScript only.");
+    expect(buildMemberPrompt({ ...base, brief: "Use TypeScript only." })).not.toContain(
+      "Use TypeScript only.",
+    );
+    const lead = { ...codex, lead: true };
+    const changed = buildMemberPrompt({
+      ...base,
+      members: [claude, lead],
+      brief: "Use Go.",
+      setupChanged: true,
+    });
+    expect(changed).toMatch(/changed the group's setup/);
+    expect(changed).toContain("Use Go.");
+    expect(changed).toMatch(/@Codex .*lead/);
+    // The skill list is long and has not changed, so it is not repeated.
+    expect(changed).not.toContain("release-notes");
+  });
+
+  it("marks the lead and muted members, and tells the lead what it does", () => {
+    const lead = { ...claude, lead: true };
+    const muted = { ...codex, muted: true };
+    const prompt = buildMemberPrompt({
+      ...base,
+      self: lead,
+      members: [lead, muted],
+      briefing: true,
+    });
+    expect(prompt).toMatch(/@Claude .*lead/);
+    expect(prompt).toMatch(/@Codex .*muted/);
+    expect(prompt).toMatch(/You are the group's lead/);
+  });
+
+  it("offers the pass token only when allowed", () => {
+    expect(buildMemberPrompt({ ...base, allowPass: true })).toContain("[PASS]");
+    expect(buildMemberPrompt(base)).not.toContain("[PASS]");
+  });
+
+  it("asks a reviewer to read the changed files and @ the author only to send fixes", () => {
+    const prompt = buildMemberPrompt({
+      ...base,
+      readOnly: "review",
+      review: { authorHandle: "Codex", files: ["src/app.ts"] },
+    });
+    expect(prompt).toContain("src/app.ts");
+    expect(prompt).toMatch(/reviewer/);
+    expect(prompt).toMatch(/write @Codex followed by exactly what to fix/);
+    expect(prompt).not.toMatch(/Everyone in the group was asked/);
+  });
+});
+
+describe("isPassReply", () => {
+  it("accepts the pass token with stray formatting and nothing else", () => {
+    expect(isPassReply("[PASS]")).toBe(true);
+    expect(isPassReply("  [pass].\n")).toBe(true);
+    expect(isPassReply("**[PASS]**")).toBe(true);
+    expect(isPassReply("[PASS] but also this")).toBe(false);
+    expect(isPassReply("pass")).toBe(false);
   });
 });

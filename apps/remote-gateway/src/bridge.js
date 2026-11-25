@@ -92,6 +92,7 @@ const { readDaemonConfig, writeDaemonConfig } = require("./daemon-state");
 const { handleGitRequest } = require("./git-handler");
 const { RELAY_CLOSE_RATE_LIMITED, relayReconnectDelayMs } = require("./relay-reconnect-policy");
 const { createPresenceHeartbeat } = require("./presence-heartbeat");
+const { allowGuestOutbound, classifyGuestInbound, parseGuestScope } = require("./guest-scope");
 const { handleThreadContextRequest } = require("./thread-context-handler");
 const { handleWorkspaceRequest } = require("./workspace-handler");
 const { handleProjectRequest } = require("./project-handler");
@@ -795,6 +796,24 @@ function startBridge({
       `[djl-electron-bridge] startup transport=${usesElectronBackend ? "electron" : "non-electron"} desktop-ipc=${config.desktopIpcEnabled === false ? "disabled" : "enabled"} refresh=${config.refreshEnabled === true ? "enabled" : "disabled"}`,
     );
   }
+  // A guest gateway serves one invited person and one group. A scope that cannot be read stops
+  // the bridge here: it must never fall back to an ordinary, unrestricted gateway.
+  const guestScope = parseGuestScope(config.guestScope);
+  if (guestScope && !usesElectronBackend) {
+    throw new Error("A guest gateway needs the DJL desktop backend.");
+  }
+  // Without its own state folder and its own Keychain mirror file, a guest gateway would adopt
+  // the owner's device identity and trusted phone from the shared macOS Keychain entry.
+  if (
+    guestScope &&
+    !(
+      normalizeNonEmptyString(process.env.DJL_DEVICE_STATE_DIR) &&
+      normalizeNonEmptyString(process.env.DJL_DEVICE_STATE_KEYCHAIN_MOCK_FILE)
+    )
+  ) {
+    throw new Error("A guest gateway needs its own device state folder.");
+  }
+  const bridgeDisplayName = normalizeNonEmptyString(config.displayName) || os.hostname();
   config.keepMacAwakeEnabled = config.keepMacAwakeEnabled === true;
   const bridgeWakeAssertion = createMacOSBridgeWakeAssertion({
     enabled: config.keepMacAwakeEnabled,
@@ -899,7 +918,7 @@ function startBridge({
     sessionId,
     relayUrl: relayBaseUrl,
     deviceState,
-    displayName: os.hostname(),
+    displayName: bridgeDisplayName,
     pairingSecret: pairingCodeKeys.pairingSecret,
     // Electron Dev enables this explicitly from main.ts. Do not turn secure
     // transport tracing on for every packaged Electron session.
@@ -991,6 +1010,7 @@ function startBridge({
   const codex = createCodexTransport({
     endpoint: config.codexEndpoint,
     electronBackendEndpoint: config.electronBackendEndpoint,
+    guestScope,
     onMutationCommitted: onRemoteMutationCommitted,
     env: process.env,
     appPath: config.codexAppPath,
@@ -1190,7 +1210,12 @@ function startBridge({
         threshold: 256,
         concurrencyLimit: 4,
       },
-      headers: buildMacConnectionHeaders(deviceState, pairingSession, notificationSecret),
+      headers: buildMacConnectionHeaders(
+        deviceState,
+        pairingSession,
+        notificationSecret,
+        bridgeDisplayName,
+      ),
     });
     socket = nextSocket;
 
@@ -1271,6 +1296,18 @@ function startBridge({
     // Streaming deltas make this the hottest path in the bridge: parse the
     // envelope once and share the read-only object with every observer.
     const parsedMessage = parseBridgeMessage(message);
+    if (guestScope) {
+      // The backend streams every chat on this computer. For a guest, only their own group's
+      // chat leaves, and nothing is remembered, mirrored or pushed on the way.
+      if (handleBridgeManagedCodexResponse(message, parsedMessage)) return;
+      trackCodexHandshakeState(message, parsedMessage);
+      if (!allowGuestOutbound(guestScope, parsedMessage)) return;
+      secureTransport.queueOutboundApplicationMessage(
+        sanitizeRelayBoundCodexMessage(message, parsedMessage),
+        sendRelayWireMessage,
+      );
+      return;
+    }
     remoteThreadScope.observeOutbound(parsedMessage);
     if (handleBridgeManagedCodexResponse(message, parsedMessage)) {
       return;
@@ -1320,6 +1357,21 @@ function startBridge({
   // Routes decrypted app payloads through the same bridge handlers as before.
   function handleApplicationMessage(rawMessage) {
     const parsedMessage = parseBridgeMessage(rawMessage);
+    if (guestScope) {
+      // None of the local handlers below (files, git, terminals, this computer's settings) are
+      // for a guest. Connection setup is answered here; the rest goes to the adapter, which
+      // serves the guest's one group and refuses everything else.
+      const route = classifyGuestInbound(parsedMessage);
+      if (route === "drop") return;
+      if (
+        route === "bridge" &&
+        (handleBridgeManagedHandshakeMessage(rawMessage, sendApplicationResponse, parsedMessage) ||
+          handleBridgeManagedAccountRequest(rawMessage, sendApplicationResponse, parsedMessage))
+      )
+        return;
+      codex.send(rawMessage);
+      return;
+    }
     if (handleBridgeManagedHandshakeMessage(rawMessage, sendApplicationResponse, parsedMessage)) {
       return;
     }
@@ -1441,6 +1493,7 @@ function startBridge({
 
   // Encrypts bridge-generated responses instead of letting the relay see plaintext.
   function sendApplicationResponse(rawMessage) {
+    if (guestScope && !allowGuestOutbound(guestScope, parseBridgeMessage(rawMessage))) return;
     secureTransport.queueOutboundApplicationMessage(
       sanitizeRelayBoundCodexMessage(rawMessage),
       sendRelayWireMessage,
@@ -2244,6 +2297,8 @@ function startBridge({
       ...status,
       activeDevice: activePhoneSummary,
       activePhone: activePhoneSummary,
+      // Lets the desktop keep the computer awake for a paired phone that is not connected yet.
+      phonePaired: Object.keys(deviceState?.trustedPhones || {}).length > 0,
     });
   }
 
@@ -2257,7 +2312,7 @@ function startBridge({
     socket.send(
       JSON.stringify({
         kind: "relayMacRegistration",
-        registration: buildMacRegistration(nextDeviceState, pairingSession),
+        registration: buildMacRegistration(nextDeviceState, pairingSession, bridgeDisplayName),
       }),
     );
   }
@@ -2410,7 +2465,12 @@ async function requestManagedDesktopUpdate(onDesktopUpdateRequested) {
   };
 }
 
-function buildMacConnectionHeaders(deviceState, pairingSession, notificationSecret) {
+function buildMacConnectionHeaders(
+  deviceState,
+  pairingSession,
+  notificationSecret,
+  displayName = os.hostname(),
+) {
   const hostSecret = normalizeNonEmptyString(deviceState?.relaySessionSecret);
   const pushSecret = normalizeNonEmptyString(notificationSecret);
   if (hostSecret.length < 32 || pushSecret.length < 32) {
@@ -2420,13 +2480,13 @@ function buildMacConnectionHeaders(deviceState, pairingSession, notificationSecr
     "x-role": "mac",
     "x-djl-session-secret": hostSecret,
     "x-djl-notification-secret": pushSecret,
-    ...buildMacRegistrationHeaders(deviceState, pairingSession),
+    ...buildMacRegistrationHeaders(deviceState, pairingSession, displayName),
   };
 }
 
 // Registers the canonical Mac identity and the one trusted phone allowed for auto-resolve.
-function buildMacRegistrationHeaders(deviceState, pairingSession) {
-  const registration = buildMacRegistration(deviceState, pairingSession);
+function buildMacRegistrationHeaders(deviceState, pairingSession, displayName = os.hostname()) {
+  const registration = buildMacRegistration(deviceState, pairingSession, displayName);
   const headers = {
     "x-mac-device-id": registration.macDeviceId,
     "x-mac-identity-public-key": registration.macIdentityPublicKey,
@@ -2448,12 +2508,12 @@ function buildMacRegistrationHeaders(deviceState, pairingSession) {
   return headers;
 }
 
-function buildMacRegistration(deviceState, pairingSession) {
+function buildMacRegistration(deviceState, pairingSession, displayName = os.hostname()) {
   const trustedPhoneEntry = Object.entries(deviceState?.trustedPhones || {})[0] || null;
   return {
     macDeviceId: normalizeNonEmptyString(deviceState?.macDeviceId),
     macIdentityPublicKey: normalizeNonEmptyString(deviceState?.macIdentityPublicKey),
-    displayName: normalizeNonEmptyString(os.hostname()),
+    displayName: normalizeNonEmptyString(displayName),
     trustedPhoneDeviceId: normalizeNonEmptyString(trustedPhoneEntry?.[0]),
     trustedPhonePublicKey: normalizeNonEmptyString(trustedPhoneEntry?.[1]),
     // The relay only ever learns the lookup code derived from the typed pairing code.

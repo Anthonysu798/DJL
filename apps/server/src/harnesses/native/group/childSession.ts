@@ -5,6 +5,7 @@
 
 import type {
   CanonicalRequestType,
+  GroupContextUsage,
   GroupMemberProvider,
   ProviderApprovalDecision,
   ProviderSessionStartInput,
@@ -31,13 +32,21 @@ export type ChildRequestHandler = (
 
 /** `restart` is true when the member begins a new message, which replaces what it wrote before. */
 export type ChildDraftHandler = (delta: string, restart: boolean) => void;
+/** What the member's CLI is doing now, for the live stage. */
+export type ChildActivityKind = "reading" | "editing" | "running" | "writing";
+export type ChildActivityHandler = (kind: ChildActivityKind, detail: string | null) => void;
 
 export interface ChildSession {
   readonly nativeSessionId: string;
+  /** How full the member's context was at its CLI's last report; null until it reports. */
+  contextUsage(): GroupContextUsage | null;
+  /** When the CLI last reported anything (an event or a request), in epoch milliseconds. */
+  lastActivityAt(): number;
   ask(
     prompt: string,
     onRequest: ChildRequestHandler,
     onDraft?: ChildDraftHandler,
+    onActivity?: ChildActivityHandler,
   ): Promise<ChildReply>;
   stop(): Promise<void>;
   close(): void;
@@ -52,6 +61,25 @@ const COMMAND_REQUESTS = new Set<CanonicalRequestType>([
   "exec_command_approval",
 ]);
 const WORK_LINE_LIMIT = 200;
+const ACTIVITY_DETAIL_LIMIT = 80;
+// Claude reports these tools as commands, but they only look things up.
+const LOOKUP_TOOLS = new Set(["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch"]);
+
+function requestActivity(
+  type: CanonicalRequestType,
+  args: unknown,
+): { kind: ChildActivityKind; detail: string | null } | null {
+  const detail = workLine(nativeApprovalDetail(args)).slice(0, ACTIVITY_DETAIL_LIMIT) || null;
+  if (FILE_REQUESTS.has(type)) return { kind: "editing", detail };
+  if (type === "file_read_approval") return { kind: "reading", detail };
+  if (COMMAND_REQUESTS.has(type)) {
+    const tool = (args as { tool?: unknown } | null)?.tool;
+    return typeof tool === "string" && LOOKUP_TOOLS.has(tool)
+      ? { kind: "reading", detail }
+      : { kind: "running", detail };
+  }
+  return null;
+}
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const workLine = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, WORK_LINE_LIMIT);
@@ -78,6 +106,7 @@ interface Turn {
   readonly startedAt: number;
   onRequest: ChildRequestHandler;
   onDraft: ChildDraftHandler | undefined;
+  onActivity: ChildActivityHandler | undefined;
   settled: boolean;
   resolve: (reply: ChildReply) => void;
 }
@@ -91,6 +120,8 @@ export async function openChildSession(input: {
   const countsCodexItems = input.provider === "codex";
   let turn: Turn | null = null;
   let driver: NativeDriver | null = null;
+  let usage: GroupContextUsage | null = null;
+  let lastActivity = Date.now();
 
   const settle = (reply: (work: ChildWork) => ChildReply) => {
     const current = turn;
@@ -102,9 +133,19 @@ export async function openChildSession(input: {
 
   const sink: NativeSink = {
     emit: (event) => {
+      lastActivity = Date.now();
+      const payload = (event.payload ?? {}) as Record<string, unknown>;
+      if (event.type === "thread.token-usage.updated") {
+        const reported = (payload.usage ?? {}) as { usedTokens?: unknown; maxTokens?: unknown };
+        if (typeof reported.usedTokens === "number")
+          usage = {
+            usedTokens: reported.usedTokens,
+            maxTokens: typeof reported.maxTokens === "number" ? reported.maxTokens : null,
+          };
+        return;
+      }
       const current = turn;
       if (!current) return;
-      const payload = (event.payload ?? {}) as Record<string, unknown>;
       if (
         event.type === "content.delta" &&
         payload.streamKind === "assistant_text" &&
@@ -112,7 +153,10 @@ export async function openChildSession(input: {
       ) {
         const delta = String(payload.delta ?? "");
         current.texts.set(event.itemId, (current.texts.get(event.itemId) ?? "") + delta);
-        if (delta) current.onDraft?.(delta, event.itemId !== current.lastItem);
+        if (delta) {
+          current.onDraft?.(delta, event.itemId !== current.lastItem);
+          current.onActivity?.("writing", null);
+        }
         current.lastItem = event.itemId;
         return;
       }
@@ -129,8 +173,11 @@ export async function openChildSession(input: {
       }
     },
     request: async (type, args, signal) => {
+      lastActivity = Date.now();
       const current = turn;
       if (!current) return "cancel";
+      const activity = requestActivity(type, args);
+      if (activity) current.onActivity?.(activity.kind, activity.detail);
       const answer = await current.onRequest(type, args, signal);
       const accepted = answer === "accept" || answer === "acceptForSession";
       if (accepted && !countsCodexItems) {
@@ -155,8 +202,11 @@ export async function openChildSession(input: {
 
   return {
     nativeSessionId: active.id,
-    ask: (prompt, onRequest, onDraft) =>
+    contextUsage: () => usage,
+    lastActivityAt: () => lastActivity,
+    ask: (prompt, onRequest, onDraft, onActivity) =>
       new Promise<ChildReply>((resolve) => {
+        lastActivity = Date.now();
         turn = {
           texts: new Map(),
           lastItem: null,
@@ -166,6 +216,7 @@ export async function openChildSession(input: {
           startedAt: Date.now() - 1000,
           onRequest,
           onDraft,
+          onActivity,
           settled: false,
           resolve,
         };

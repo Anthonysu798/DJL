@@ -1054,6 +1054,9 @@ class DesktopController extends ChangeNotifier {
   }
 
   String state = 'disconnected';
+
+  /// When the paired computer was last seen going to sleep or offline, while it still is.
+  DateTime? hostOfflineSince;
   bool busy = false, _disposed = false, _suspended = false, _intent = false;
   Timer? _retry;
   Timer? _hostPresenceRecovery;
@@ -3978,7 +3981,13 @@ class DesktopController extends ChangeNotifier {
             transport.macDeviceId == active?.macDeviceId &&
             requestMatchesConnection(rpc) &&
             params['online'] is bool) {
-          state = params['online'] == true ? 'connected' : 'desktop offline';
+          final online = params['online'] == true;
+          if (online) {
+            hostOfflineSince = null;
+          } else if (state != 'desktop offline') {
+            hostOfflineSince = DateTime.now();
+          }
+          state = online ? 'connected' : 'desktop offline';
         }
     }
     // A streaming reply is cached when it completes. Caching every delta

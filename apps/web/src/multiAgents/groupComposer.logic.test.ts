@@ -12,7 +12,9 @@ import {
   insertSkillToken,
   mentionMenuItems,
   referencedSkills,
-  replyToText,
+  plainExcerpt,
+  replyMessageText,
+  splitQuotedMessage,
 } from "./groupComposer.logic";
 
 const groupId = GroupId.makeUnsafe("g1");
@@ -24,6 +26,8 @@ const member = (id: string, handle: string, position: number) => ({
   role: null,
   model: null,
   position,
+  muted: false,
+  contextUsage: null,
 });
 const group: Group = {
   id: groupId,
@@ -35,6 +39,10 @@ const group: Group = {
   hopLimit: 6,
   skipAllWarning: false,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   members: [member("m1", "Claude", 0), member("m2", "Claude2", 1), member("m3", "Codex", 2)],
   createdAt: 1,
   updatedAt: 1,
@@ -42,6 +50,7 @@ const group: Group = {
 const claudeRow: GroupMemberRow = {
   kind: "member",
   id: "reply-1",
+  replyId: "reply-1",
   memberId: GroupMemberId.makeUnsafe("m1"),
   handle: "Claude",
   provider: "claudeAgent",
@@ -51,6 +60,9 @@ const claudeRow: GroupMemberRow = {
   error: null,
   files: [],
   commands: [],
+  passed: false,
+  proposeOnly: false,
+  turnId: null,
 };
 const codex = group.members[2]!;
 
@@ -83,15 +95,32 @@ describe("mention menu", () => {
 describe("reply actions", () => {
   it("builds the three reply actions", () => {
     expect(askAgainText(claudeRow, "what is 2+2?")).toBe("@Claude what is 2+2?");
-    expect(replyToText({ ...claudeRow, text: "x".repeat(400) })).toBe(
-      `@Claude\n> ${"x".repeat(280)}\n\n`,
+    expect(replyMessageText(claudeRow, " thanks, now add tests ")).toBe(
+      "@Claude thanks, now add tests\n> It is 4.",
     );
     expect(askAnotherText(claudeRow, codex, "Please check this answer from Claude.")).toBe(
       "@Codex Please check this answer from Claude.\n> It is 4.",
     );
   });
-  it("quotes multi-line answers line by line", () => {
-    expect(replyToText({ ...claudeRow, text: "a\nb" })).toBe("@Claude\n> a\n> b\n\n");
+  it("quotes an answer as one plain line that wakes nobody", () => {
+    const answer =
+      "## Done\n\n[index.html](/Users/me/group/index.html) (**Orbit Rush**) is ready.\n- ask @Codex to `test` it";
+    expect(plainExcerpt(answer)).toBe(
+      "Done index.html (Orbit Rush) is ready. ask Codex to test it",
+    );
+    expect(plainExcerpt("x".repeat(400))).toBe(`${"x".repeat(279)}…`);
+    expect(replyMessageText({ handle: "Claude", text: "" }, "ok")).toBe("@Claude ok");
+  });
+  it("splits a sent reply into the user's words and the quoted answer", () => {
+    expect(splitQuotedMessage("@Claude thanks\n> It is 4.")).toEqual({
+      body: "@Claude thanks",
+      quote: "It is 4.",
+    });
+    expect(splitQuotedMessage("@Claude\n> a\n> b\n\nmy reply")).toEqual({
+      body: "@Claude\n\nmy reply",
+      quote: "a b",
+    });
+    expect(splitQuotedMessage("plain > text")).toEqual({ body: "plain > text", quote: "" });
   });
   it("replaces the typed $query with the chosen skill", () => {
     expect(

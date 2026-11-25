@@ -31,6 +31,10 @@ const group = (id: GroupId, overrides: Partial<Group> = {}): Omit<Group, "member
   hopLimit: 6,
   skipAllWarning: false,
   pendingHandoffs: [],
+  brief: "",
+  setupRev: 0,
+  defaultRecipient: "last",
+  reviewerMemberId: null,
   createdAt: 1,
   updatedAt: 1,
   ...overrides,
@@ -44,6 +48,8 @@ const member = (id: GroupMemberId, position: number, groupId = g1): GroupMember 
   role: null,
   model: null,
   position,
+  muted: false,
+  contextUsage: null,
 });
 
 layer("GroupRepository", (it) => {
@@ -83,12 +89,47 @@ layer("GroupRepository", (it) => {
       assert.deepStrictEqual(yield* repo.getMemberRuntime(m1), {
         nativeSessionId: "s1",
         readSeq: 5,
+        setupRevSeen: 0,
       });
       yield* repo.resetMemberSessions(g1);
       assert.deepStrictEqual(yield* repo.getMemberRuntime(m1), {
         nativeSessionId: null,
         readSeq: 5,
+        setupRevSeen: 0,
       });
+    }),
+  );
+
+  it.effect("keeps the v2 group settings, mute, context usage and brief revision", () =>
+    Effect.gen(function* () {
+      const repo = yield* GroupRepository;
+      yield* repo.upsertGroup(
+        group(g1, { brief: "Ship it", setupRev: 2, defaultRecipient: m1, reviewerMemberId: m2 }),
+      );
+      yield* repo.upsertMember({ ...member(m2, 1), muted: true });
+      yield* repo.saveMemberRuntime(m1, {
+        nativeSessionId: "s2",
+        setupRevSeen: 2,
+        contextUsage: { usedTokens: 1200, maxTokens: 200_000 },
+      });
+      const stored = yield* repo.getById(g1);
+      assert.strictEqual(stored?.brief, "Ship it");
+      assert.strictEqual(stored?.setupRev, 2);
+      assert.strictEqual(stored?.defaultRecipient, m1);
+      assert.strictEqual(stored?.reviewerMemberId, m2);
+      assert.strictEqual(stored?.members.find((entry) => entry.id === m2)?.muted, true);
+      assert.deepStrictEqual(stored?.members.find((entry) => entry.id === m1)?.contextUsage, {
+        usedTokens: 1200,
+        maxTokens: 200_000,
+      });
+      assert.strictEqual((yield* repo.getMemberRuntime(m1)).setupRevSeen, 2);
+      yield* repo.resetMemberSession(m1);
+      assert.strictEqual((yield* repo.getMemberRuntime(m1)).nativeSessionId, null);
+      assert.strictEqual(
+        (yield* repo.getById(g1))?.members.find((entry) => entry.id === m1)?.contextUsage,
+        null,
+      );
+      yield* repo.upsertGroup(group(g1));
     }),
   );
 
@@ -113,10 +154,25 @@ layer("GroupRepository", (it) => {
         files: ["a.ts"],
         commands: [],
       });
+      yield* repo.recordReply({
+        groupId: g1,
+        replyId: "r2",
+        memberId: m2,
+        status: "empty",
+        error: null,
+        files: [],
+        commands: [],
+        proposeOnly: true,
+        passed: true,
+      });
+      const replies = yield* repo.listReplies(g1);
       assert.deepStrictEqual(
-        (yield* repo.listReplies(g1)).map((reply) => reply.files),
-        [["a.ts"]],
+        replies.map((reply) => reply.files),
+        [["a.ts"], []],
       );
+      assert.strictEqual(replies[0]?.passed, undefined);
+      assert.strictEqual(replies[1]?.passed, true);
+      assert.strictEqual(replies[1]?.proposeOnly, true);
     }),
   );
 

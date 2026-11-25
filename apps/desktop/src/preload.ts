@@ -2,7 +2,12 @@ import { DESKTOP_IPC_CHANNELS as IPC } from "./ipcChannels";
 import type { DesktopComputerPreviewFrame } from "@djl/contracts";
 import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 import { contextBridge, ipcRenderer } from "electron";
-import type { DesktopBridge, DesktopBuildInfo } from "@djl/contracts";
+import type {
+  DesktopAgentLink,
+  DesktopBridge,
+  DesktopBuildInfo,
+  DesktopGroupGuestLink,
+} from "@djl/contracts";
 import { RENDERER_READY_CHANNEL } from "./windowReveal";
 import { BROWSER_IPC_CHANNELS } from "./browserIpcChannels";
 import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
@@ -202,6 +207,31 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     setEnabled: (enabled) => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.setEnabled, enabled),
     refreshPairing: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing),
     resetPairing: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.resetPairing),
+    syncGroupGuests: (guests) =>
+      ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.syncGroupGuests, guests),
+    renewGroupGuestInvite: (guestId) =>
+      ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.renewGroupGuestInvite, guestId),
+    onGroupGuests: (listener) => {
+      const wrapped = (_event: Electron.IpcRendererEvent, links: unknown) => {
+        if (Array.isArray(links)) listener(links as DesktopGroupGuestLink[]);
+      };
+      ipcRenderer.on(REMOTE_GATEWAY_IPC_CHANNELS.groupGuests, wrapped);
+      return () => ipcRenderer.removeListener(REMOTE_GATEWAY_IPC_CHANNELS.groupGuests, wrapped);
+    },
+    listAgentLinks: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.listAgentLinks),
+    joinGroupAsAgent: (input) =>
+      ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.joinGroupAsAgent, input),
+    leaveAgentLink: (id) => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.leaveAgentLink, id),
+    onAgentLinks: (listener) => {
+      const wrapped = (_event: Electron.IpcRendererEvent, links: unknown) => {
+        if (Array.isArray(links)) listener(links as DesktopAgentLink[]);
+      };
+      ipcRenderer.on(REMOTE_GATEWAY_IPC_CHANNELS.agentLinks, wrapped);
+      return () => ipcRenderer.removeListener(REMOTE_GATEWAY_IPC_CHANNELS.agentLinks, wrapped);
+    },
+    getReachability: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.getReachability),
+    setReachability: (change) =>
+      ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.setReachability, change),
     onState: (listener) => {
       const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
         if (typeof state !== "object" || state === null) return;

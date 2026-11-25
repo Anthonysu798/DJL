@@ -68,6 +68,7 @@ import {
   nativeTheme,
   protocol,
   powerMonitor,
+  powerSaveBlocker,
   screen,
   session,
   shell,
@@ -81,6 +82,9 @@ import type {
 } from "electron";
 import * as Effect from "effect/Effect";
 import type {
+  DesktopAgentLink,
+  DesktopGroupGuestInvite,
+  DesktopGroupGuestLink,
   DesktopRemoteGatewayState,
   DesktopTheme,
   DesktopUpdateActionResult,
@@ -247,6 +251,38 @@ import {
   resolveRemoteRelayUrl,
   type RemoteGatewayPackageMetadata,
 } from "./remoteGatewayRuntime";
+import {
+  agentLinkEnv,
+  agentLinkStateDir,
+  agentLinksFile,
+  initialAgentLink,
+  parseAgentLinkRecords,
+  planAgentLink,
+  recordOf,
+  reduceAgentLink,
+  type AgentLinkRecord,
+} from "./agentLinks";
+import {
+  guestGatewayEnv,
+  guestInviteNeedsRenewal,
+  guestStateDir,
+  initialGuestLink,
+  parseGuestInvites,
+  planGuestSync,
+  reduceGuestLink,
+} from "./groupGuestGateways";
+import {
+  DEFAULT_REMOTE_REACHABILITY_PREFERENCES,
+  LOGIN_HIDDEN_ARG,
+  createStayAwakeController,
+  launchedHiddenAtLogin,
+  mergeRemoteReachabilityPreferences,
+  openAtLoginSupported,
+  parseRemoteReachabilityPreferences,
+  phonePairedFromChildMessage,
+  remoteReachabilityState,
+  shouldStayAwake,
+} from "./remoteReachability";
 
 // Capture the real archive identity before any explicit app.asar lookup. Static
 // snapshotting and the runtime watcher both use this same generation as their
@@ -285,6 +321,7 @@ const UPDATE_INSTALL_CHANNEL = "desktop:update-install";
 const NOTIFICATIONS_IS_SUPPORTED_CHANNEL = "desktop:notifications-is-supported";
 const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
 const REMOTE_GATEWAY_PREFERENCES_FILE = "remote-gateway-preferences.json";
+const REMOTE_REACHABILITY_PREFERENCES_FILE = "remote-reachability.json";
 const REMOTE_GATEWAY_RESTART_BASE_DELAY_MS = 1_000;
 const REMOTE_GATEWAY_RESTART_MAX_DELAY_MS = 30_000;
 const REMOTE_GATEWAY_STOP_TIMEOUT_MS = 5_000;
@@ -3137,7 +3174,452 @@ const remotePairingRenewal = createRemotePairingRenewal(
 function setRemoteGatewayState(state: DesktopRemoteGatewayState): void {
   remoteGatewayState = state;
   remotePairingRenewal.update(state);
+  syncRemoteStayAwake();
   emitRemoteGatewayState();
+}
+
+// ─── Staying reachable for the paired phone ───────────────────────────────────
+// The phone can only reach a computer that is awake, so DJL holds off idle sleep while a phone is
+// paired (by default only on power), and can start with the computer. A closed laptop lid still
+// sleeps, and nothing can wake a sleeping computer from the phone.
+let remoteReachabilityPreferences = DEFAULT_REMOTE_REACHABILITY_PREFERENCES;
+let remotePhonePaired = false;
+let hiddenLoginLaunchPending = true;
+const remoteStayAwake = createStayAwakeController(powerSaveBlocker);
+
+function remoteReachabilityPreferencesPath(): string {
+  return Path.join(app.getPath("userData"), REMOTE_REACHABILITY_PREFERENCES_FILE);
+}
+
+function remoteLoginItemSupported(): boolean {
+  return openAtLoginSupported({ platform: process.platform, packaged: app.isPackaged });
+}
+
+function syncRemoteStayAwake(): boolean {
+  if (!app.isReady()) return false;
+  return remoteStayAwake.set(
+    shouldStayAwake({
+      mode: remoteReachabilityPreferences.keepAwake,
+      remoteEnabled: remoteGatewayEnabled && remoteGatewayRelayUrl !== null,
+      // An invited guest needs this computer awake just as the owner's own phone does.
+      phonePaired:
+        remotePhonePaired || [...guestGateways.values()].some((gateway) => gateway.paired),
+      phoneConnected:
+        remoteGatewayState.status === "connected" ||
+        [...guestGateways.values()].some((gateway) => gateway.link.status === "connected"),
+      onBattery: powerMonitor.isOnBatteryPower(),
+    }),
+  );
+}
+
+function applyRemoteOpenAtLogin(): void {
+  if (!remoteLoginItemSupported()) return;
+  app.setLoginItemSettings({
+    openAtLogin: remoteReachabilityPreferences.openAtLogin,
+    // Windows passes this back at login so the window can stay in the background.
+    ...(process.platform === "win32" ? { args: [LOGIN_HIDDEN_ARG] } : {}),
+  });
+}
+
+function currentRemoteReachabilityState() {
+  return remoteReachabilityState({
+    preferences: remoteReachabilityPreferences,
+    openAtLoginSupported: remoteLoginItemSupported(),
+    stayingAwake: syncRemoteStayAwake(),
+    onBattery: app.isReady() && powerMonitor.isOnBatteryPower(),
+  });
+}
+
+function initializeRemoteReachability(): void {
+  try {
+    remoteReachabilityPreferences = parseRemoteReachabilityPreferences(
+      JSON.parse(FS.readFileSync(remoteReachabilityPreferencesPath(), "utf8")),
+    );
+  } catch {
+    remoteReachabilityPreferences = DEFAULT_REMOTE_REACHABILITY_PREFERENCES;
+  }
+  powerMonitor.on("on-ac", syncRemoteStayAwake);
+  powerMonitor.on("on-battery", syncRemoteStayAwake);
+  // Sleep drops the idle-sleep block on some systems; take it again on wake.
+  powerMonitor.on("resume", syncRemoteStayAwake);
+}
+
+function updateRemoteReachability(change: unknown) {
+  const next = mergeRemoteReachabilityPreferences(remoteReachabilityPreferences, change);
+  const loginChanged = next.openAtLogin !== remoteReachabilityPreferences.openAtLogin;
+  remoteReachabilityPreferences = next;
+  const target = remoteReachabilityPreferencesPath();
+  FS.mkdirSync(Path.dirname(target), { recursive: true });
+  FS.writeFileSync(target, JSON.stringify(next, null, 2), { mode: 0o600 });
+  if (loginChanged) applyRemoteOpenAtLogin();
+  return currentRemoteReachabilityState();
+}
+
+// ─── Guests of Multi agents groups ────────────────────────────────────────────
+// Every invited guest gets a gateway process of their own: its own device identity, its own
+// relay session and a scope of one group (see groupGuestGateways.ts and the gateway's
+// guest-scope.js). The renderer tells main which guests exist; main keeps their gateways running.
+interface GuestGateway {
+  invite: DesktopGroupGuestInvite;
+  child: ChildProcess.ChildProcess | null;
+  link: DesktopGroupGuestLink;
+  paired: boolean;
+  renewTimer: ReturnType<typeof setTimeout> | null;
+}
+const GUEST_GATEWAY_RESTART_DELAY_MS = 5_000;
+const guestGateways = new Map<string, GuestGateway>();
+
+function guestLinks(): DesktopGroupGuestLink[] {
+  return [...guestGateways.values()].map((gateway) => gateway.link);
+}
+
+function emitGuestLinks(): void {
+  const target = mainWindow?.webContents;
+  if (target && !target.isDestroyed())
+    target.send(REMOTE_GATEWAY_IPC_CHANNELS.groupGuests, guestLinks());
+  syncRemoteStayAwake();
+}
+
+// An invite code lasts five minutes. Until the guest has paired, a fresh one replaces it when
+// it runs out, so the code shown in Group settings always works.
+function scheduleGuestInviteRenewal(gateway: GuestGateway): void {
+  if (gateway.renewTimer) clearTimeout(gateway.renewTimer);
+  gateway.renewTimer = null;
+  const expiresAt = gateway.link.pairingExpiresAt;
+  if (expiresAt === null || gateway.paired) return;
+  gateway.renewTimer = setTimeout(
+    () => {
+      gateway.renewTimer = null;
+      if (guestGateways.get(gateway.invite.guestId) !== gateway) return;
+      if (guestInviteNeedsRenewal({ link: gateway.link, paired: gateway.paired, now: Date.now() }))
+        restartGuestGateway(gateway);
+    },
+    Math.max(1_000, expiresAt - Date.now() + 500),
+  );
+  gateway.renewTimer.unref();
+}
+
+function stopGuestGateway(gateway: GuestGateway): void {
+  if (gateway.renewTimer) clearTimeout(gateway.renewTimer);
+  gateway.renewTimer = null;
+  const child = gateway.child;
+  gateway.child = null;
+  child?.kill("SIGTERM");
+}
+
+function startGuestGateway(gateway: GuestGateway): void {
+  if (gateway.child || isQuitting || !remoteGatewayEnabled || !remoteGatewayRelayUrl) return;
+  if (!backendWsUrl) return;
+  gateway.link = initialGuestLink(gateway.invite);
+  const child = ChildProcess.spawn(
+    process.execPath,
+    [Path.join(__dirname, "remoteGatewayChild.js")],
+    {
+      env: guestGatewayEnv({
+        base: process.env,
+        invite: gateway.invite,
+        baseDir: BASE_DIR,
+        relayUrl: remoteGatewayRelayUrl,
+        backendWsUrl,
+        desktopVersion: app.getVersion(),
+      }),
+      stdio: ["ignore", "ignore", "pipe", "ipc"],
+    },
+  );
+  gateway.child = child;
+  child.stderr?.on("data", (chunk) => {
+    const line = String(chunk).trim();
+    if (line) console.warn(`[desktop-remote-guest] ${line}`);
+  });
+  child.on("message", (message: unknown) => {
+    if (gateway.child !== child) return;
+    if (message && typeof message === "object") {
+      const type = (message as Record<string, unknown>).type;
+      if (type === "remote-mutation") {
+        // A guest's message is already committed; let the renderer reconcile.
+        emitRemoteGatewayState();
+        return;
+      }
+      // A guest's gateway never opens chats on this computer or asks it to update.
+      if (type === "open-thread" || type === "desktop-update-request") return;
+    }
+    const next = reduceGuestLink(gateway.link, message);
+    if (next.paired !== null) gateway.paired = next.paired;
+    if (next.link !== gateway.link) {
+      gateway.link = next.link;
+      scheduleGuestInviteRenewal(gateway);
+    }
+    emitGuestLinks();
+  });
+  child.on("error", (error) => {
+    if (gateway.child !== child) return;
+    gateway.link = { ...gateway.link, status: "error", message: error.message };
+    emitGuestLinks();
+  });
+  child.on("exit", () => {
+    if (gateway.child !== child) return;
+    gateway.child = null;
+    gateway.link = { ...gateway.link, status: "offline", pairingCode: null };
+    emitGuestLinks();
+    const timer = setTimeout(() => {
+      if (guestGateways.get(gateway.invite.guestId) === gateway) startGuestGateway(gateway);
+    }, GUEST_GATEWAY_RESTART_DELAY_MS);
+    timer.unref();
+  });
+  emitGuestLinks();
+}
+
+function restartGuestGateway(gateway: GuestGateway): void {
+  stopGuestGateway(gateway);
+  startGuestGateway(gateway);
+}
+
+function syncGroupGuests(raw: unknown): DesktopGroupGuestLink[] {
+  const wanted = parseGuestInvites(raw);
+  const plan = planGuestSync(
+    new Map([...guestGateways].map(([guestId, gateway]) => [guestId, gateway.invite])),
+    wanted,
+  );
+  for (const guestId of plan.remove) {
+    const gateway = guestGateways.get(guestId);
+    if (!gateway) continue;
+    stopGuestGateway(gateway);
+    guestGateways.delete(guestId);
+    // Deleting the guest's identity is what revokes them: nothing can reconnect as this guest.
+    FS.rmSync(guestStateDir(BASE_DIR, guestId), { recursive: true, force: true });
+  }
+  for (const invite of plan.restart) {
+    const gateway = guestGateways.get(invite.guestId);
+    if (!gateway) continue;
+    gateway.invite = invite;
+    restartGuestGateway(gateway);
+  }
+  for (const invite of plan.start) {
+    const gateway: GuestGateway = {
+      invite,
+      child: null,
+      link: initialGuestLink(invite),
+      paired: false,
+      renewTimer: null,
+    };
+    guestGateways.set(invite.guestId, gateway);
+    startGuestGateway(gateway);
+  }
+  emitGuestLinks();
+  return guestLinks();
+}
+
+function renewGroupGuestInvite(guestId: unknown): DesktopGroupGuestLink[] {
+  const gateway = typeof guestId === "string" ? guestGateways.get(guestId) : undefined;
+  if (gateway && gateway.link.status !== "connected") restartGuestGateway(gateway);
+  return guestLinks();
+}
+
+function stopAllGuestGateways(): void {
+  for (const gateway of guestGateways.values()) stopGuestGateway(gateway);
+}
+
+// ─── Agents lent to other people's groups ─────────────────────────────────────
+// The other direction of guests: this computer joins someone else's group with an invite code
+// and answers there with one of its own agents (see agentLinks.ts and the gateway's
+// guest-agent-link.js). Each link is its own process; it needs no Remote of this computer's own.
+interface AgentLinkRuntime {
+  record: AgentLinkRecord;
+  child: ChildProcess.ChildProcess | null;
+  link: DesktopAgentLink;
+  /** The invite code, until the link has connected once. */
+  code: string | null;
+  /** Settles the join request once the link connected or was refused. */
+  settle: ((error: string | null) => void) | null;
+}
+const AGENT_LINK_RESTART_DELAY_MS = 5_000;
+const AGENT_LINK_JOIN_TIMEOUT_MS = 45_000;
+const agentLinkRuntimes = new Map<string, AgentLinkRuntime>();
+
+function agentLinkList(): DesktopAgentLink[] {
+  return [...agentLinkRuntimes.values()].map((runtime) => runtime.link);
+}
+
+function emitAgentLinks(): void {
+  const target = mainWindow?.webContents;
+  if (target && !target.isDestroyed())
+    target.send(REMOTE_GATEWAY_IPC_CHANNELS.agentLinks, agentLinkList());
+}
+
+function saveAgentLinks(): void {
+  const file = agentLinksFile(BASE_DIR);
+  try {
+    FS.mkdirSync(Path.dirname(file), { recursive: true, mode: 0o700 });
+    FS.writeFileSync(
+      file,
+      JSON.stringify([...agentLinkRuntimes.values()].map((runtime) => runtime.record)),
+      { mode: 0o600 },
+    );
+  } catch (error) {
+    console.warn(`[desktop-agent-link] could not save links: ${formatErrorMessage(error)}`);
+  }
+}
+
+function loadAgentLinks(): void {
+  let raw: unknown = [];
+  try {
+    raw = JSON.parse(FS.readFileSync(agentLinksFile(BASE_DIR), "utf8"));
+  } catch {
+    // No links yet.
+  }
+  for (const record of parseAgentLinkRecords(raw)) {
+    if (agentLinkRuntimes.has(record.id)) continue;
+    const runtime: AgentLinkRuntime = {
+      record,
+      child: null,
+      link: initialAgentLink(record),
+      code: null,
+      settle: null,
+    };
+    agentLinkRuntimes.set(record.id, runtime);
+    startAgentLink(runtime);
+  }
+}
+
+function stopAgentLink(runtime: AgentLinkRuntime): void {
+  const child = runtime.child;
+  runtime.child = null;
+  child?.kill("SIGTERM");
+}
+
+function removeAgentLink(runtime: AgentLinkRuntime): void {
+  agentLinkRuntimes.delete(runtime.record.id);
+  FS.rmSync(agentLinkStateDir(BASE_DIR, runtime.record.id), { recursive: true, force: true });
+  saveAgentLinks();
+  emitAgentLinks();
+}
+
+function startAgentLink(runtime: AgentLinkRuntime): void {
+  if (runtime.child || isQuitting || !remoteGatewayRelayUrl || !backendWsUrl) return;
+  const child = ChildProcess.spawn(process.execPath, [Path.join(__dirname, "agentLinkChild.js")], {
+    env: agentLinkEnv({
+      base: process.env,
+      record: runtime.record,
+      code: runtime.code,
+      baseDir: BASE_DIR,
+      relayUrl: remoteGatewayRelayUrl,
+      backendWsUrl,
+    }),
+    stdio: ["ignore", "ignore", "pipe", "ipc"],
+  });
+  runtime.child = child;
+  child.stderr?.on("data", (chunk) => {
+    const line = String(chunk).trim();
+    if (line) console.warn(`[desktop-agent-link] ${line}`);
+  });
+  child.on("message", (message: unknown) => {
+    if (runtime.child !== child) return;
+    const next = reduceAgentLink(runtime.link, message);
+    if (next === runtime.link) return;
+    runtime.link = next;
+    if (next.status === "connected") {
+      // Paired: from now on the link reconnects with its saved identity, not the code.
+      runtime.code = null;
+      runtime.record = recordOf(runtime.record, next);
+      saveAgentLinks();
+      runtime.settle?.(null);
+    } else if (next.status === "refused" && runtime.settle) {
+      // The code was wrong or expired: nothing was joined, so nothing is kept.
+      const settle = runtime.settle;
+      stopAgentLink(runtime);
+      removeAgentLink(runtime);
+      settle(next.message ?? "That invite code did not work. Ask for a new one.");
+      return;
+    }
+    emitAgentLinks();
+  });
+  child.on("exit", () => {
+    if (runtime.child !== child) return;
+    runtime.child = null;
+    runtime.link = { ...runtime.link, status: "offline", busy: false };
+    emitAgentLinks();
+    const timer = setTimeout(() => {
+      if (agentLinkRuntimes.get(runtime.record.id) === runtime) startAgentLink(runtime);
+    }, AGENT_LINK_RESTART_DELAY_MS);
+    timer.unref();
+  });
+  emitAgentLinks();
+}
+
+function joinGroupAsAgent(request: unknown): Promise<DesktopAgentLink[]> {
+  if (!remoteGatewayRelayUrl) return Promise.reject(new Error("DJL has no relay to connect to."));
+  const plan = planAgentLink({
+    request,
+    existing: agentLinkRuntimes.size,
+    newId: () => Crypto.randomUUID().replaceAll("-", "").slice(0, 16),
+    now: Date.now(),
+  });
+  if ("error" in plan) return Promise.reject(new Error(plan.error));
+  return new Promise((resolve, reject) => {
+    const runtime: AgentLinkRuntime = {
+      record: plan.record,
+      child: null,
+      link: initialAgentLink(plan.record),
+      code: plan.code,
+      settle: null,
+    };
+    const timer = setTimeout(() => {
+      // Still trying: keep the link only if it has paired; otherwise give the code back.
+      runtime.settle?.("Could not reach that group. Check the code and try again.");
+    }, AGENT_LINK_JOIN_TIMEOUT_MS);
+    timer.unref();
+    runtime.settle = (error) => {
+      runtime.settle = null;
+      clearTimeout(timer);
+      if (error === null) return resolve(agentLinkList());
+      if (agentLinkRuntimes.get(runtime.record.id) === runtime) {
+        stopAgentLink(runtime);
+        removeAgentLink(runtime);
+      }
+      reject(new Error(error));
+    };
+    agentLinkRuntimes.set(runtime.record.id, runtime);
+    startAgentLink(runtime);
+    if (!runtime.child) runtime.settle("DJL is still starting. Try again in a moment.");
+  });
+}
+
+async function leaveAgentLink(id: unknown): Promise<DesktopAgentLink[]> {
+  const runtime = typeof id === "string" ? agentLinkRuntimes.get(id) : undefined;
+  if (!runtime) return agentLinkList();
+  const child = runtime.child;
+  runtime.child = null;
+  if (child?.connected) {
+    // The link's process forgets the other computer and closes the agent's session itself.
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 3_000);
+      child.once("exit", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      child.send({ type: "leave" });
+    });
+  }
+  child?.kill("SIGTERM");
+  removeAgentLink(runtime);
+  return agentLinkList();
+}
+
+function stopAllAgentLinks(): void {
+  for (const runtime of agentLinkRuntimes.values()) stopAgentLink(runtime);
+}
+
+/** True once, for the first window of a launch the system made at login. */
+function consumeHiddenLoginLaunch(): boolean {
+  if (!hiddenLoginLaunchPending) return false;
+  hiddenLoginLaunchPending = false;
+  if (!remoteReachabilityPreferences.openAtLogin || !remoteLoginItemSupported()) return false;
+  return launchedHiddenAtLogin({
+    platform: process.platform,
+    argv: process.argv,
+    wasOpenedAtLogin:
+      process.platform === "darwin" && app.getLoginItemSettings().wasOpenedAtLogin === true,
+  });
 }
 
 function initializeRemoteGatewayConfiguration(): void {
@@ -3261,6 +3743,11 @@ function startRemoteGateway(): void {
         return;
       }
     }
+    const phonePaired = phonePairedFromChildMessage(message, remotePhonePaired);
+    if (phonePaired !== remotePhonePaired) {
+      remotePhonePaired = phonePaired;
+      syncRemoteStayAwake();
+    }
     const nextState = reduceRemoteGatewayChildMessage(remoteGatewayState, message);
     if (nextState !== remoteGatewayState) {
       setRemoteGatewayState(nextState);
@@ -3343,6 +3830,11 @@ async function setRemoteGatewayEnabled(enabled: boolean): Promise<DesktopRemoteG
   writeRemoteGatewayEnabled(enabled);
   if (!enabled) {
     await stopRemoteGateway();
+    // Turning Remote off closes the guests' connections too; their invites stay.
+    stopAllGuestGateways();
+    for (const gateway of guestGateways.values())
+      gateway.link = { ...initialGuestLink(gateway.invite), status: "offline" };
+    emitGuestLinks();
     setRemoteGatewayState(
       createInitialRemoteGatewayState({ enabled: false, relayUrl: remoteGatewayRelayUrl }),
     );
@@ -3353,6 +3845,7 @@ async function setRemoteGatewayEnabled(enabled: boolean): Promise<DesktopRemoteG
     relayUrl: remoteGatewayRelayUrl,
   });
   startRemoteGateway();
+  for (const gateway of guestGateways.values()) startGuestGateway(gateway);
   return remoteGatewayState;
 }
 
@@ -3437,6 +3930,8 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
       multiPostRuntime = null;
       await multiPostEndpoint?.close();
       multiPostEndpoint = null;
+      stopAllGuestGateways();
+      stopAllAgentLinks();
       await stopRemoteGateway();
       await stopBackendAndWaitForExit();
       await sharedStateLock?.release();
@@ -3752,6 +4247,39 @@ function registerIpcHandlers(): void {
     if (typeof enabled !== "boolean") throw new Error("Remote enabled state must be boolean.");
     return setRemoteGatewayEnabled(enabled);
   });
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.syncGroupGuests);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.syncGroupGuests, (_event, guests: unknown) =>
+    syncGroupGuests(guests),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.renewGroupGuestInvite);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.renewGroupGuestInvite, (_event, guestId: unknown) =>
+    renewGroupGuestInvite(guestId),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.listAgentLinks);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.listAgentLinks, () => agentLinkList());
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.joinGroupAsAgent);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.joinGroupAsAgent, (_event, input: unknown) =>
+    joinGroupAsAgent(input),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.leaveAgentLink);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.leaveAgentLink, (_event, id: unknown) =>
+    leaveAgentLink(id),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.getReachability);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.getReachability, () =>
+    currentRemoteReachabilityState(),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.setReachability);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.setReachability, (_event, change: unknown) =>
+    updateRemoteReachability(change),
+  );
 
   ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing);
   ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing, async () => {
@@ -4319,6 +4847,13 @@ function createWindow(): BrowserWindow {
   const revealGate = createWindowRevealGate(() => {
     if (window.isDestroyed()) return;
     revealedWindows.add(window);
+    if (consumeHiddenLoginLaunch()) {
+      // Started by the system at login: stay in the background until the user opens DJL.
+      window.once("show", () => {
+        if (!window.isDestroyed()) window.maximize();
+      });
+      return;
+    }
     // Launch filling the screen work area; the 1100x780 size above stays as the
     // restore bounds when the user toggles the window back out of maximized.
     window.maximize();
@@ -4453,6 +4988,7 @@ async function bootstrap(): Promise<void> {
   await reserveBackendEndpoint("bootstrap");
 
   initializeRemoteGatewayConfiguration();
+  initializeRemoteReachability();
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
   ensureInitialBackendWindowOpen(backendHttpUrl);
@@ -4472,6 +5008,7 @@ async function bootstrap(): Promise<void> {
   multiPostTray = new MultiPostTray(resolveIconPath("png"), () => focusMainWindow());
   if (mainWindow) multiPostTray.attach(mainWindow, () => isQuitting);
   startRemoteGateway();
+  loadAgentLinks();
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
 }

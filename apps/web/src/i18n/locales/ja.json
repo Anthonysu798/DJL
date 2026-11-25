@@ -2497,7 +2497,28 @@
         "starting": "起動中…",
         "unavailable": "利用不可"
       },
-      "unavailable": "このデスクトップビルドではリモートアクセスが設定されていません。"
+      "unavailable": "このデスクトップビルドではリモートアクセスが設定されていません。",
+      "reach": {
+        "title": "いつでも接続できるようにする",
+        "description": "このコンピュータがスリープしていない間だけ、スマートフォンから接続できます。",
+        "keepAwake": {
+          "label": "このコンピュータをスリープさせない",
+          "never": "しない",
+          "pluggedIn": "電源接続中のみ",
+          "always": "常に"
+        },
+        "status": {
+          "awake": "DJL がスマートフォンのためにこのコンピュータをスリープさせないようにしています。",
+          "normal": "このコンピュータは通常どおりスリープします。"
+        },
+        "login": {
+          "label": "ログイン時に DJL を起動",
+          "hint": "DJL はバックグラウンドで開き、スマートフォンからの接続を待ちます。",
+          "unsupported": "macOS と Windows のインストール版でのみ利用できます。"
+        },
+        "limits": "ノートパソコンはふたを閉じるとスリープします。スリープ中のコンピュータをスマートフォンから起こすことはできません。",
+        "saveFailed": "この設定を保存できませんでした。"
+      }
     },
     "route": {
       "advanced": {
@@ -3581,7 +3602,10 @@
         "tryAgain": "再試行",
         "removedAgent": "削除されたエージェント",
         "members": "メンバー",
-        "allMembers": "グループ全員"
+        "allMembers": "グループ全員",
+        "passed": "{{name}} は付け加えることがありませんでした。",
+        "handoffs": "引き継ぎ {{used}} / {{limit}}",
+        "quiet": "3 分間動きがありません"
       },
       "pause": {
         "title": "エージェント同士で {{count}} 回引き継ぎました。",
@@ -3608,7 +3632,21 @@
         "workCommands_one": "{{count}} 件のコマンドを実行",
         "workCommands_other": "{{count}} 件のコマンドを実行",
         "filesHeading": "ファイル",
-        "commandsHeading": "コマンド"
+        "commandsHeading": "コマンド",
+        "goWith": "これで進める",
+        "goWithText": "あなたの提案どおりに進めてください。",
+        "combine": "まとめる",
+        "combineWho": "誰がまとめますか？",
+        "combineText": "上の提案を一つの計画にまとめてください。",
+        "discuss": "議論する",
+        "discussText": "上のほかの回答を読んでください。反対意見や付け加えることがあるときだけ返信し、なければ [PASS] と返信してください。",
+        "undo": "変更を元に戻す",
+        "undoConfirm_one": "このラウンドで変更された {{count}} 個のファイルを元に戻しますか？変更前の状態に戻ります。",
+        "undoConfirm_other": "このラウンドで変更された {{count}} 個のファイルを元に戻しますか？変更前の状態に戻ります。",
+        "undoFailed": "変更を元に戻せませんでした。",
+        "more": "その他",
+        "replyingTo": "{{name}} に返信",
+        "cancelReply": "返信をキャンセル"
       },
       "composer": {
         "mention": "エージェントをメンション",
@@ -3641,7 +3679,31 @@
           "working": "作業中",
           "waiting": "順番待ち",
           "failed": "要確認"
-        }
+        },
+        "mute": "ミュート",
+        "muteHint": "名前で @ したときだけ答えます。",
+        "context": "使用中のコンテキスト",
+        "contextUnknown": "まだ報告がありません",
+        "contextTokens": "{{tokens}} トークン",
+        "startFresh": "新しく始める",
+        "startFreshHint": "このエージェントを止めて新しいセッションを始めます。直近 40 件のメッセージが渡されます。",
+        "brief": "グループの説明",
+        "briefPlaceholder": "このグループの目的と、エージェントの進め方",
+        "briefHint": "どのエージェントも答える前にこれを読みます。",
+        "recipient": "@ のないメッセージの送り先",
+        "recipientLast": "最後に答えたエージェント",
+        "recipientAll": "全員（提案のみ、編集なし）",
+        "recipientLead": "リーダー：{{name}}",
+        "review": "変更を自動でチェック",
+        "reviewOff": "オフ",
+        "reviewBy": "{{name}} がチェック",
+        "reviewHint": "エージェントがファイルを変更すると、チェック担当が読んで修正点を返します。",
+        "recipientLastShort": "最後に答えた人",
+        "recipientAllShort": "全員",
+        "more": "その他の設定",
+        "options": "{{name}} のオプション",
+        "noMatch": "一致するものがありません",
+        "modelSearch": "モデルを検索"
       },
       "roles": {
         "planner": "プランナー",
@@ -3654,6 +3716,197 @@
         "createFailed": "グループを作成できませんでした。",
         "sendFailed": "メッセージを送信できませんでした。",
         "updateFailed": "グループを更新できませんでした。"
+      },
+      "templates": {
+        "title": "チームから始める",
+        "buildReview": {
+          "name": "開発とレビュー",
+          "body": "一人が作り、もう一人がすべての変更を確認します。"
+        },
+        "planBuildReview": {
+          "name": "計画・開発・レビュー",
+          "body": "リーダーが計画して作業を割り振り、変更は確認されます。"
+        },
+        "researchWrite": {
+          "name": "調査と執筆",
+          "body": "一人が調べ、もう一人が文章にまとめます。"
+        },
+        "secondOpinions": {
+          "name": "セカンドオピニオン",
+          "body": "全員に一度に聞いて答えを比べます。"
+        }
+      },
+      "stage": {
+        "ready": "待機中",
+        "from": "{{name}} から",
+        "muted": "ミュート中",
+        "mission": "ミッション {{done}}/{{total}}",
+        "kind": {
+          "thinking": "考え中…",
+          "planning": "計画中…",
+          "reviewing": "チェック中…",
+          "reading": "読んでいます…",
+          "editing": "編集中…",
+          "running": "コマンドを実行中…",
+          "writing": "書いています…",
+          "waiting": "順番待ち…"
+        },
+        "with": {
+          "reading": "{{detail}} を読んでいます",
+          "editing": "{{detail}} を編集中",
+          "running": "{{detail}} を実行中"
+        }
+      },
+      "reactions": {
+        "member": {
+          "seen": "{{name}} が対応中",
+          "done": "{{name}} が回答しました",
+          "passed": "{{name}} は付け加えることがありません",
+          "failed": "{{name}} は回答できませんでした"
+        },
+        "label": {
+          "like": "いいね",
+          "dislike": "ちょっと違う",
+          "doIt": "やって",
+          "simpler": "もっとやさしく"
+        },
+        "text": {
+          "dislike": "その回答は少し違います。別の方法で、もっと良い回答をしてください。",
+          "doIt": "そのまま進めてください。",
+          "simpler": "技術に詳しくない人にもわかるように、やさしい言葉で短く説明し直してください。"
+        },
+        "failed": "リアクションを送れませんでした。"
+      },
+      "quests": {
+        "title": "はじめてのクエスト",
+        "allDone": "準備完了！",
+        "progress": "{{done}} / {{total}}",
+        "hide": "クエストを隠す",
+        "tryIt": "やってみる",
+        "meet": {
+          "title": "みんなにあいさつ",
+          "hint": "@all で始まるメッセージを送る",
+          "prompt": "自己紹介をして、得意なことを教えてください"
+        },
+        "askOne": {
+          "title": "一人に聞く",
+          "hint": "@ と名前で始まるメッセージを送る",
+          "prompt": "何を手伝ってくれますか？"
+        },
+        "react": {
+          "title": "回答にリアクション",
+          "hint": "回答の下の 👍 👎 ✅ 🤔 をタップ"
+        },
+        "mission": {
+          "title": "ミッションを実行",
+          "hint": "旗をタップしてチームに目標を伝える"
+        }
+      },
+      "mission": {
+        "placeholder": "チームに達成してほしい目標を書いてください…",
+        "toggle": "ミッション",
+        "toggleHint": "チームに目標を伝えると、手順に分けてくれます",
+        "mode": "ミッション",
+        "planText": "このミッションの計画を立ててください：{{goal}}",
+        "label": "ミッション",
+        "completeTitle": "ミッション完了",
+        "status": {
+          "planning": "計画中",
+          "ready": "開始できます",
+          "running": "進行中",
+          "paused": "一時停止中",
+          "done": "完了",
+          "stopped": "停止",
+          "failed": "計画できませんでした"
+        },
+        "planning": "{{name}} が手順を計画しています…",
+        "removeStep": "手順を削除",
+        "planUnreadable": "計画から手順を読み取れませんでした。もう一度計画するか、チャットで聞いてください。",
+        "pausedOn": "手順 {{step}} で一時停止中。やり直す、飛ばす、停止するのどれかを選んでください。",
+        "start": "ミッション開始",
+        "cancel": "キャンセル",
+        "stop": "ミッションを停止",
+        "retry": "手順をやり直す",
+        "skip": "手順を飛ばす",
+        "planAgain": "もう一度計画する",
+        "startText": "ミッションを開始：{{goal}}",
+        "retryText": "その手順をもう一度やってください。",
+        "skipText": "その手順は飛ばして、ミッションを続けてください。",
+        "failedAction": "うまくいきませんでした。もう一度お試しください。",
+        "copySummary": "まとめをコピー",
+        "copied": "コピーしました",
+        "statsFiles_one": "{{count}} 個のファイルを変更",
+        "statsFiles_other": "{{count}} 個のファイルを変更",
+        "statsCommands_one": "コマンド {{count}} 回",
+        "statsCommands_other": "コマンド {{count}} 回",
+        "statsReviews_one": "チェック {{count}} 回",
+        "statsReviews_other": "チェック {{count}} 回",
+        "durationSeconds_one": "{{count}} 秒",
+        "durationSeconds_other": "{{count}} 秒",
+        "durationMinutes_one": "{{count}} 分",
+        "durationMinutes_other": "{{count}} 分"
+      },
+      "guests": {
+        "title": "メンバー",
+        "add": "メンバーを招待",
+        "invite": "招待",
+        "cancel": "キャンセル",
+        "namePlaceholder": "相手の名前",
+        "roleLabel": "相手ができること",
+        "roleFor": "{{name}} ができること",
+        "role": {
+          "chat": "チャット可",
+          "viewer": "閲覧のみ",
+          "agent": "エージェントを連れてくる"
+        },
+        "roleHint": {
+          "chat": "あなたのエージェントに質問できます。エージェントは提案だけを行い、あなたが承認するまで何も変更しません。",
+          "viewer": "チャットを読めますが、書き込みはできません。",
+          "agent": "相手自身のエージェントが相手のコンピューターから参加し、相手のサブスクリプションで回答します。このグループのメッセージは読めますが、あなたのファイルを開いたり変更したりはできません。"
+        },
+        "status": {
+          "connected": "接続済み",
+          "waiting": "相手の参加を待っています",
+          "starting": "招待を準備中…",
+          "expired": "招待コードの有効期限が切れました",
+          "offline": "未接続",
+          "desktopOnly": "ゲストを接続するには DJL デスクトップアプリを開いてください",
+          "agentAway": "相手のコンピューターがオフラインです"
+        },
+        "codeHelp": "{{name}} は DJL のスマートフォンアプリを開き、「コードでペアリング」をタップして次を入力します：",
+        "newCode": "新しい招待コード",
+        "remove": "グループから削除",
+        "failed": "この人を招待できませんでした。",
+        "full_one": "グループのゲストは {{count}} 人までです。",
+        "full_other": "グループのゲストは {{count}} 人までです。",
+        "tag": "ゲスト",
+        "removedName": "ゲスト",
+        "codeHelpAgent": "{{name}} さんは自分のコンピューターで DJL を開き、「マルチエージェント」で「グループに参加」をクリックして、次を入力します：",
+        "visitingHint": "このエージェントは持ち主のコンピューターで、持ち主が選んだモデルで回答します。"
+      },
+      "lend": {
+        "join": "グループに参加",
+        "title": "エージェントをグループに貸す",
+        "description": "あなたのエージェントが相手のグループに招待されました。招待コードを入力し、どのエージェントに回答させるかを選んでください。",
+        "code": "招待コード",
+        "agent": "エージェント",
+        "checking": "エージェントを確認しています…",
+        "noAgent": "先にエージェントを設定してください",
+        "safety": "エージェントはこのコンピューターであなたのサブスクリプションを使って回答し、相手のグループのメッセージを読みます。ツールは一切使わず、ファイルを開くこともコマンドの実行も閲覧もできません。信頼できる人のグループにだけ参加してください。",
+        "failed": "そのグループに参加できませんでした。",
+        "joining": "参加しています…",
+        "submit": "参加",
+        "section": "ほかのグループに貸出中",
+        "unknownGroup": "グループに参加しています…",
+        "leave": "このグループを退出",
+        "status": {
+          "connecting": "接続しています…",
+          "connected": "接続済み",
+          "offline": "相手のコンピューターがオフラインです",
+          "refused": "招待が取り消されました",
+          "busy": "回答しています…"
+        },
+        "onlyClaude": "現在貸し出せるのは Claude だけです。"
       }
     },
     "navigation": {
