@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/design/djl_icons.dart';
@@ -566,6 +567,7 @@ class _MessageRow extends StatelessWidget {
       );
     }
     final Widget body;
+    VoidCallback? onHold;
     if (reply?.failed ?? false) {
       body = Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,25 +603,27 @@ class _MessageRow extends StatelessWidget {
         ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
       );
     } else {
+      body = _ReplyText(message.text);
       final reporter = ContentReportScope.maybeOf(context);
-      body = reporter == null || message.text.trim().isEmpty
-          ? _ReplyText(message.text)
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ReplyText(message.text),
-                ReportAnswerButton(
-                  send: (reason, note) => reporter.reportDesktop(
-                    text: message.text,
-                    agent: member?.handle,
-                    reason: reason,
-                    note: note,
-                  ),
-                ),
-              ],
-            );
+      if (reporter != null && message.text.trim().isNotEmpty) {
+        // Held, like a message in any chat app: no flag under every reply.
+        onHold = () {
+          unawaited(HapticFeedback.mediumImpact());
+          unawaited(
+            showReportSheet(
+              context,
+              (reason, note) => reporter.reportDesktop(
+                text: message.text,
+                agent: member?.handle,
+                reason: reason,
+                note: note,
+              ),
+            ),
+          );
+        };
+      }
     }
-    return _AgentRow(member: member, child: body);
+    return _AgentRow(member: member, onHold: onHold, child: body);
   }
 }
 
@@ -660,9 +664,12 @@ class _ReplyText extends StatelessWidget {
 
 /// An agent's avatar and name beside whatever it is saying.
 class _AgentRow extends StatelessWidget {
-  const _AgentRow({required this.member, required this.child});
+  const _AgentRow({required this.member, required this.child, this.onHold});
   final GroupMember? member;
   final Widget child;
+
+  /// What holding the reply does (report it); nothing when null.
+  final VoidCallback? onHold;
 
   @override
   Widget build(BuildContext context) {
@@ -691,17 +698,25 @@ class _AgentRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.surfaceRaised,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                  Semantics(
+                    onLongPressHint: onHold == null
+                        ? null
+                        : context.l10n.reportTitle,
+                    child: GestureDetector(
+                      onLongPress: onHold,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          child: child,
+                        ),
                       ),
-                      child: child,
                     ),
                   ),
                 ],
