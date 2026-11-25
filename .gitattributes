@@ -15,3 +15,7 @@ cloud/** text=auto eol=lf
 *.md text=auto eol=lf
 *.yml text=auto eol=lf
 *.yaml text=auto eol=lf
+
+# Vendored starter skills are hash-checked against their pinned upstream commits, so every
+# checkout (Windows included) must keep their bytes exactly as stored.
+packages/starter-skills/skills/** -text
