@@ -36,19 +36,22 @@ const LICENSE_FILE = /^(licen[cs]e|copying)(\.(md|txt|markdown))?$/i;
 /** Licenses DJL accepts for skills it installs. */
 export const ACCEPTED_SKILL_LICENSES = ["MIT", "Apache-2.0", "BSD", "ISC", "CC-BY-4.0"] as const;
 
+export type SkillSourceErrorCode =
+  | "badRepo"
+  | "network"
+  | "notFound"
+  | "unsafe"
+  | "tooLarge"
+  | "noLicense"
+  | "license";
+
+// No parameter properties: the desktop build script loads this file with Node's type stripping,
+// which rejects them.
 export class SkillSourceError extends Error {
-  constructor(
-    message: string,
-    readonly code:
-      | "badRepo"
-      | "network"
-      | "notFound"
-      | "unsafe"
-      | "tooLarge"
-      | "noLicense"
-      | "license" = "network",
-  ) {
+  readonly code: SkillSourceErrorCode;
+  constructor(message: string, code: SkillSourceErrorCode = "network") {
     super(message);
+    this.code = code;
   }
 }
 
