@@ -1,12 +1,13 @@
 // FILE: lentAgent.ts
 // Purpose: Runs an agent this computer lends to someone else's group. The other person's
 //          computer sends a prompt; the agent answers with this user's CLI and subscription.
-//          The prompt is not trusted: the agent works in an empty folder of its own, every
-//          request to change a file or run a command is refused, and it is told so.
+//          The prompt is not trusted: only agents that can run with no tools at all are lent
+//          (see GROUP_LENDABLE_PROVIDERS), the agent works in an empty folder of its own, and
+//          any request that still reaches DJL is refused.
 // Layer: Native harness (group)
 
 import type { GroupMemberProvider, ModelSelection, ProviderStartOptions } from "@djl/contracts";
-import { ThreadId } from "@djl/contracts";
+import { ThreadId, isGroupLendableProvider } from "@djl/contracts";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -59,7 +60,8 @@ interface Link {
 }
 
 export function createLentAgents(deps: {
-  childFactories: Record<GroupMemberProvider, NativeDriverFactory>;
+  /** Drivers that start the agent with no tools; an agent without one cannot be lent. */
+  childFactories: Partial<Record<GroupMemberProvider, NativeDriverFactory>>;
   childOptions: (provider: GroupMemberProvider) => Promise<ProviderStartOptions>;
   /** Where each link gets its own empty working folder. */
   workRoot: string;
@@ -94,6 +96,9 @@ export function createLentAgents(deps: {
       await links.get(linkId)?.child?.stop();
     },
     ask: async (input, onDraft) => {
+      const factory = deps.childFactories[input.provider];
+      if (!factory || !isGroupLendableProvider(input.provider))
+        return { status: "failed", text: "This agent cannot be lent to another group." };
       const link = links.get(input.linkId);
       if (!link || link.sessionId !== input.sessionId)
         return { status: "failed", text: "This agent restarted. Ask it again." };
@@ -110,7 +115,7 @@ export function createLentAgents(deps: {
           await mkdir(cwd, { recursive: true });
           link.child = await openChildSession({
             provider: input.provider,
-            factory: deps.childFactories[input.provider],
+            factory,
             start: {
               threadId: ThreadId.makeUnsafe(`lent-agent-${input.linkId}`),
               provider: input.provider,

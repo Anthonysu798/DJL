@@ -329,14 +329,17 @@ computers, end-to-end encrypted, through the same relay as the phone.
   Answering…, Their computer is offline, No longer invited). **Leave this group** takes it back.
 - A lent agent needs the DJL desktop app to be running; it does not need your own Remote to be
   on. Up to 8 agents can be lent at a time.
-- It answers in an empty folder of its own (`<data folder>/lent-agents/<link id>`). Every request
-  to run a command or change a file is refused, and so is every read outside that folder that
-  the agent asks permission for. Every message from the other group arrives behind a fixed
-  notice that it is someone else's chat and must not be treated as instructions about your
-  computer.
-- **Limit to know:** Codex runs harmless-looking read commands (`cat`, `ls`) without asking, so
-  for a lent Codex the notice is what keeps it from reading your files, not a hard block. Lend
-  agents only to people you trust; the join dialog says so.
+- Only Claude can be lent for now. A lent Claude runs with no tools at all (no files, shell,
+  web or MCP servers) and none of the lender's settings, hooks or `CLAUDE.md`
+  (`createLentClaudeDriver`: `tools: []`, `settingSources: []`, `strictMcpConfig: true`), so
+  whatever the other group writes, it can only answer with text. Checked 2026-11-24: such a
+  session reports an empty tool list at start.
+- As a second barrier it works in an empty folder of its own (`<data folder>/lent-agents/<link
+  id>`), any request that still reaches DJL is refused, and every message from the other group
+  arrives behind a notice that it is someone else's chat.
+- Codex cannot be lent: it runs read-only shell commands (`cat`, `ls`) without asking, so its
+  permission prompts cannot keep it out of the lender's files. Other agents are not lendable
+  until each is checked the same way (`GROUP_LENDABLE_PROVIDERS` in `packages/contracts`).
 
 **How it works**
 

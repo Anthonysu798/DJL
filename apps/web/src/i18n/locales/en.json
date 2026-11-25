@@ -3892,7 +3892,7 @@
         "agent": "Agent",
         "checking": "Checking your agents…",
         "noAgent": "Set up an agent first",
-        "safety": "Your agent answers from this computer with your subscription, and reads that group's messages. It cannot change your files or run commands, and it is told not to open your files. Join only groups of people you trust.",
+        "safety": "Your agent answers from this computer with your subscription and reads that group's messages. It runs with no tools: it cannot open files, run commands or browse. Join only groups of people you trust.",
         "failed": "Could not join that group.",
         "joining": "Joining…",
         "submit": "Join",
@@ -3905,7 +3905,8 @@
           "offline": "Their computer is offline",
           "refused": "No longer invited",
           "busy": "Answering…"
-        }
+        },
+        "onlyClaude": "Only Claude can be lent for now."
       }
     },
     "navigation": {

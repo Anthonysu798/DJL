@@ -3892,7 +3892,7 @@
         "agent": "Agente",
         "checking": "Revisando tus agentes…",
         "noAgent": "Primero configura un agente",
-        "safety": "Tu agente responde desde esta computadora con tu suscripción y lee los mensajes de ese grupo. No puede cambiar tus archivos ni ejecutar comandos, y se le indica que no abra tus archivos. Únete solo a grupos de personas en quienes confías.",
+        "safety": "Tu agente responde desde esta computadora con tu suscripción y lee los mensajes de ese grupo. Funciona sin herramientas: no puede abrir archivos, ejecutar comandos ni navegar. Únete solo a grupos de personas en quienes confías.",
         "failed": "No se pudo unir a ese grupo.",
         "joining": "Uniéndose…",
         "submit": "Unirse",
@@ -3905,7 +3905,8 @@
           "offline": "Su computadora está desconectada",
           "refused": "Ya no tiene invitación",
           "busy": "Respondiendo…"
-        }
+        },
+        "onlyClaude": "Por ahora solo se puede prestar Claude."
       }
     },
     "navigation": {

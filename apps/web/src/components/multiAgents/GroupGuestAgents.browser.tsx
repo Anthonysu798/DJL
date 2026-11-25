@@ -10,7 +10,7 @@ import {
 } from "@djl/contracts";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
 import { joinErrorText } from "~/multiAgents/agentLinks";
@@ -49,7 +49,10 @@ vi.mock("~/nativeApi", async (importOriginal) => ({
 }));
 vi.mock("~/hooks/useProviderModelCatalog", () => ({
   useProviderModelCatalog: () => ({
-    modelOptionsByProvider: { codex: [{ slug: "gpt-fast", name: "GPT Fast" }], claudeAgent: [] },
+    modelOptionsByProvider: {
+      codex: [{ slug: "gpt-fast", name: "GPT Fast" }],
+      claudeAgent: [{ slug: "claude-opus", name: "Claude Opus" }],
+    },
   }),
 }));
 
@@ -110,7 +113,7 @@ const guestLink = (status: "waiting" | "connected") => ({
 });
 const lent = (patch: Partial<DesktopAgentLink>): DesktopAgentLink => ({
   id: "link00000001",
-  provider: "codex",
+  provider: "claudeAgent",
   model: null,
   status: "connected",
   hostName: "Alice's Mac",
@@ -248,13 +251,21 @@ describe("lending an agent", () => {
       .element(page.getByRole("textbox", { name: "Invite code" }))
       .toHaveValue("ABCDE-23456");
     await expect.element(page.getByText(/Join only groups of people you trust/)).toBeVisible();
+    await expect.element(page.getByText(/Only Claude can be lent for now/)).toBeVisible();
+    // Codex is set up here too, but it cannot run with no tools, so it is not offered.
+    await page.getByTestId("join-group-agent").click();
+    await expect.element(page.getByRole("menuitemradio", { name: "Claude" })).toBeVisible();
+    await expect
+      .element(page.getByRole("menuitemradio", { name: "Codex" }))
+      .not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
     await page.getByTestId("join-group-model").click();
-    await page.getByRole("menuitemradio", { name: "GPT Fast" }).click();
+    await page.getByRole("menuitemradio", { name: "Claude Opus" }).click();
     await submit.click();
     expect(join).toHaveBeenCalledWith({
       code: "ABCDE-23456",
-      provider: "codex",
-      model: "gpt-fast",
+      provider: "claudeAgent",
+      model: "claude-opus",
     });
     await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
@@ -289,7 +300,7 @@ describe("lending an agent", () => {
     );
     const rows = page.getByTestId("lent-agent");
     await expect.element(rows.nth(0)).toHaveTextContent("Launch team");
-    await expect.element(rows.nth(0)).toHaveTextContent("Codex · Answering…");
+    await expect.element(rows.nth(0)).toHaveTextContent("Claude · Answering…");
     await expect.element(rows.nth(1)).toHaveTextContent("Their computer is offline");
     await expect.element(rows.nth(2)).toHaveTextContent("No longer invited");
     await rows.nth(2).getByRole("button").click();

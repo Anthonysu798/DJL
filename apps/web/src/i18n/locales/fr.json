@@ -3892,7 +3892,7 @@
         "agent": "Agent à prêter",
         "checking": "Vérification de vos agents…",
         "noAgent": "Configurez d’abord un agent",
-        "safety": "Votre agent répond depuis cet ordinateur avec votre abonnement et lit les messages de ce groupe. Il ne peut ni modifier vos fichiers ni exécuter de commandes, et il lui est demandé de ne pas ouvrir vos fichiers. Ne rejoignez que les groupes de personnes de confiance.",
+        "safety": "Votre agent répond depuis cet ordinateur avec votre abonnement et lit les messages de ce groupe. Il fonctionne sans aucun outil : il ne peut ni ouvrir de fichiers, ni exécuter de commandes, ni naviguer. Ne rejoignez que les groupes de personnes de confiance.",
         "failed": "Impossible de rejoindre ce groupe.",
         "joining": "Connexion au groupe…",
         "submit": "Rejoindre",
@@ -3905,7 +3905,8 @@
           "offline": "Son ordinateur est hors ligne",
           "refused": "Invitation retirée",
           "busy": "En train de répondre…"
-        }
+        },
+        "onlyClaude": "Pour l’instant, seul Claude peut être prêté."
       }
     },
     "navigation": {

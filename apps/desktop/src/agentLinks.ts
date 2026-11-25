@@ -5,23 +5,10 @@
 
 import * as Path from "node:path";
 
-import type { DesktopAgentLink } from "@djl/contracts";
+import { isGroupLendableProvider, type DesktopAgentLink } from "@djl/contracts";
 
 const LINK_ID_PATTERN = /^[a-z0-9]{8,32}$/;
 const PAIRING_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/;
-// GROUP_MEMBER_PROVIDERS in packages/contracts: the agents a group can hold.
-const PROVIDERS = new Set([
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "grok",
-  "kimi",
-  "iflow",
-  "qwen",
-  "codebuddy",
-  "pi",
-  "gemini",
-]);
 /** One process and one relay connection each. */
 export const MAX_AGENT_LINKS = 8;
 
@@ -51,7 +38,8 @@ export function parseAgentLinkRecords(raw: unknown): AgentLinkRecord[] {
     const source = entry as Record<string, unknown>;
     const id = text(source.id, 32);
     const provider = text(source.provider, 40);
-    if (!id || !LINK_ID_PATTERN.test(id) || !provider || !PROVIDERS.has(provider)) continue;
+    if (!id || !LINK_ID_PATTERN.test(id) || !provider || !isGroupLendableProvider(provider))
+      continue;
     records.set(id, {
       id,
       provider,
@@ -87,7 +75,8 @@ export function planAgentLink(input: {
   const code = normalizeInviteCode(source.code);
   if (!code) return { error: "Enter the 10-character invite code." };
   const provider = text(source.provider, 40);
-  if (!provider || !PROVIDERS.has(provider)) return { error: "Choose an agent to lend." };
+  // Only agents that can run with no tools may answer another person's chat.
+  if (!provider || !isGroupLendableProvider(provider)) return { error: "Choose an agent to lend." };
   if (input.existing >= MAX_AGENT_LINKS)
     return { error: `You can lend at most ${MAX_AGENT_LINKS} agents at a time.` };
   const id = input.newId();

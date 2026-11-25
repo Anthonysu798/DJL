@@ -9,7 +9,11 @@ import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
 import { transcribeNativeCodexVoice } from "./codexTranscription";
-import { createClaudeDriverWithBackends, createGroupMemberClaudeDriver } from "./claude";
+import {
+  createClaudeDriverWithBackends,
+  createGroupMemberClaudeDriver,
+  createLentClaudeDriver,
+} from "./claude";
 import type { ProviderModelDescriptor } from "@djl/contracts";
 import { CodingPlans } from "../../codingPlans/CodingPlans";
 import {
@@ -349,7 +353,7 @@ const NativeGroupAdapterLive = Layer.effect(
       nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings));
     bridge.attachLentAgents(
       createLentAgents({
-        childFactories,
+        childFactories: { claudeAgent: createLentClaudeDriver },
         childOptions,
         workRoot: join(config.stateDir, "lent-agents"),
       }),

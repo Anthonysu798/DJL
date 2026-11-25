@@ -1,4 +1,3 @@
-import type { GroupMemberProvider } from "@djl/contracts";
 import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,17 +41,14 @@ const factory: NativeDriverFactory = async (input, sink) => {
 
 const agents = (idleCloseMs?: number) =>
   createLentAgents({
-    childFactories: new Proxy({}, { get: () => factory }) as Record<
-      GroupMemberProvider,
-      NativeDriverFactory
-    >,
+    childFactories: { claudeAgent: factory },
     childOptions: async () => ({}),
     workRoot: root,
     ...(idleCloseMs === undefined ? {} : { idleCloseMs }),
   });
 const ask = (lent: ReturnType<typeof agents>, sessionId: string, model: string | null = null) =>
   lent.ask(
-    { linkId: "link00001", sessionId, provider: "codex", model, prompt: "@Bo hi" },
+    { linkId: "link00001", sessionId, provider: "claudeAgent", model, prompt: "@Bo hi" },
     () => {},
   );
 
@@ -78,6 +74,18 @@ describe("lent agent", () => {
     expect(prompts[0]!.startsWith(LENT_AGENT_GUARD)).toBe(true);
     expect(prompts[0]!.endsWith("@Bo hi")).toBe(true);
     lent.close("link00001");
+  });
+
+  it("lends only agents that can run with no tools", async () => {
+    const lent = agents();
+    const sessionId = lent.open("link00001");
+    expect(
+      await lent.ask(
+        { linkId: "link00001", sessionId, provider: "codex", model: null, prompt: "hi" },
+        () => {},
+      ),
+    ).toEqual({ status: "failed", text: "This agent cannot be lent to another group." });
+    expect(starts).toHaveLength(0);
   });
 
   it("refuses every command, file change and read outside its folder", async () => {

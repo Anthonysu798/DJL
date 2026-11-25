@@ -137,6 +137,16 @@ export type GroupHandoff = typeof GroupHandoff.Type;
  * lends one of the guest's own agents to the group; it joins from the guest's DJL desktop app.
  */
 export const GROUP_GUEST_ROLES = ["viewer", "chat", "agent"] as const;
+/**
+ * The agents a user can lend to someone else's group. A lent agent is driven by another person's
+ * chat, so it must run with no tools at all: only agents whose CLI can switch every tool off are
+ * listed. Codex runs read-only shell commands without asking, so it is not.
+ */
+export const GROUP_LENDABLE_PROVIDERS = [
+  "claudeAgent",
+] as const satisfies readonly (typeof GROUP_MEMBER_PROVIDERS)[number][];
+export const isGroupLendableProvider = (provider: string): boolean =>
+  (GROUP_LENDABLE_PROVIDERS as readonly string[]).includes(provider);
 /** A visiting agent that has not been heard from for this long counts as offline. */
 export const GROUP_GUEST_AGENT_STALE_MS = 75_000;
 /** How often a visiting agent's computer says it is still there. */

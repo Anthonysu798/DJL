@@ -14,7 +14,7 @@ import {
 
 const record = {
   id: "link00000001",
-  provider: "codex",
+  provider: "claudeAgent",
   model: "gpt-x",
   createdAt: 5,
   hostName: null,
@@ -29,6 +29,8 @@ describe("saved links", () => {
         { ...record, hostName: "Alice's Mac" },
         { ...record, id: "../../etc" },
         { ...record, id: "link00000002", provider: "group" },
+        // Saved before Codex stopped being lendable: dropped, so it never connects again.
+        { ...record, id: "link00000003", provider: "codex" },
         "nonsense",
       ]),
     ).toEqual([{ ...record, hostName: "Alice's Mac" }]);
@@ -68,6 +70,9 @@ describe("lending an agent", () => {
     expect(plan({ code: "RYV9UHAE2C", provider: "group" })).toEqual({
       error: "Choose an agent to lend.",
     });
+    expect(plan({ code: "RYV9UHAE2C", provider: "codex" })).toEqual({
+      error: "Choose an agent to lend.",
+    });
     expect(plan({ code: "RYV9UHAE2C", provider: "codex" }, MAX_AGENT_LINKS)).toHaveProperty(
       "error",
     );
@@ -85,7 +90,7 @@ describe("lending an agent", () => {
     expect(agentLinkEnv({ ...input, code: "RYV9UHAE2C" })).toMatchObject({
       PATH: "/bin",
       DJL_AGENT_LINK_ID: "link00000001",
-      DJL_AGENT_LINK_PROVIDER: "codex",
+      DJL_AGENT_LINK_PROVIDER: "claudeAgent",
       DJL_AGENT_LINK_MODEL: "gpt-x",
       DJL_AGENT_LINK_CODE: "RYV9UHAE2C",
       DJL_AGENT_LINK_STATE_DIR: "/base/agent-links/link00000001",

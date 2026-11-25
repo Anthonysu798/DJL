@@ -71,6 +71,13 @@ export const createGroupMemberClaudeDriver: NativeDriverFactory = (
   plugins,
 ) => startClaudeDriver(input, sink, workTools, plugins, true, defaultBackendOnly);
 
+/**
+ * An agent lent to another person's group. Their chat drives it, so it gets no tools at all
+ * (no files, shell, web or MCP servers) and none of this user's settings, hooks or CLAUDE.md.
+ */
+export const createLentClaudeDriver: NativeDriverFactory = (input, sink) =>
+  startClaudeDriver(input, sink, undefined, undefined, false, defaultBackendOnly, true);
+
 const startClaudeDriver = async (
   input: Parameters<NativeDriverFactory>[0],
   sink: Parameters<NativeDriverFactory>[1],
@@ -78,6 +85,7 @@ const startClaudeDriver = async (
   plugins: Parameters<NativeDriverFactory>[3],
   groupMember: boolean,
   resolveBackend: ClaudeBackendResolver,
+  lent = false,
 ): ReturnType<NativeDriverFactory> => {
   if (input.approvalPolicy)
     throw new Error(
@@ -232,7 +240,9 @@ const startClaudeDriver = async (
       ...(permissionMode === "bypassPermissions" ? { allowDangerouslySkipPermissions: true } : {}),
       abortController: abort,
       includePartialMessages: true,
-      settingSources: ["user", "project", "local"],
+      ...(lent
+        ? { tools: [], settingSources: [], strictMcpConfig: true }
+        : { settingSources: ["user", "project", "local"] as const }),
       ...(groupMember ? { hooks: { PreToolUse: [{ hooks: [askForGroupTools] }] } } : {}),
       env: withDjlThreadId(backendEnv?.env ?? process.env, input.threadId),
       canUseTool: async (tool, args, context) => {

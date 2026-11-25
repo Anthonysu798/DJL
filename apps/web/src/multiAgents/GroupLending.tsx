@@ -6,6 +6,7 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  isGroupLendableProvider,
   type DesktopAgentLink,
   type GroupMemberProvider,
 } from "@djl/contracts";
@@ -59,10 +60,10 @@ export function JoinGroupDialog(props: { open: boolean; onOpenChange: (open: boo
     queryFn: () => ensureNativeApi().harnesses.listAccounts(),
     enabled: props.open,
   });
-  // Only agents that are set up here can answer for you.
+  // Only agents that are set up here, and that can run with no tools, can answer for you.
   const ready = memberChoices(accountsQuery.data?.accounts ?? [], {
     checkFailed: accountsQuery.isError,
-  }).filter((choice) => choice.ready !== false);
+  }).filter((choice) => choice.ready !== false && isGroupLendableProvider(choice.provider));
   const chosen = provider ?? ready[0]?.provider ?? null;
   const { modelOptionsByProvider } = useProviderModelCatalog({
     selectedProvider: chosen ?? "codex",
@@ -171,7 +172,7 @@ export function JoinGroupDialog(props: { open: boolean; onOpenChange: (open: boo
               )}
             </div>
             <p className="rounded-2xl bg-[var(--glass-control-fill)] px-3 py-2.5 text-xs leading-relaxed text-[var(--color-text-foreground-secondary)]">
-              {t("multiAgents.lend.safety")}
+              {t("multiAgents.lend.safety")} {t("multiAgents.lend.onlyClaude")}
             </p>
             {error ? (
               <p role="alert" className="text-xs text-destructive">
