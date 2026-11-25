@@ -600,23 +600,16 @@ function collapseSettledTurns(
     if (row.leadingWorkEntries) collectWorkItems(row.leadingWorkEntries, collapsedItems);
     if (row.inlineWorkEntries) collectWorkItems(row.inlineWorkEntries, collapsedItems);
 
-    // Cards the user acts on (a site ready to publish) stay visible above the answer.
+    // Rows the user should still see stay above the answer: a site ready to publish, and a
+    // note that the chat moved to another subscription account.
+    const isPinned = (item: (typeof collapsedItems)[number]) =>
+      item.kind === "work" && Boolean(item.entry.siteReady || item.entry.accountSwitch);
     const pinned = collapsedItems.flatMap((item) =>
-      item.kind === "work" && item.entry.siteReady ? [item.entry] : [],
+      item.kind === "work" && isPinned(item) ? [item.entry] : [],
     );
-    const details = pinned.length
-      ? collapsedItems.filter((item) => !(item.kind === "work" && item.entry.siteReady))
-      : collapsedItems;
+    const details = collapsedItems.filter((item) => !isPinned(item));
 
     if (collapsedItems.length > 0) {
-      // An account switch stays above the answer: the user should see that the chat moved
-      // to another subscription without opening the details.
-      const notices = collapsedItems.flatMap((item) =>
-        item.kind === "work" && item.entry.accountSwitch ? [item.entry] : [],
-      );
-      const details = collapsedItems.filter(
-        (item) => !(item.kind === "work" && item.entry.accountSwitch),
-      );
       const elapsed = formatElapsed(collapsedStart, row.message.completedAt);
       if (details.length > 0) {
         row.collapsedTurnItems = details;
@@ -626,14 +619,10 @@ function collapseSettledTurns(
       delete row.leadingWorkGroupId;
       if (pinned.length > 0) {
         row.leadingWorkEntries = pinned;
-        row.leadingWorkGroupId = `${row.id}:site-ready`;
+        row.leadingWorkGroupId = `${row.id}:pinned`;
       }
       delete row.inlineWorkEntries;
       delete row.inlineWorkGroupId;
-      if (notices.length > 0) {
-        row.leadingWorkEntries = notices;
-        row.leadingWorkGroupId = `${row.id}:account-switch`;
-      }
 
       for (const index of foldIndices.toSorted((a, b) => b - a)) {
         rows.splice(index, 1);
