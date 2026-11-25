@@ -627,9 +627,11 @@ own registrable domain so a published page can never read or set `slcor.com` coo
    They live in a separate file because a missing certificate would otherwise stop the
    whole Caddy configuration, including the API, from loading.
 
-Visitor IPs come from `CF-Connecting-IP`. A client that reaches the origin directly can
-forge it to dodge per-IP limits; restrict port 443 for this hostname to Cloudflare's
-ranges, or enable Authenticated Origin Pulls, before heavy public use.
+Visitor IPs come from `CF-Connecting-IP`. Caddy drops that header from any connection
+outside Cloudflare's published ranges (listed in `Caddyfile.sites`; update them when
+cloudflare.com/ips changes), so a client that reaches the origin directly is limited by
+its own address. Restricting port 443 to Cloudflare or enabling Authenticated Origin
+Pulls is still worth doing before heavy public use.
 
 Moderation: deploys whose pages contain password fields, forms posting to other sites, or
 wallet/card/identity phrases are held for review in the admin API

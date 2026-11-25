@@ -115,4 +115,23 @@ describe("VPS edge proxy", () => {
     // Uploads are sized by their presigned URL, not by the proxy.
     expect(storage).not.toContain("request_body");
   });
+
+  it("drops client-supplied visitor IP headers on API and user-site requests", () => {
+    const apiProxy = block(block(api, "    handle"), "        reverse_proxy {$API_UPSTREAM}");
+    const sites = block(
+      readFileSync(new URL("Caddyfile.sites", import.meta.url), "utf8"),
+      "*.{$SITES_DOMAIN}",
+    );
+    const sitesProxy = block(sites, "    reverse_proxy {$SITES_UPSTREAM}");
+    for (const proxy of [apiProxy, sitesProxy]) {
+      expect(proxy).toContain("header_up -Fly-Client-IP");
+      expect(proxy).toContain("header_up X-Forwarded-For {remote_host}");
+    }
+    expect(apiProxy).toContain("header_up -CF-Connecting-IP");
+    // Sites are proxied by Cloudflare, so only a request from outside its ranges loses the header.
+    const cloudflare = sites.match(/@not_cloudflare not remote_ip ([^\n]+)/)?.[1]?.split(" ");
+    expect(cloudflare).toContain("173.245.48.0/20");
+    expect(cloudflare).toContain("2400:cb00::/32");
+    expect(sites).toContain("request_header @not_cloudflare -CF-Connecting-IP");
+  });
 });
