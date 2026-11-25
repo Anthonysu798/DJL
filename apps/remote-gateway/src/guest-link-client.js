@@ -13,9 +13,11 @@ const {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   createPrivateKey,
   createPublicKey,
   diffieHellman,
+  timingSafeEqual,
   generateKeyPairSync,
   hkdfSync,
   randomBytes,
@@ -25,13 +27,18 @@ const {
 } = require("crypto");
 const {
   DJL_CLIENT_AUTH_LABEL,
+  DJL_PAIRING_PROOF_MAC_LABEL,
+  DJL_PAIRING_PROOF_PHONE_LABEL,
   DJL_PAIRING_QR_VERSION,
   DJL_SECURE_HANDSHAKE_TAG,
   DJL_SECURE_PROTOCOL_VERSION,
   buildHandshakeTranscript,
+  buildPairingProofInput,
+  buildRelayPhoneConnectTranscript,
   buildTrustedSessionResolveTranscript,
   secureNonce,
 } = require("@djl/remote-protocol");
+const { derivePairingCodeKeys } = require("./qr");
 
 const STATE_FILE = "guest-link.json";
 const PAIRING_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/;
@@ -173,7 +180,14 @@ function createGuestLinkClient({
     } catch {
       throw refuse("The relay address must be a secure wss:// URL.");
     }
-    const response = await postToRelay(relay, "pairing/code/resolve", { code: normalized }, true);
+    // The relay gets only the lookup half of the code; the other half proves the computer.
+    const keys = derivePairingCodeKeys(normalized);
+    const response = await postToRelay(
+      relay,
+      "pairing/code/resolve",
+      { code: keys.lookupCode },
+      true,
+    );
     if (lastPathSegment(relay) !== "relay") {
       relay.pathname = `${relay.pathname.replace(/\/$/, "")}/relay`;
     }
@@ -190,6 +204,8 @@ function createGuestLinkClient({
     if (payload.expiresAt < now() - 60_000) throw refuse("The pairing code expired.");
     return {
       bootstrap: true,
+      // Kept only for this handshake; never saved, never taken from the relay's answer.
+      pairingSecret: Buffer.from(keys.pairingSecret, "base64"),
       relay: payload.relay,
       sessionId: payload.sessionId,
       macDeviceId: payload.macDeviceId,
@@ -285,7 +301,25 @@ function createGuestLinkClient({
     const ephemeral = generateKeyPairSync("x25519");
     const clientNonce = randomBytes(32).toString("base64");
     const url = `${target.relay.replace(/\/$/, "")}/${encodeURIComponent(target.sessionId)}`;
-    const socket = new WebSocketImpl(url, { headers: { "x-role": "iphone" } });
+    // Signed like the phone's connect, so the relay can tell this client from a stranger.
+    const connectSignature = signBytes(
+      state.device,
+      Buffer.from(
+        buildRelayPhoneConnectTranscript({
+          sessionId: target.sessionId,
+          phoneDeviceId: state.device.deviceId,
+          phoneIdentityPublicKey: Buffer.from(state.device.publicKey, "base64"),
+        }),
+      ),
+    );
+    const socket = new WebSocketImpl(url, {
+      headers: {
+        "x-role": "iphone",
+        "x-phone-device-id": state.device.deviceId,
+        "x-phone-identity-public-key": state.device.publicKey,
+        "x-phone-signature": connectSignature,
+      },
+    });
     const current = {
       socket,
       target,
@@ -399,6 +433,16 @@ function createGuestLinkClient({
       if (server.clientNonce == null) return;
       throw refuse("The computer's handshake could not be verified.");
     }
+    let phoneProof;
+    if (target.bootstrap) {
+      // The relay supplied the key that just verified. Only the secret from the typed code
+      // proves this is the computer whose owner gave out the code.
+      const expected = pairingProof(target.pairingSecret, transcript, DJL_PAIRING_PROOF_MAC_LABEL);
+      if (typeof server.pairingProof !== "string" || !base64Equal(server.pairingProof, expected)) {
+        throw refuse("The computer could not prove it made this pairing code.");
+      }
+      phoneProof = pairingProof(target.pairingSecret, transcript, DJL_PAIRING_PROOF_PHONE_LABEL);
+    }
     current.server = server;
     current.transcript = transcript;
     if (server.bridgeReplayEpoch && server.bridgeReplayEpoch !== cursor.epoch) {
@@ -415,6 +459,7 @@ function createGuestLinkClient({
           state.device,
           Buffer.concat([transcript, lengthPrefixed(Buffer.from(DJL_CLIENT_AUTH_LABEL))]),
         ),
+        ...(phoneProof ? { pairingProof: phoneProof } : {}),
       }),
     );
   }
@@ -649,6 +694,18 @@ function verifyBytes(publicKeyBase64, bytes, signatureBase64) {
 
 function rawPublicKey(keyObject) {
   return fromBase64Url(keyObject.export({ format: "jwk" }).x);
+}
+
+function pairingProof(secret, transcript, label) {
+  return createHmac("sha256", secret)
+    .update(buildPairingProofInput(transcript, label))
+    .digest("base64");
+}
+
+function base64Equal(left, right) {
+  const a = Buffer.from(String(left), "base64");
+  const b = Buffer.from(String(right), "base64");
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function lengthPrefixed(buffer) {

@@ -14,12 +14,18 @@ const path = require("path");
 const { createPublicKey, generateKeyPairSync, randomUUID, verify } = require("crypto");
 const { setTimeout: wait } = require("node:timers/promises");
 const { WebSocketServer } = require("ws");
-const { buildTrustedSessionResolveTranscript } = require("@djl/remote-protocol");
+const {
+  buildRelayPhoneConnectTranscript,
+  buildTrustedSessionResolveTranscript,
+} = require("@djl/remote-protocol");
 
 const { createGuestLinkClient } = require("../src/guest-link-client");
 const { createBridgeSecureTransport } = require("../src/secure-transport");
+const { derivePairingCodeKeys } = require("../src/qr");
 
 const CODE = "ABCDEFGHJK";
+// What the relay sees of the typed code; the code itself never leaves the client.
+const LOOKUP_CODE = derivePairingCodeKeys(CODE).lookupCode;
 // Retries and keep-alives 20x faster; the handshake timeout still leaves 600ms on loopback.
 const fastTimer = (callback, ms) => setTimeout(callback, Math.max(5, ms / 20));
 
@@ -46,9 +52,12 @@ test("pairs with a code, then both directions carry application messages", async
     relay.requests.map((request) => request.path),
     ["/relay/v1/pairing/code/resolve", "/v1/pairing/code/resolve"],
   );
-  assert.deepEqual(relay.requests[1].body, { code: CODE });
+  assert.deepEqual(relay.requests[1].body, { code: LOOKUP_CODE });
+  assert.notEqual(LOOKUP_CODE, CODE);
   assert.equal(relay.sockets[0].path, `/relay/${host.sessionId}`);
   assert.equal(relay.sockets[0].role, "iphone");
+  assert.equal(relay.sockets[0].phoneDeviceId, saved.device.deviceId);
+  assert.equal(relay.sockets[0].signed, true, "the connect is signed like the phone's");
 
   assert.equal(client.send({ id: "guest-1", method: "thread/list", params: { limit: 5 } }), true);
   await waitFor(() => host.received.length === 1);
@@ -227,10 +236,25 @@ test("the state file is private and never holds the pairing code", async (t) => 
   assert.equal(fs.statSync(stateDir).mode & 0o777, 0o700);
   const text = fs.readFileSync(file, "utf8");
   assert.doesNotMatch(text, new RegExp(CODE));
+  assert.doesNotMatch(text, new RegExp(derivePairingCodeKeys(CODE).pairingSecret));
   assert.doesNotMatch(text, /"code"/);
 
   client.forget();
   assert.deepEqual(fs.readdirSync(stateDir), []);
+});
+
+test("a computer that cannot prove it knows the code is never trusted", async (t) => {
+  const relay = await startRelay(t);
+  // The relay answers for the typed code, but the computer behind it was given another code:
+  // what a relay pairing a guest with the wrong computer would look like.
+  const host = startHost(relay, {
+    deviceState: createHostDeviceState(),
+    pairingSecret: derivePairingCodeKeys("ZZZZZZZZZZ").pairingSecret,
+  });
+  const { statuses, stateDir } = startClient(t, relay, { code: CODE });
+  await waitFor(() => last(statuses)?.state === "refused");
+  assert.equal(host.trustedUpdates.length, 0);
+  assert.equal(readState(stateDir).host ?? null, null);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -309,7 +333,25 @@ async function startRelay(t) {
     }
     wss.handleUpgrade(request, socket, head, (phone) => {
       const sessionId = match[1];
-      sockets.push({ path: request.url, role: request.headers["x-role"] });
+      const phoneDeviceId = request.headers["x-phone-device-id"];
+      const phoneKey = request.headers["x-phone-identity-public-key"];
+      let signed = false;
+      try {
+        signed = verify(
+          null,
+          buildRelayPhoneConnectTranscript({
+            sessionId,
+            phoneDeviceId,
+            phoneIdentityPublicKey: Buffer.from(phoneKey, "base64"),
+          }),
+          createPublicKey({
+            key: { crv: "Ed25519", kty: "OKP", x: toBase64Url(phoneKey) },
+            format: "jwk",
+          }),
+          Buffer.from(request.headers["x-phone-signature"], "base64"),
+        );
+      } catch {}
+      sockets.push({ path: request.url, role: request.headers["x-role"], phoneDeviceId, signed });
       const phones = phonesBySession.get(sessionId) ?? new Set();
       phonesBySession.set(sessionId, phones);
       for (const existing of phones) existing.close(4001, "Replaced by a newer iphone connection");
@@ -347,7 +389,7 @@ async function startRelay(t) {
     attach(host, code) {
       hostsBySession.set(host.sessionId, host);
       hostsByMac.set(host.deviceState.macDeviceId, host);
-      codes.set(code, host.sessionId);
+      codes.set(derivePairingCodeKeys(code).lookupCode, host.sessionId);
       host.transport.bindLiveSendWireMessage((text) => toPhones(host.sessionId, text));
       toPhones(host.sessionId, presence(true));
     },
@@ -363,7 +405,15 @@ async function startRelay(t) {
 }
 
 // The host half of bridge.js, reduced to its secure transport.
-function startHost(relay, { deviceState, advertisedKey, code = CODE }) {
+function startHost(
+  relay,
+  {
+    deviceState,
+    advertisedKey,
+    code = CODE,
+    pairingSecret = derivePairingCodeKeys(code).pairingSecret,
+  },
+) {
   const host = {
     sessionId: randomUUID(),
     deviceState,
@@ -379,6 +429,7 @@ function startHost(relay, { deviceState, advertisedKey, code = CODE }) {
     relayUrl: relay.relayUrl,
     deviceState,
     displayName: host.displayName,
+    pairingSecret,
     persistTrustedPhone: false,
     onTrustedPhoneUpdate(nextDeviceState, phone) {
       host.deviceState = nextDeviceState;
