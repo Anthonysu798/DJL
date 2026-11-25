@@ -47,6 +47,8 @@ import {
   HarnessLoginInput,
   HarnessLoginResult,
   HarnessEndLoginInput,
+  ClaudeCompatibleKeysResult,
+  ClaudeCompatibleSetKeyInput,
 } from "./harnessAccounts";
 import {
   CodingPlanConnectInput,
@@ -54,6 +56,24 @@ import {
   CodingPlanIdInput,
   CodingPlansListResult,
 } from "./codingPlans";
+import {
+  CliAccountAddInput,
+  CliAccountRemoveInput,
+  CliAccountSetActiveInput,
+  CliAccountSummary,
+  CliAccountsListResult,
+  CliAccountsUsageInput,
+  CliAccountsUsageResult,
+} from "./cliAccounts";
+import {
+  SkillsStoreChangeResult,
+  SkillsStorePreview,
+  SkillsStorePreviewInput,
+  SkillsStoreSearchInput,
+  SkillsStoreSearchResultList,
+  SkillsStoreSkillInput,
+  SkillsStoreSnapshot,
+} from "./skillsStore";
 import {
   CloudAccountStatus,
   CloudBrowserSignInCompleteInput,
@@ -1410,6 +1430,67 @@ export const WsHarnessEndLoginRpc = Rpc.make(WS_METHODS.harnessEndLogin, {
   error: WsRpcError,
 });
 
+export const WsHarnessListClaudeCompatibleKeysRpc = Rpc.make(
+  WS_METHODS.harnessListClaudeCompatibleKeys,
+  { payload: Schema.Struct({}), success: ClaudeCompatibleKeysResult, error: WsRpcError },
+);
+export const WsHarnessSetClaudeCompatibleKeyRpc = Rpc.make(
+  WS_METHODS.harnessSetClaudeCompatibleKey,
+  { payload: ClaudeCompatibleSetKeyInput, success: ClaudeCompatibleKeysResult, error: WsRpcError },
+);
+
+export const WsCliAccountsListRpc = Rpc.make(WS_METHODS.cliAccountsList, {
+  payload: Schema.Struct({}),
+  success: CliAccountsListResult,
+  error: WsRpcError,
+});
+export const WsCliAccountsAddRpc = Rpc.make(WS_METHODS.cliAccountsAdd, {
+  payload: CliAccountAddInput,
+  success: CliAccountSummary,
+  error: WsRpcError,
+});
+export const WsCliAccountsRemoveRpc = Rpc.make(WS_METHODS.cliAccountsRemove, {
+  payload: CliAccountRemoveInput,
+  success: CliAccountsListResult,
+  error: WsRpcError,
+});
+export const WsCliAccountsSetActiveRpc = Rpc.make(WS_METHODS.cliAccountsSetActive, {
+  payload: CliAccountSetActiveInput,
+  success: CliAccountsListResult,
+  error: WsRpcError,
+});
+export const WsCliAccountsUsageRpc = Rpc.make(WS_METHODS.cliAccountsUsage, {
+  payload: CliAccountsUsageInput,
+  success: CliAccountsUsageResult,
+  error: WsRpcError,
+});
+
+export const WsSkillsStoreSnapshotRpc = Rpc.make(WS_METHODS.skillsStoreSnapshot, {
+  payload: Schema.Struct({}),
+  success: SkillsStoreSnapshot,
+  error: WsRpcError,
+});
+export const WsSkillsStoreSearchRpc = Rpc.make(WS_METHODS.skillsStoreSearch, {
+  payload: SkillsStoreSearchInput,
+  success: SkillsStoreSearchResultList,
+  error: WsRpcError,
+});
+export const WsSkillsStorePreviewRpc = Rpc.make(WS_METHODS.skillsStorePreview, {
+  payload: SkillsStorePreviewInput,
+  success: SkillsStorePreview,
+  error: WsRpcError,
+});
+export const WsSkillsStoreInstallRpc = Rpc.make(WS_METHODS.skillsStoreInstall, {
+  payload: SkillsStoreSkillInput,
+  success: SkillsStoreChangeResult,
+  error: WsRpcError,
+});
+export const WsSkillsStoreRemoveRpc = Rpc.make(WS_METHODS.skillsStoreRemove, {
+  payload: SkillsStoreSkillInput,
+  success: SkillsStoreSnapshot,
+  error: WsRpcError,
+});
+
 export const WsServersListRpc = Rpc.make(WS_METHODS.serversList, {
   payload: EmptyServersInput,
   success: ServerListResult,
@@ -2019,44 +2100,7 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsProviderListModelsRpc,
   WsOpenCodeListModelProvidersRpc,
 
-  WsHarnessListToolsRpc,
-  WsHarnessMaintainToolRpc,
-  WsHarnessProfileAccountRpc,
-  WsHarnessListAccountsRpc,
-  WsCloudGetStatusRpc,
-  WsCloudStartSignInRpc,
-  WsCloudPollSignInRpc,
-  WsCloudSignOutRpc,
-  WsCloudStartBrowserSignInRpc,
-  WsCloudCompleteBrowserSignInRpc,
-  WsHarnessListLegacyOpenCodeCredentialsRpc,
-  WsHarnessTransferLegacyOpenCodeCredentialsRpc,
-  WsHarnessStartLoginRpc,
-  WsHarnessEndLoginRpc,
   WsProviderListAgentsRpc,
-  WsServersListRpc,
-  WsServersCreateRpc,
-  WsServersUpdateRpc,
-  WsServersDeleteRpc,
-  WsServersTestConnectionRpc,
-  WsServersTrustHostKeyRpc,
-  WsServersRefreshStatsRpc,
-  WsServersImportPreviewRpc,
-  WsServersImportApplyRpc,
-  WsServersCheckCapabilitiesRpc,
-  WsServersListLocalKeysRpc,
-  WsServersResolveCommandRpc,
-  WsServersListCommandsRpc,
-  WsSubscribeServerEventsRpc,
-  WsAutomationListRpc,
-  WsAutomationCreateRpc,
-  WsAutomationUpdateRpc,
-  WsAutomationDeleteRpc,
-  WsAutomationRunNowRpc,
-  WsAutomationCancelRunRpc,
-  WsAutomationMarkRunReadRpc,
-  WsAutomationArchiveRunRpc,
-  WsSubscribeAutomationEventsRpc,
 );
 
 // The core group's inferred type is at the size tsc can still write into a declaration
@@ -2132,15 +2176,85 @@ const WsSitesRpcGroup = RpcGroup.make(
   WsSitesPublishRpc,
   WsSitesUnpublishRpc,
 );
+// Accounts, sign-in and harness tools: split out when new providers pushed the core group
+// past TS7056 again.
+const WsAccountsRpcGroup = RpcGroup.make(
+  WsHarnessListToolsRpc,
+  WsHarnessMaintainToolRpc,
+  WsHarnessProfileAccountRpc,
+  WsHarnessListAccountsRpc,
+  WsCloudGetStatusRpc,
+  WsCloudStartSignInRpc,
+  WsCloudPollSignInRpc,
+  WsCloudSignOutRpc,
+  WsCloudStartBrowserSignInRpc,
+  WsCloudCompleteBrowserSignInRpc,
+  WsHarnessListLegacyOpenCodeCredentialsRpc,
+  WsHarnessTransferLegacyOpenCodeCredentialsRpc,
+  WsHarnessStartLoginRpc,
+  WsHarnessEndLoginRpc,
+  WsHarnessListClaudeCompatibleKeysRpc,
+  WsHarnessSetClaudeCompatibleKeyRpc,
+);
+// Extra Claude Code / Codex subscription accounts (Settings → AI accounts).
+const WsCliAccountsRpcGroup = RpcGroup.make(
+  WsCliAccountsListRpc,
+  WsCliAccountsAddRpc,
+  WsCliAccountsRemoveRpc,
+  WsCliAccountsSetActiveRpc,
+  WsCliAccountsUsageRpc,
+);
+// The Skills store on the Plugins page.
+const WsSkillsStoreRpcGroup = RpcGroup.make(
+  WsSkillsStoreSnapshotRpc,
+  WsSkillsStoreSearchRpc,
+  WsSkillsStorePreviewRpc,
+  WsSkillsStoreInstallRpc,
+  WsSkillsStoreRemoveRpc,
+);
+// Servers and automations, split out for the same TS7056 reason.
+const WsWorkspaceRpcGroup = RpcGroup.make(
+  WsServersListRpc,
+  WsServersCreateRpc,
+  WsServersUpdateRpc,
+  WsServersDeleteRpc,
+  WsServersTestConnectionRpc,
+  WsServersTrustHostKeyRpc,
+  WsServersRefreshStatsRpc,
+  WsServersImportPreviewRpc,
+  WsServersImportApplyRpc,
+  WsServersCheckCapabilitiesRpc,
+  WsServersListLocalKeysRpc,
+  WsServersResolveCommandRpc,
+  WsServersListCommandsRpc,
+  WsSubscribeServerEventsRpc,
+  WsAutomationListRpc,
+  WsAutomationCreateRpc,
+  WsAutomationUpdateRpc,
+  WsAutomationDeleteRpc,
+  WsAutomationRunNowRpc,
+  WsAutomationCancelRunRpc,
+  WsAutomationMarkRunReadRpc,
+  WsAutomationArchiveRunRpc,
+  WsSubscribeAutomationEventsRpc,
+);
 export const WsRpcGroup: RpcGroup.RpcGroup<
   | RpcGroup.Rpcs<typeof WsCoreRpcGroup>
   | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
   | RpcGroup.Rpcs<typeof WsModelAccessRpcGroup>
   | RpcGroup.Rpcs<typeof WsGroupsRpcGroup>
   | RpcGroup.Rpcs<typeof WsSitesRpcGroup>
+  | RpcGroup.Rpcs<typeof WsAccountsRpcGroup>
+  | RpcGroup.Rpcs<typeof WsCliAccountsRpcGroup>
+  | RpcGroup.Rpcs<typeof WsSkillsStoreRpcGroup>
+  | RpcGroup.Rpcs<typeof WsWorkspaceRpcGroup>
 > = WsCoreRpcGroup.merge(
   WsPluginSourcesRpcGroup,
   WsModelAccessRpcGroup,
   WsGroupsRpcGroup,
   WsSitesRpcGroup,
+  WsAccountsRpcGroup,
+  WsCliAccountsRpcGroup,
+  WsSkillsStoreRpcGroup,
+  WsWorkspaceRpcGroup,
 );

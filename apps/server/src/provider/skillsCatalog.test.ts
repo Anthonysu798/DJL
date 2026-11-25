@@ -47,6 +47,8 @@ description: ${description}
 
 beforeEach(() => {
   clearSkillsCatalogCacheForTests();
+  // Most tests look at the user's own folders; the bundled starter skills have their own test.
+  vi.stubEnv("DJL_STARTER_SKILLS_DIR", "");
   root = mkdtempSync(path.join(os.tmpdir(), "djl-skills-catalog-"));
   homeDir = path.join(root, "home");
   djlBaseDir = path.join(homeDir, ".djl");
@@ -121,6 +123,53 @@ describe("discoverSkillsCatalog", () => {
     expect(byName.get("kilo-only")?.scope).toBe("kilo");
     expect(byName.get("opencode-only")?.scope).toBe("opencode");
     expect(byName.get("pi-only")?.scope).toBe("pi");
+  });
+
+  it("adds skills from enabled Claude Code plugins as plugin:skill", async () => {
+    const pluginsDir = path.join(homeDir, ".claude", "plugins");
+    const enabledInstall = path.join(pluginsDir, "cache", "mkt", "superpowers", "7.0.2");
+    const disabledInstall = path.join(pluginsDir, "cache", "mkt", "ralph", "1.0.0");
+    const otherProject = path.join(root, "other-project");
+    const projectInstall = path.join(pluginsDir, "cache", "mkt", "local-only", "1.0.0");
+    await writeSkill(
+      path.join(enabledInstall, "skills", "brainstorming"),
+      "brainstorming",
+      "Ideas",
+    );
+    await writeSkill(path.join(disabledInstall, "skills", "loop"), "loop", "Loop");
+    await writeSkill(path.join(projectInstall, "skills", "scoped"), "scoped", "Project only");
+    await mkdir(pluginsDir, { recursive: true });
+    await writeFile(
+      path.join(pluginsDir, "installed_plugins.json"),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          "superpowers@mkt": [{ scope: "user", installPath: enabledInstall }],
+          "ralph@mkt": [{ scope: "user", installPath: disabledInstall }],
+          "local-only@mkt": [
+            { scope: "project", projectPath: otherProject, installPath: projectInstall },
+          ],
+        },
+      }),
+    );
+    await writeFile(
+      path.join(homeDir, ".claude", "settings.json"),
+      JSON.stringify({
+        enabledPlugins: { "superpowers@mkt": true, "ralph@mkt": false, "local-only@mkt": true },
+      }),
+    );
+
+    const skills = await discoverSkillsCatalog({ homeDir, djlBaseDir, cwd: root });
+    const plugin = skills.find((skill) => skill.name === "superpowers:brainstorming");
+
+    expect(plugin).toMatchObject({
+      scope: "claude",
+      plugin: "superpowers",
+      interface: { displayName: "brainstorming" },
+    });
+    expect(skills.some((skill) => skill.name === "ralph:loop")).toBe(false);
+    // A project-scoped plugin only applies inside its own project.
+    expect(skills.some((skill) => skill.name === "local-only:scoped")).toBe(false);
   });
 
   it("follows symlinked skill directories from provider homes", async () => {
@@ -335,4 +384,23 @@ it("does not scan or initialize filesystem skills in Computer QA", async () => {
   vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
   expect(await discoverSkillsCatalog({ homeDir, djlBaseDir })).toEqual([]);
   await expect(access(path.join(djlBaseDir, "skills"))).rejects.toThrow();
+});
+
+it("lists DJL's bundled starter skills after the user's own, but not in settings", async () => {
+  const starter = path.join(root, "starter");
+  await writeSkill(path.join(starter, "frontend-design"), "frontend-design", "Bundled");
+  await writeSkill(path.join(djlBaseDir, "skills", "mine"), "mine", "Mine");
+  vi.stubEnv("DJL_STARTER_SKILLS_DIR", starter);
+
+  const skills = await discoverSkillsCatalog({ homeDir, djlBaseDir });
+  expect(skills.map((skill) => [skill.name, skill.scope])).toEqual([
+    ["mine", "djl"],
+    ["frontend-design", "built-in"],
+  ]);
+  const settings = await discoverSkillsCatalog({
+    homeDir,
+    djlBaseDir,
+    includeDuplicateOrigins: true,
+  });
+  expect(settings.map((skill) => skill.name)).toEqual(["mine"]);
 });

@@ -13,7 +13,9 @@ import { AddCustomServerDialog } from "~/components/plugins/AddCustomServerDialo
 import { AddMarketplaceDialog } from "~/components/plugins/AddMarketplaceDialog";
 import { CreateSkillDialog } from "~/components/plugins/CreateSkillDialog";
 import { PluginDirectoryView } from "~/components/plugins/PluginDirectory";
+import { PluginLibraryTabs, type PluginLibraryView } from "~/components/plugins/PluginLibraryTabs";
 import { PluginPageShell } from "~/components/plugins/PluginPageShell";
+import { SkillsStoreView } from "~/components/plugins/SkillsStore";
 import { UploadPluginDialog } from "~/components/plugins/UploadPluginDialog";
 import { usePluginConnect } from "~/components/plugins/usePluginConnect";
 import { pluginsSnapshotQueryOptions, usePluginActions } from "~/lib/pluginsReactQuery";
@@ -21,6 +23,9 @@ import { pluginsSnapshotQueryOptions, usePluginActions } from "~/lib/pluginsReac
 export const Route = createFileRoute("/_chat/plugins/")({
   component: PluginDirectoryRoute,
 });
+
+// Coming back from a plugin's page lands on the tab the user left.
+let lastLibraryView: PluginLibraryView = "plugins";
 
 function PluginDirectoryRoute() {
   const { t } = useTranslation("shell");
@@ -44,6 +49,18 @@ function PluginDirectoryRoute() {
   const [uploading, setUploading] = useState(false);
   const [addingMarketplace, setAddingMarketplace] = useState(false);
   const [skipped, setSkipped] = useState(0);
+  const [view, setViewState] = useState<PluginLibraryView>(lastLibraryView);
+  const setView = (next: PluginLibraryView) => {
+    lastLibraryView = next;
+    setViewState(next);
+  };
+  const heading = <PluginLibraryTabs value={view} onChange={setView} />;
+  if (view === "skills")
+    return (
+      <PluginPageShell>
+        <SkillsStoreView heading={heading} />
+      </PluginPageShell>
+    );
   const noteSkipped = (result: PluginMarketplaceResult) => setSkipped(result.skipped);
   return (
     <PluginPageShell>
@@ -116,6 +133,7 @@ function PluginDirectoryRoute() {
         />
       ) : null}
       <PluginDirectoryView
+        heading={heading}
         snapshot={snapshot.data}
         loading={snapshot.isFetching}
         error={

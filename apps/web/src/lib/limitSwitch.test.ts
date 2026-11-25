@@ -109,10 +109,13 @@ describe("pickLimitSwitchTarget", () => {
           snapshot("gemini", [10]),
         ]),
         {
+          key: "djlCloud",
           provider: "djlCloud",
+          inUse: null,
           name: "DJL Cloud",
           planName: null,
           status: "ok",
+          cliSignedIn: true,
           rows: [],
           usageLines: [],
           credits: null,

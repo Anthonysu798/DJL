@@ -49,6 +49,7 @@ import {
 import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces.ts";
+import { starterSkillsDir } from "./provider/starterSkills.ts";
 import { createLogger } from "./logger";
 import { transcribeVoiceWithChatGptSession } from "./voiceTranscription.ts";
 
@@ -767,8 +768,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       return;
     }
     try {
+      const starterDir = starterSkillsDir();
       await this.sendRequest(context, "skills/extraRoots/set", {
-        extraRoots: [this.djlSkillsDir],
+        // DJL's own skills plus the bundled new-chat starter skills.
+        extraRoots: [this.djlSkillsDir, ...(starterDir ? [starterDir] : [])],
       });
     } catch (error) {
       // Older codex builds (< extra-roots support) keep working; DJL-only

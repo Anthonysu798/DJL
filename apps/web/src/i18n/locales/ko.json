@@ -103,13 +103,18 @@
       "groups": {
         "agentModels": "다른 에이전트로 계속",
         "builtIn": "내장",
+        "claudeSkills": "Claude Code",
+        "codexSkills": "Codex",
         "local": "지역",
         "mcp": "MCP 서버",
+        "otherSkills": "기타 스킬",
         "plugins": "플러그인",
         "provider": "공급자",
         "servers": "서버",
+        "sharedSkills": "공유",
         "skills": "기술",
-        "subagents": "하위 에이전트"
+        "subagents": "하위 에이전트",
+        "suggestedSkills": "{{provider}}용"
       },
       "handoffReady": "에이전트 준비 완료",
       "handoffReadyDescription": "대화, 메모, 초안이 유지됩니다. 다음 지시를 보내 계속하세요.",
@@ -128,7 +133,11 @@
       },
       "runNativeCommand": "{{provider}} 기본 명령 실행",
       "searchFilesHint": "파일을 검색하려면 입력하세요.",
-      "searchingMentions": "자주 묻는 질문"
+      "searchingMentions": "자주 묻는 질문",
+      "skillOrigin": {
+        "project": "프로젝트",
+        "shared": "공유"
+      }
     },
     "composer": {
       "actions": {
@@ -427,32 +436,32 @@
       "openRepositoryFallback": "인앱 브라우저에서 GitHub를 열 수 없습니다.",
       "providerFailure": {
         "authentication": {
-          "action": "제공자에 로그인하거나 자격 증명을 업데이트한 후 다시 시도하세요.",
-          "title": "제공자 로그인이 필요합니다"
+          "action": "AI 계정에 다시 로그인해야 합니다. 로그인한 뒤 메시지를 다시 보내세요.",
+          "title": "계속하려면 다시 로그인하세요"
         },
         "commandMissing": {
-          "action": "제공자 명령을 설치하거나 구성한 후 다시 시도하세요.",
-          "title": "제공자 명령을 찾을 수 없습니다"
+          "action": "설정에서 설치한 뒤 메시지를 다시 보내세요.",
+          "title": "이 AI 도구가 아직 설정되지 않았습니다"
         },
         "connection": {
-          "action": "제공자 서비스 또는 네트워크를 확인한 후 다시 시도하세요.",
-          "title": "제공자 연결이 중단되었습니다"
+          "action": "인터넷 연결을 확인한 뒤 메시지를 다시 보내세요.",
+          "title": "연결이 끊겼습니다"
         },
         "generic": {
-          "action": "작업을 다시 시도하세요. 다시 실패하면 제공자 설정을 확인하세요.",
-          "title": "작업이 중지되었습니다"
+          "action": "메시지를 다시 보내세요. 계속 반복되면 다른 AI 모델을 사용해 보세요.",
+          "title": "답변이 중간에 멈췄습니다"
         },
         "permission": {
-          "action": "제공자의 파일 권한을 확인한 후 다시 시도하세요.",
-          "title": "제공자 액세스가 차단되었습니다"
+          "action": "DJL이 이 폴더를 열 수 있는지 확인한 뒤 메시지를 다시 보내세요.",
+          "title": "DJL이 필요한 파일을 열지 못했습니다"
         },
         "rateLimit": {
-          "action": "제한이 재설정될 때까지 기다리거나 제공자를 전환한 후 다시 시도하세요.",
-          "title": "제공자 한도에 도달했습니다"
+          "action": "한도가 초기화될 때까지 기다리거나 다른 계정으로 전환한 뒤 다시 보내세요.",
+          "title": "요금제 한도에 도달했습니다"
         },
         "workspaceMissing": {
-          "action": "기존 프로젝트 폴더를 선택한 다음 메시지를 다시 보내세요.",
-          "title": "작업 폴더를 사용할 수 없습니다"
+          "action": "아직 있는 폴더를 선택한 뒤 메시지를 다시 보내세요.",
+          "title": "이 폴더를 찾을 수 없습니다"
         }
       },
       "renameThreadFailed": "스레드 이름을 바꾸지 못했습니다.",
@@ -584,6 +593,337 @@
       },
       "unavailable": "{{provider}} 제공자를 사용할 수 없습니다."
     },
+    "home": {
+      "mascot": "DJL에게 인사해 보세요",
+      "modeLabel": "작업 종류",
+      "modes": {
+        "code": "코드",
+        "work": "업무"
+      },
+      "suggestionsLabel": "{{topic}} 추천 프롬프트",
+      "topics": {
+        "apps": {
+          "label": "앱",
+          "suggestions": {
+            "s1": {
+              "label": "습관 관리 앱 만들기",
+              "prompt": "습관을 추가하고 매일 체크하면서 연속 기록을 볼 수 있는 간단한 습관 관리 앱을 만들어 주세요. 디자인은 깔끔하게 하고, 모든 데이터는 이 컴퓨터에 저장해 주세요."
+            },
+            "s2": {
+              "label": "가계부 계산기 만들기",
+              "prompt": "작은 가계부 계산기를 만들어 주세요. 월 수입과 항목별 지출을 입력하면 남은 금액과 간단한 차트를 보여 주면 돼요. 다 만들면 여는 방법도 알려 주세요."
+            },
+            "s3": {
+              "label": "어린이용 퀴즈 게임 만들기",
+              "prompt": "8세에서 10세 어린이를 위한 알록달록한 퀴즈 게임을 만들어 주세요. 객관식 문제 10개, 마지막에 점수 표시, 다시 하기 버튼이 있으면 좋겠어요."
+            },
+            "s4": {
+              "label": "스프레드시트를 앱으로 바꾸기",
+              "prompt": "스프레드시트를 하나 공유할게요. 스프레드시트를 열지 않고도 검색하고, 필터링하고, 행을 추가할 수 있는 작은 앱으로 바꿔 주세요."
+            }
+          }
+        },
+        "automation": {
+          "label": "자동화",
+          "suggestions": {
+            "s1": {
+              "label": "사진 폴더 이름 한 번에 바꾸기",
+              "prompt": "제가 고른 폴더의 사진을 모두 찍은 날짜 기준으로 이름을 바꿔 주세요. 예를 들면 2026-05-14 바다 01.jpg처럼요. 이름을 바꾸기 전에 변경 목록을 먼저 보여 주세요."
+            },
+            "s2": {
+              "label": "다운로드 폴더 정리하기",
+              "prompt": "다운로드 폴더를 파일 종류별(문서, 이미지, 동영상, 설치 파일, 기타) 하위 폴더로 정리해 주세요. 옮기기 전에 무엇을 옮길지 먼저 알려 주세요."
+            },
+            "s3": {
+              "label": "스프레드시트 하나로 합치기",
+              "prompt": "폴더에 있는 스프레드시트를 모두 같은 열 구성의 시트 하나로 합쳐 주세요. 각 행이 어느 파일에서 왔는지 보여 주는 열도 추가해 주세요."
+            },
+            "s4": {
+              "label": "하루 요약 스크립트 만들기",
+              "prompt": "매일 아침 실행하면 어제 수정한 파일 목록을 보여 주고 짧은 요약 메모를 만들어 주는 스크립트를 작성해 주세요. 실행 방법은 쉬운 말로 설명해 주세요."
+            }
+          }
+        },
+        "data": {
+          "label": "데이터",
+          "suggestions": {
+            "s1": {
+              "label": "매출 시트에서 추세 찾기",
+              "prompt": "매출 스프레드시트를 공유할게요. 주요 추세, 가장 좋았던 달과 나빴던 달, 눈에 띄는 특이점을 찾아서 간단한 차트 하나와 함께 다섯 줄로 요약해 주세요."
+            },
+            "s2": {
+              "label": "지저분한 스프레드시트 정리하기",
+              "prompt": "제가 공유하는 스프레드시트를 정리해 주세요. 날짜와 이름 형식을 통일하고, 중복된 행을 지우고, 제가 확인할 수 있게 바꾼 내용을 모두 알려 주세요."
+            },
+            "s3": {
+              "label": "간단한 대시보드 만들기",
+              "prompt": "제 데이터를 핵심 숫자 서너 개와 차트 두 개가 있는 한 페이지 대시보드로 만들어 주세요. 아직 데이터를 공유하지 않았다면 예시라고 분명히 표시한 숫자를 써 주세요."
+            },
+            "s4": {
+              "label": "두 목록 비교하기",
+              "prompt": "제가 공유하는 두 목록을 비교해서 양쪽에 다 있는 항목, 첫 번째 목록에만 있는 항목, 두 번째 목록에만 있는 항목을 알려 주세요."
+            }
+          }
+        },
+        "docs": {
+          "label": "기술 문서",
+          "suggestions": {
+            "s1": {
+              "label": "프로젝트 README 작성하기",
+              "prompt": "이 프로젝트를 살펴보고 무엇을 하는지, 어떻게 설치하고 실행하는지, 도움은 어디서 받는지 담은 README를 써 주세요. 짧고 친근하게 써 주세요."
+            },
+            "s2": {
+              "label": "이 코드 쉽게 설명하기",
+              "prompt": "코딩을 모르는 사람도 이해할 수 있게 이 프로젝트가 무엇을 하는지 쉬운 말로 설명해 주세요. 그다음 주요 구성 요소와 각각의 역할을 정리해 주세요."
+            },
+            "s3": {
+              "label": "API 문서 만들기",
+              "prompt": "이 프로젝트의 API 문서를 쉽게 써 주세요. 엔드포인트마다 보낼 내용, 돌아오는 내용, 예시 하나씩을 넣어 주세요."
+            },
+            "s4": {
+              "label": "설치 방법 정리하기",
+              "prompt": "새로 온 팀원이 새 컴퓨터에서 그대로 따라 할 수 있는 단계별 설치 안내를 써 주세요. 무엇부터 설치해야 하는지, 제대로 되는지 확인하는 방법도 넣어 주세요."
+            }
+          }
+        },
+        "documents": {
+          "label": "문서",
+          "suggestions": {
+            "s1": {
+              "label": "긴 문서 요약하기",
+              "prompt": "제가 공유하는 문서를 한 페이지로 요약해 주세요. 핵심 내용, 결정 사항이나 마감일, 그리고 이 문서에 대해 물어봐야 할 질문 세 가지를 정리해 주세요."
+            },
+            "s2": {
+              "label": "주간 보고서 쓰기",
+              "prompt": "제 메모를 바탕으로 주간 보고서를 써 주세요. 완료한 일, 막혀 있는 일, 다음에 할 일 세 부분으로 짧게 나누고, 300단어 이내로 써 주세요. 추측한 부분은 표시해 주세요."
+            },
+            "s3": {
+              "label": "회의록 템플릿 만들기",
+              "prompt": "계속 쓸 수 있는 회의록 템플릿을 만들어 주세요. 참석자, 안건, 결정 사항, 담당자와 마감일이 있는 할 일 항목을 넣어 주세요."
+            },
+            "s4": {
+              "label": "글 교정하고 다듬기",
+              "prompt": "제가 공유하는 글을 교정해 주세요. 맞춤법과 문법을 고치고, 제 말투는 살리면서 더 명확하고 간결하게 다듬어 주세요. 바꾼 부분도 보여 주세요."
+            }
+          }
+        },
+        "email": {
+          "label": "이메일",
+          "suggestions": {
+            "s1": {
+              "label": "정중한 후속 이메일 쓰기",
+              "prompt": "일주일째 답장이 없는 분께 보낼 정중하지만 분명한 후속 이메일을 써 주세요. 제목도 넣고, 이름과 날짜는 빈칸으로 남겨 주세요."
+            },
+            "s2": {
+              "label": "답하기 곤란한 메시지에 답장하기",
+              "prompt": "제가 붙여 넣는 메시지에 답장하는 걸 도와주세요. 차분하고 예의 바르게, 상대방의 말을 인정하면서 다음 단계를 제안해 주세요."
+            },
+            "s3": {
+              "label": "초안 피드백 요청하기",
+              "prompt": "동료에게 정해진 날까지 제 초안에 대한 의견을 부탁하는 짧은 이메일을 써 주세요. 몇 마디만으로도 쉽게 답할 수 있게 써 주세요."
+            },
+            "s4": {
+              "label": "팀에 변경 사항 공지하기",
+              "prompt": "제가 설명하는 변경 사항을 팀에 알리는 친근한 공지를 써 주세요. 무엇이 언제 바뀌는지, 왜 도움이 되는지, 궁금한 점은 누구에게 물어보면 되는지 넣어 주세요."
+            }
+          }
+        },
+        "fixes": {
+          "label": "버그 고치기",
+          "suggestions": {
+            "s1": {
+              "label": "버튼이 안 눌리는 이유 찾기",
+              "prompt": "이 프로젝트의 버튼 하나가 클릭해도 아무 반응이 없어요. 원인을 찾아서 고치고, 원인을 한두 문장으로 설명해 주세요."
+            },
+            "s2": {
+              "label": "오류 메시지 해결하기",
+              "prompt": "오류 메시지를 붙여 넣을게요. 이 프로젝트의 어디에서 나오는지 찾아 원인을 고치고, 오류가 사라졌는지 확인하는 방법을 알려 주세요."
+            },
+            "s3": {
+              "label": "느린 페이지 빠르게 만들기",
+              "prompt": "이 프로젝트의 한 페이지가 느리게 열려요. 왜 느린지 찾아서 가장 큰 원인을 고치고, 얼마나 빨라졌는지 알려 주세요."
+            },
+            "s4": {
+              "label": "휴대폰에서도 잘 보이게 하기",
+              "prompt": "이 웹사이트가 휴대폰에서도 제대로 보이게 해 주세요. 작은 화면 크기로 페이지마다 확인하고, 화면 밖으로 넘치거나 누르기에 너무 작은 부분을 고쳐 주세요."
+            }
+          }
+        },
+        "planning": {
+          "label": "계획",
+          "suggestions": {
+            "s1": {
+              "label": "프로젝트 일정 짜기",
+              "prompt": "프로젝트 계획을 도와주세요. 먼저 간단한 질문 세 가지를 하고, 그다음 마일스톤과 담당자가 있는 일정을 만들어 주세요. 가장 위험한 단계는 강조해 주세요."
+            },
+            "s2": {
+              "label": "메모로 할 일 목록 만들기",
+              "prompt": "어수선한 제 메모를 우선순위별로 묶은 깔끔한 할 일 목록으로 바꿔 주세요. 오늘 먼저 할 일 세 가지는 맨 위에 놓아 주세요."
+            },
+            "s3": {
+              "label": "팀 행사 계획하기",
+              "prompt": "15명 정도가 참여하는 반나절 팀 행사를 계획해 주세요. 진행 순서, 예약할 것 체크리스트, 예시 비용이 들어간 대략적인 예산을 만들어 주세요."
+            },
+            "s4": {
+              "label": "회의 준비하기",
+              "prompt": "중요한 회의 준비를 도와주세요. 회의 목표, 꼭 전달해야 할 요점 세 가지, 나올 만한 질문과 각각에 대한 짧은 답변을 정리해 주세요."
+            }
+          }
+        },
+        "research": {
+          "label": "리서치",
+          "suggestions": {
+            "s1": {
+              "label": "구매 전에 제품 비교하기",
+              "prompt": "제가 말하는 제품의 대표적인 선택지들을 비교해 주세요. 가격, 주요 기능, 장단점을 표로 정리하고, 대부분의 사람에게 어떤 제품이 맞는지와 그 이유도 알려 주세요."
+            },
+            "s2": {
+              "label": "주제 조사 부탁하기",
+              "prompt": "제가 말하는 주제를 조사해서 짧게 브리핑해 주세요. 핵심 사실, 주요 관점, 믿을 만한 출처 세 곳의 링크를 넣어 주세요."
+            },
+            "s3": {
+              "label": "회사 알아보기",
+              "prompt": "제가 말하는 회사가 어떻게 돈을 버는지, 주요 경쟁사는 어디인지, 시장에서 무엇이 바뀌고 있는지 400단어 이내로 설명해 주세요."
+            },
+            "s4": {
+              "label": "주장이 사실인지 확인하기",
+              "prompt": "제가 붙여 넣는 주장이 사실인지 확인해 주세요. 믿을 만한 출처에서는 뭐라고 하는지, 얼마나 확신하는지, 아직 불확실한 점은 무엇인지 알려 주세요."
+            }
+          }
+        },
+        "review": {
+          "label": "코드 리뷰",
+          "suggestions": {
+            "s1": {
+              "label": "최근 변경 사항 리뷰하기",
+              "prompt": "이 프로젝트의 최근 변경 사항에서 버그, 헷갈리는 이름, 빠진 오류 처리를 검토해 주세요. 가장 중요한 문제부터 정리해 주세요."
+            },
+            "s2": {
+              "label": "기능에 테스트 추가하기",
+              "prompt": "이 프로젝트의 주요 기능에 테스트를 추가하고 실행해 주세요. 테스트가 무엇을 확인하는지, 통과했는지 쉬운 말로 알려 주세요."
+            },
+            "s3": {
+              "label": "보안 문제 점검하기",
+              "prompt": "코드에 들어 있는 비밀 키나 검증하지 않은 사용자 입력처럼 흔한 보안 문제가 있는지 이 프로젝트를 살펴보고, 가장 심각한 문제부터 해결 방법을 제안해 주세요."
+            },
+            "s4": {
+              "label": "지저분한 코드 정리하기",
+              "prompt": "이 프로젝트에서 가장 지저분한 부분을 찾아서 동작은 그대로 두고 깔끔하게 정리해 주세요. 그다음 무엇을 개선했는지 설명해 주세요."
+            }
+          }
+        },
+        "slides": {
+          "label": "슬라이드",
+          "suggestions": {
+            "s1": {
+              "label": "메모로 발표 자료 만들기",
+              "prompt": "제 메모를 슬라이드 6장짜리 발표 자료로 만들어 주세요. 제목 슬라이드를 넣고, 슬라이드마다 아이디어 하나씩, 마지막에는 짧은 요약을 넣어 주세요."
+            },
+            "s2": {
+              "label": "투자 제안서 구성하기",
+              "prompt": "제가 설명하는 아이디어로 슬라이드 10장짜리 투자 제안서의 구성을 짜 주세요. 문제, 해결책, 대상 고객, 수익 모델, 팀, 요청 사항을 담아 주세요."
+            },
+            "s3": {
+              "label": "교육용 발표 자료 만들기",
+              "prompt": "제가 말하는 주제를 처음 배우는 사람에게 가르치는 짧은 교육용 발표 자료를 만들어 주세요. 쉬운 예시를 넣고, 마지막에 세 문제짜리 퀴즈도 넣어 주세요."
+            },
+            "s4": {
+              "label": "프로젝트 진행 보고 자료 만들기",
+              "prompt": "슬라이드 5장짜리 프로젝트 진행 보고 자료를 만들어 주세요. 지금까지의 진행 상황, 결과, 문제점, 다음 단계, 필요한 도움을 담아 주세요."
+            }
+          }
+        },
+        "websites": {
+          "label": "웹사이트",
+          "suggestions": {
+            "s1": {
+              "label": "개인 웹사이트 만들기",
+              "prompt": "홈, 소개 페이지, 연락처 섹션이 있는 간단한 개인 웹사이트를 만들어 주세요. 휴대폰에서도 보기 좋게 만들고, 여는 방법도 알려 주세요."
+            },
+            "s2": {
+              "label": "랜딩 페이지 만들기",
+              "prompt": "제가 설명하는 제품의 랜딩 페이지를 만들어 주세요. 눈에 띄는 헤드라인, 장점 세 가지, 짧은 FAQ, 가입 버튼을 넣어 주세요."
+            },
+            "s3": {
+              "label": "소규모 가게 웹사이트 만들기",
+              "prompt": "작은 가게를 위한 4페이지짜리 웹사이트를 만들어 주세요. 홈, 서비스, 소개, 연락처 페이지에 영업시간과 지도 자리도 넣어 주세요."
+            },
+            "s4": {
+              "label": "할 일 목록 웹페이지 만들기",
+              "prompt": "할 일을 추가하고, 체크하고, 지울 수 있는 할 일 목록 웹페이지를 만들어 주세요. 페이지를 다시 열어도 목록이 그대로 남아 있어야 해요."
+            }
+          }
+        }
+      },
+      "skillsLabel": "이 작업에 쓰는 스킬",
+      "removeSkill": "{{name}} 제거",
+      "skills": {
+        "docx": {
+          "name": "Word 문서",
+          "description": "제목, 표, 레이아웃이 갖춰진 실제 Word 파일을 만들고 편집합니다."
+        },
+        "copy-editing": {
+          "name": "글 다듬기",
+          "description": "말투는 살리면서 글을 교정하고 간결하게 다듬습니다."
+        },
+        "xlsx": {
+          "name": "스프레드시트",
+          "description": "수식과 차트가 작동하는 Excel·CSV 파일을 읽고 정리하고 만듭니다."
+        },
+        "build-dashboard": {
+          "name": "대시보드",
+          "description": "데이터를 핵심 수치와 차트가 담긴 한 페이지 대시보드로 만듭니다."
+        },
+        "pptx": {
+          "name": "PowerPoint 슬라이드",
+          "description": "깔끔하고 읽기 쉬운 실제 PowerPoint 자료를 만듭니다."
+        },
+        "theme-factory": {
+          "name": "슬라이드 테마",
+          "description": "슬라이드와 문서에 어울리는 색상·글꼴 테마를 적용합니다."
+        },
+        "djl-research": {
+          "name": "리서치",
+          "description": "실제 출처로 조사하고 선택지를 공정하게 비교하며 모든 주장에 출처를 답니다."
+        },
+        "djl-email": {
+          "name": "이메일 작성",
+          "description": "다음 단계가 분명한, 명확하고 정중한 이메일을 씁니다."
+        },
+        "djl-planning": {
+          "name": "계획 세우기",
+          "description": "목표를 날짜·담당자·위험·점검 시점이 있는 작은 단계로 나눕니다."
+        },
+        "frontend-design": {
+          "name": "프런트엔드 디자인",
+          "description": "템플릿 느낌 없이 개성 있고 의도된 디자인을 만듭니다."
+        },
+        "frontend-ui-engineering": {
+          "name": "앱 화면",
+          "description": "어떤 크기에서도 잘 작동하는 접근성 높은 앱 화면을 만듭니다."
+        },
+        "systematic-debugging": {
+          "name": "체계적인 디버깅",
+          "description": "무엇이든 바꾸기 전에 근본 원인부터 찾습니다."
+        },
+        "djl-automation": {
+          "name": "안전한 자동화",
+          "description": "변경 전 항상 미리 보여 주고, 삭제하지 않으며, 되돌리기 목록을 남깁니다."
+        },
+        "code-review-and-quality": {
+          "name": "코드 리뷰",
+          "description": "정확성, 보안, 속도, 가독성 관점에서 코드를 리뷰합니다."
+        },
+        "documentation-and-adrs": {
+          "name": "문서화",
+          "description": "이유까지 설명하는 문서를 쓰고 코드와 맞지 않는 문서를 찾아냅니다."
+        },
+        "create-readme": {
+          "name": "README 작성",
+          "description": "무엇을 하는지, 설치·실행 방법이 담긴 README를 씁니다."
+        }
+      }
+    },
     "image": {
       "download": "생성된 이미지 다운로드",
       "downloadError": "생성된 이미지를 다운로드할 수 없음",
@@ -659,6 +999,26 @@
       "noPiModels": "Pi 모델을 찾을 수 없음",
       "search": "모델 또는 제공자 검색",
       "setUpLocalAi": "로컬 AI 설정…"
+    },
+    "modelPanel": {
+      "aboutEffort": "노력 수준 안내",
+      "addProvider": "AI 공급자 추가",
+      "checking": "{{provider}} 확인 중…",
+      "effortNote": "노력 수준이 높을수록 답하기 전에 더 오래 생각합니다. Ultracode에서는 Claude가 여러 단계의 작업을 스스로 계획할 수도 있습니다.",
+      "effortNoteBasic": "노력 수준이 높을수록 답하기 전에 더 오래 생각합니다.",
+      "fastMode": "빠른 모드",
+      "faster": "더 빠르게",
+      "noFavourites": "모델에 별표를 하면 여기에 표시됩니다.",
+      "recommended": "추천",
+      "searchPlaceholder": "모델 검색...",
+      "signInTo": "{{provider}}의 모델을 사용하려면 로그인하세요.",
+      "smarter": "더 똑똑하게",
+      "unavailable": "지금은 {{provider}}을(를) 사용할 수 없습니다.",
+      "account": "계정",
+      "accountLeft": "{{percent}}% 남음",
+      "accountDefaultTag": "기본",
+      "accountSignedOut": "로그아웃됨",
+      "makeDefault": "새 채팅에 사용"
     },
     "models": {
       "addFavorite": "{{name}}를 즐겨찾기에 추가",
@@ -983,7 +1343,6 @@
       "library": "미디어 라이브러리",
       "loading": "소셜 도구 로딩 중…",
       "navigation": "소셜 도구",
-      "open": "소셜 도구",
       "product": "제품 링크",
       "publishingHistory": "게시 이력",
       "results": "성과 분석",
@@ -1512,6 +1871,11 @@
       "unpublish": "게시 중단",
       "unpublishTitle": "{{address}} 게시를 중단할까요?",
       "unpublishDescription": "사이트가 바로 오프라인이 되고, 주소는 누구나 가져갈 수 있게 됩니다. 프로젝트 파일은 이 컴퓨터에 그대로 남아요."
+    },
+    "accountSwitch": {
+      "switched": "{{to}}(으)로 전환했습니다: {{from}}이(가) 사용 한도에 도달했습니다.",
+      "resets": "{{time}}에 초기화됩니다.",
+      "mainAccount": "기본 계정"
     }
   },
   "common": {
@@ -1626,7 +1990,25 @@
   },
   "settings": {
     "accounts": {
+      "addAnotherTool": "다른 AI 도구 추가 ({{total}})",
       "checking": "확인 중…",
+      "claudeCompatible": {
+        "description": "Doubao와 DeepSeek 코딩 플랜은 플랜의 API 키로 Claude Code를 통해 실행됩니다. Claude Code를 설치하고 여기에 키를 저장한 다음 ‘새 채팅에 사용’을 선택하세요.",
+        "getKey": "API 키 발급받기",
+        "keyLabel": "{{provider}} API 키",
+        "keyMissing": "저장된 API 키 없음",
+        "keyPlaceholder": "API 키를 붙여 넣으세요",
+        "keySaved": "API 키 저장됨",
+        "loadError": "저장된 API 키를 확인할 수 없습니다.",
+        "region": "Doubao 리전",
+        "regionChina": "중국 본토",
+        "regionInternational": "글로벌(BytePlus)",
+        "remove": "삭제",
+        "replacePlaceholder": "새 키를 붙여 넣으면 저장된 키를 대체합니다",
+        "save": "저장",
+        "saveError": "저장하지 못했습니다. 다시 시도해 주세요.",
+        "title": "코딩 플랜"
+      },
       "codingPlansDescription": "OpenCode 로그인에서 GLM은 Z.AI Coding Plan, Kimi는 Kimi For Coding, MiniMax는 가입한 코딩 요금제 제공업체를 선택하세요. Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, Pi는 위 목록에서 공식 CLI로 연결하며 해당 CLI에 이미 로그인된 상태를 그대로 사용합니다.",
       "codingPlansTitle": "중국 모델 및 코딩 요금제",
       "default": "새 채팅 기본값",
@@ -1663,6 +2045,9 @@
       "installNotDetected": "설치 후 {{provider}}을(를) 찾을 수 없습니다. 설정 안내를 확인한 후 다시 시도하세요.",
       "loadError": "계정을 확인할 수 없습니다.",
       "loginFor": "{{provider}}에 로그인",
+      "moreOptions": "다른 연결 방법",
+      "moreOptionsDescription": "코딩 플랜 API 키, 도구 업데이트, 기타 플랜.",
+      "noneConnected": "아직 로그인한 AI 도구가 없습니다. 아래에서 하나를 골라 로그인하세요.",
       "openCodeExistingKept": "기존 CLI 로그인 정보 유지: {{providers}}.",
       "openCodeLegacyAvailable": "DJL에 복사할 수 있는 저장된 로그인 정보가 있습니다: {{providers}}. 기존 CLI 로그인 정보는 유지되며 원래 DJL 자격 증명도 백업으로 보관됩니다.",
       "openCodeSharedLogin": "OpenCode는 설치된 OpenCode CLI와 로그인 정보를 공유합니다. 여기서 로그인하면 CLI의 로그인 정보도 업데이트됩니다.",
@@ -1691,6 +2076,33 @@
       "resetAriaLabel": "{{label}} 기본값으로 재설정",
       "resetToDefault": "기본값으로 재설정",
       "restoreDefaults": "기본값 복원"
+    },
+    "aiAccounts": {
+      "addAccount": "계정 추가",
+      "addAndSignIn": "추가하고 로그인",
+      "cancel": "취소",
+      "description": "Claude Code와 Codex 구독을 더 추가하고, 각 계정의 남은 사용량을 보고, 새 채팅에서 쓸 계정을 고르세요.",
+      "error": "AI 계정에 문제가 생겼습니다.",
+      "inUse": "사용 중",
+      "mainAccount": "기본 계정",
+      "nameLabel": "새 {{provider}} 계정 이름",
+      "namePlaceholder": "업무, 개인 같은 이름",
+      "noUsage": "아직 사용량이 없습니다",
+      "refresh": "사용량 새로고침",
+      "remove": "제거",
+      "removeConfirm": "{{name}} 계정을 제거할까요? DJL이 로그아웃하고 저장된 로그인을 삭제합니다.",
+      "signIn": "로그인",
+      "signInAgain": "다시 로그인",
+      "status": {
+        "signedIn": "로그인됨",
+        "signedOut": "로그인 안 됨",
+        "unavailable": "계정 설정에서 꺼짐",
+        "unknown": "로그인 상태를 확인할 수 없음"
+      },
+      "switchNote": "새 채팅은 '사용 중' 계정을 씁니다. 이미 시작한 채팅은 처음 계정을 계속 씁니다.",
+      "usageUnavailable": "지금은 사용량을 볼 수 없습니다",
+      "autoSwitch": "계정 자동 전환",
+      "autoSwitchHint": "채팅에 쓰는 계정이 5시간 또는 주간 한도에 도달하면, 사용량이 가장 많이 남은 로그인된 계정으로 이어서 진행하고 채팅에 표시합니다."
     },
     "appearance": {
       "baseFontSize": {
@@ -2274,6 +2686,11 @@
           "description": "키 바인딩, 복구, 버전 정보입니다.",
           "eyebrow": "시스템 도구",
           "label": "고급"
+        },
+        "aiAccounts": {
+          "description": "여러 Claude 및 Codex 구독과 새 채팅에서 쓸 계정.",
+          "eyebrow": "계정 전환",
+          "label": "AI 계정"
         },
         "appearance": {
           "description": "언어, 테마, 글꼴, 시간 형식을 설정합니다.",
@@ -3424,6 +3841,7 @@
       "working": "처리 중…"
     },
     "usage": {
+      "cannotShow": "지금은 사용량을 표시할 수 없습니다.",
       "learnMore": "자세히 알아보기",
       "left": "{{remaining}} 남음",
       "loading": "제공자 사용량 불러오는 중…",
@@ -3448,7 +3866,7 @@
           "on-track": "계획대로"
         }
       },
-      "privacyDescription": "사용량은 각 제공자 CLI가 로컬에 저장한 자격 증명에서 읽고 제공자에게 직접 가져옵니다. OAuth 제공자는 공식 토큰 엔드포인트에서 단기 토큰을 갱신할 수 있습니다. ‘로그인하지 않음’이 표시되면 CLI에서 다시 인증하세요.",
+      "privacyDescription": "DJL은 이 컴퓨터의 로그인 정보로 각 AI 서비스에서 사용량을 직접 읽어옵니다. 계정에 “로그인하지 않음”이 표시되면 계정에서 다시 로그인하세요.",
       "rateLimits": {
         "current": "현재",
         "fiveHours": "5시간",
@@ -3460,14 +3878,16 @@
       },
       "rateLimitsRemaining": "남은 사용 한도",
       "remainingAriaLabel": "{{label}}: {{remaining}} 남음",
+      "signInToSee": "{{provider}}에 로그인하면 남은 사용량을 볼 수 있습니다.",
+      "signedInNoUsage": "{{provider}}에 로그인되어 있습니다. 다음 채팅 후에 사용량이 표시됩니다.",
       "source": "사용량 출처: {{source}}",
       "status": {
         "notSignedIn": "로그인하지 않음",
+        "signedIn": "로그인됨",
         "unavailable": "사용할 수 없음",
         "unsupported": "지원되지 않음"
       },
-      "title": "제공자 사용량",
-      "unavailableWithDetail": "사용량을 확인할 수 없습니다. {{detail}}"
+      "title": "제공자 사용량"
     },
     "couldNotCheckPermissions": "Could not check permissions",
     "keyboardFocus": "keyboard focus",
@@ -3618,7 +4038,6 @@
     },
     "multiAgents": {
       "title": "멀티 에이전트",
-      "beta": "베타",
       "newGroup": "새 그룹",
       "groups": "그룹",
       "emptyTitle": "에이전트를 한 채팅방에 모으세요",
@@ -4042,7 +4461,7 @@
       "settings": {
         "action": "튜토리얼 시작",
         "basicTitle": "기본 기능 튜토리얼",
-        "description": "에이전트 모드, 프로젝트, 로컬 AI 추천 및 설정 안내를 다시 봅니다.",
+        "description": "업무와 코드, 프로젝트, 로컬 AI 추천, 설정 안내를 다시 봅니다.",
         "section": "시작하기",
         "title": "초보자 튜토리얼"
       },
@@ -4061,8 +4480,8 @@
           "title": "로컬 AI의 강점 선택"
         },
         "project-mode": {
-          "description": "폴더나 코드베이스를 중심으로 지속적인 맥락이 필요한 작업에는 프로젝트 모드를 사용하세요.",
-          "title": "프로젝트 모드"
+          "description": "메시지 입력란 아래에서 폴더를 고르면 작업이 그 프로젝트에 들어갑니다. 고르지 않으면 최근 항목에 들어갑니다.",
+          "title": "프로젝트"
         },
         "settings": {
           "description": "여기에서 언어, 모델, 모양 및 앱 동작을 변경할 수 있습니다.",
@@ -4073,8 +4492,8 @@
           "title": "언제든지 튜토리얼 다시 보기"
         },
         "work-mode": {
-          "description": "작업을 시작한 후 @를 입력하면 맥락을 유지하면서 다른 에이전트로 이어갈 수 있습니다.",
-          "title": "에이전트 모드"
+          "description": "문서, 리서치, 일상 업무는 업무를, 소프트웨어를 만들거나 고칠 때는 코드를 고르세요. 주제를 고르면 바로 쓸 수 있는 요청이 나타나요.",
+          "title": "업무 또는 코드"
         }
       }
     },
@@ -4432,7 +4851,8 @@
         "newThread": "새 스레드",
         "newWorkspace": "새로운 작업공간",
         "social": "소셜",
-        "socialNeedsChat": "먼저 채팅을 시작하세요. 소셜 게시물은 채팅에 보관됩니다."
+        "socialNeedsChat": "먼저 채팅을 시작하세요. 소셜 게시물은 채팅에 보관됩니다.",
+        "newChat": "새 채팅"
       },
       "adding": "더 보기",
       "addProject": "프로젝트 추가",
@@ -4477,7 +4897,7 @@
       "automationCount_other": "{{count}}개의 자동화",
       "browse": "계정 만들기",
       "cancelAddProject": "자주 묻는 질문",
-      "chats": "채팅",
+      "chats": "최근 항목",
       "confirm": {
         "archiveThread": "아카이브 스레드 \"{{title}}\"?\n아카이브 스레드는 사이드바에서 숨겨져 있지만 나중에 복원 할 수 있습니다.",
         "deleteThread": "스레드 삭제 \"{{title}}\"?\n이 스레드에 대한 영구적 인 대화 기록.",
@@ -4820,6 +5240,50 @@
       "spinClockwise": "시계 방향으로 회전",
       "spinCounterClockwise": "시계 반대 방향으로 회전",
       "title": "2026 월드컵"
+    },
+    "skillsStore": {
+      "title": "스킬",
+      "hint": "스킬은 Claude Code와 Codex에 작업을 잘하는 법을 알려 줍니다. 설치한 스킬은 $ 메뉴에 나타납니다.",
+      "search": "스킬 검색",
+      "installed": "설치됨",
+      "reviewedResults": "DJL 검토 완료",
+      "liveResults": "skills.sh에서",
+      "liveHint": "DJL이 검토하지 않았습니다. 사용하기 전에 무엇을 하는지 확인하세요.",
+      "searching": "skills.sh 검색 중…",
+      "searchFailed": "skills.sh에 연결할 수 없습니다. 잠시 후 다시 시도하세요.",
+      "noMatches": "일치하는 스킬이 없습니다.",
+      "builtIn": "기본 제공",
+      "unreviewed": "검토 안 됨",
+      "install": "설치",
+      "installNamed": "{{name}} 설치",
+      "installing": "설치 중…",
+      "working": "처리 중…",
+      "update": "업데이트",
+      "remove": "제거",
+      "installedTag": "설치됨",
+      "edited": "설치 후 이 스킬을 수정했습니다.",
+      "installs": "{{value}}회 설치",
+      "notOnGitHub": "GitHub에 없음",
+      "viewOnGitHub": "GitHub에서 보기",
+      "previewFailed": "이 스킬을 불러올 수 없습니다.",
+      "scriptsWarning": "이 스킬에는 에이전트가 실행할 수 있는 스크립트가 있습니다.",
+      "unreviewedNote": "DJL이 이 스킬을 검토하지 않았습니다. 사용하기 전에 무엇을 하는지 확인하세요.",
+      "builtInNote": "DJL에 기본 제공됩니다. $ 메뉴나 홈 화면의 주제에서 고르세요.",
+      "consentScriptsTitle": "스크립트를 실행하는 스킬을 설치할까요?",
+      "consentScriptsBody": "{{name}}에는 에이전트가 컴퓨터에서 실행할 수 있는 파일이 있습니다. {{owner}}을(를) 신뢰할 때만 설치하세요.",
+      "consentEditsTitle": "변경 내용을 덮어쓸까요?",
+      "consentEditsBody": "설치 후 {{name}}을(를) 수정했습니다. 업데이트하면 변경 내용이 덮어써집니다.",
+      "installAnyway": "그래도 설치",
+      "replaceChanges": "내 변경 내용 덮어쓰기",
+      "categories": {
+        "design": "디자인",
+        "coding": "코딩",
+        "documents": "문서",
+        "writing": "글쓰기",
+        "research": "조사와 계획",
+        "data": "데이터",
+        "tools": "도구"
+      }
     }
   },
   "whatsNew": {
@@ -5657,10 +6121,20 @@
       "terminalHint": "이 터미널에서 공유할 계정을 선택하세요. 두 번째 구독에는 다른 프로필을 사용하세요.",
       "title": "워크스페이스",
       "useThisAccount": "이 계정 사용",
-      "welcomeDescription": "코딩 에이전트를 나란히 실행하세요. 프로젝트별로 터미널을 정리하고 구독마다 별도 프로필을 사용하세요.",
+      "welcomeDescription": "프로젝트 폴더에서 코딩 에이전트를 나란히 실행하세요. 설정의 계정을 여기서 바로 쓸 수 있습니다.",
       "welcomeTitle": "에이전트를 위한 워크스페이스",
       "workspaceHint": "이름을 지정한 워크스페이스에 터미널을 모으고 실행할 프로젝트 폴더를 선택하세요.",
-      "workspacePlaceholder": "내 프로젝트"
+      "workspacePlaceholder": "내 프로젝트",
+      "mainAccount": "기본 계정",
+      "accountsFromSettings": "설정 → 계정과 같은 계정이라 다시 로그인할 필요가 없습니다.",
+      "startTitle": "작업 시작",
+      "startDescription": "계정을 고르면 그 계정으로 터미널이 열립니다. 계정마다 로그인이 따로 유지됩니다.",
+      "startWith": "{{provider}} 시작",
+      "shellHint": "일반 터미널, 어떤 도구든 사용",
+      "moreOptions": "추가 옵션",
+      "readyAccounts": "바로 사용 가능",
+      "mainTag": "기본",
+      "browseFolderMenu": "다른 폴더 선택…"
     },
     "branch": {
       "actions": {

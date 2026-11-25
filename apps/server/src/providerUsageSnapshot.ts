@@ -281,55 +281,93 @@ async function listRecentCodexSessionFiles(sessionsRoot: string): Promise<Readon
   return listRecentFiles(candidates);
 }
 
-async function readCodexSessionSummary(path: string): Promise<CodexSessionSummary | null> {
-  let fileContents: string;
+function parseCodexTokenCountLine(line: string): CodexSessionSummary | null {
+  if (!line.trim()) {
+    return null;
+  }
+  let parsed: unknown;
   try {
-    fileContents = await fs.readFile(path, "utf8");
+    parsed = JSON.parse(line);
   } catch {
     return null;
   }
 
-  const lines = fileContents.split(/\r?\n/u);
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = lines[index];
-    if (!line || !line.trim()) {
-      continue;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      continue;
-    }
-
-    const record = asRecord(parsed);
-    if (!record || record.type !== "event_msg") {
-      continue;
-    }
-
-    const payload = asRecord(record.payload);
-    if (!payload || payload.type !== "token_count") {
-      continue;
-    }
-
-    const timestampMs = parseTimestampMs(record.timestamp ?? payload.timestamp);
-    if (timestampMs === null) {
-      continue;
-    }
-
-    const summary = {
-      timestampMs,
-      totalTokens: readCodexTotalTokens(payload),
-      limits: normalizeCodexUsageLimits(payload.rate_limits ?? payload.rateLimits),
-    } satisfies CodexSessionSummary;
-
-    // Codex session JSONL is chronological; only the final token_count event is
-    // needed for lifetime accounting and the latest quota snapshot per file.
-    return summary;
+  const record = asRecord(parsed);
+  if (!record || record.type !== "event_msg") {
+    return null;
   }
 
-  return null;
+  const payload = asRecord(record.payload);
+  if (!payload || payload.type !== "token_count") {
+    return null;
+  }
+
+  const timestampMs = parseTimestampMs(record.timestamp ?? payload.timestamp);
+  if (timestampMs === null) {
+    return null;
+  }
+
+  return {
+    timestampMs,
+    totalTokens: readCodexTotalTokens(payload),
+    limits: normalizeCodexUsageLimits(payload.rate_limits ?? payload.rateLimits),
+  };
+}
+
+// Codex session JSONL is chronological and only the final token_count event is needed, so
+// files are read backwards in chunks. Session files can reach gigabytes; reading them whole
+// (several at once) exhausted memory and crashed the server.
+const CODEX_TAIL_CHUNK_BYTES = 256 * 1024;
+const CODEX_TAIL_MAX_SCAN_BYTES = 32 * 1024 * 1024;
+const NEWLINE_BYTE = 0x0a;
+
+async function readCodexSessionSummary(path: string): Promise<CodexSessionSummary | null> {
+  let handle: Awaited<ReturnType<typeof fs.open>>;
+  try {
+    handle = await fs.open(path, "r");
+  } catch {
+    return null;
+  }
+
+  try {
+    let end = (await handle.stat()).size;
+    let scanned = 0;
+    // Bytes of a line cut by the chunk boundary, completed by the next (earlier) chunk.
+    let carry = Buffer.alloc(0);
+    while (end > 0 && scanned < CODEX_TAIL_MAX_SCAN_BYTES) {
+      const start = Math.max(0, end - CODEX_TAIL_CHUNK_BYTES);
+      const chunk = Buffer.alloc(end - start);
+      await handle.read(chunk, 0, chunk.length, start);
+      scanned += chunk.length;
+      let block = Buffer.concat([chunk, carry]);
+      // Split only at newline bytes so multi-byte characters are never cut apart.
+      if (start > 0) {
+        const firstNewline = block.indexOf(NEWLINE_BYTE);
+        if (firstNewline === -1) {
+          carry = block;
+          end = start;
+          continue;
+        }
+        carry = block.subarray(0, firstNewline);
+        block = block.subarray(firstNewline + 1);
+      } else {
+        carry = Buffer.alloc(0);
+      }
+      const lines = block.toString("utf8").split(/\r?\n/u);
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const summary = parseCodexTokenCountLine(lines[index] ?? "");
+        if (summary) {
+          return summary;
+        }
+      }
+      end = start;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    await handle.close();
+  }
 }
 
 function readClaudeTotalTokens(value: unknown): number {

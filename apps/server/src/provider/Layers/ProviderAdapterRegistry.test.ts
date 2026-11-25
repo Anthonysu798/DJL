@@ -11,6 +11,9 @@ import {
   NativeCopilotAdapter,
   NativeCodeBuddyAdapter,
   NativePiAdapter,
+  NativeMuseAdapter,
+  NativeDoubaoAdapter,
+  NativeDeepSeekAdapter,
   NativeDjlCloudAdapter,
 } from "../../harnesses/native/layer";
 import type { ProviderKind } from "@djl/contracts";
@@ -208,6 +211,9 @@ const layer = it.layer(
         Layer.succeed(NativeCopilotAdapter, { ...fakeGrokAdapter, provider: "copilot" }),
         Layer.succeed(NativeCodeBuddyAdapter, { ...fakeGrokAdapter, provider: "codebuddy" }),
         Layer.succeed(NativePiAdapter, { ...fakeGrokAdapter, provider: "pi" }),
+        Layer.succeed(NativeMuseAdapter, { ...fakeGrokAdapter, provider: "muse" }),
+        Layer.succeed(NativeDoubaoAdapter, { ...fakeGrokAdapter, provider: "doubao" }),
+        Layer.succeed(NativeDeepSeekAdapter, { ...fakeGrokAdapter, provider: "deepseek" }),
         Layer.succeed(NativeDjlCloudAdapter, { ...fakeGrokAdapter, provider: "djlCloud" }),
         Layer.succeed(GeminiAdapter, fakeGeminiAdapter),
         Layer.succeed(GrokAdapter, fakeGrokAdapter),
@@ -242,6 +248,9 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "copilot",
         "codebuddy",
         "pi",
+        "muse",
+        "doubao",
+        "deepseek",
         "djlCloud",
         "group",
       ]);

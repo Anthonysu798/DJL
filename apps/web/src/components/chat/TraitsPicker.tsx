@@ -37,9 +37,9 @@ import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./co
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
 
-const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
+export const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
-function defaultAgentForProvider(provider: ProviderKind): string | null {
+export function defaultAgentForProvider(provider: ProviderKind): string | null {
   if (provider === "kilo") return "code";
   if (provider === "opencode") return "build";
   return null;
@@ -50,7 +50,7 @@ function isBuiltInModeAgent(provider: ProviderKind, agentName: string): boolean 
   return agentName === defaultAgent || agentName === "plan";
 }
 
-function getAgentOptions(
+export function getAgentOptions(
   provider: ProviderKind,
   runtimeAgents: ReadonlyArray<ProviderAgentDescriptor> | null | undefined,
 ): ReadonlyArray<ProviderAgentDescriptor> {
@@ -79,7 +79,7 @@ function getAgentOptions(
   ];
 }
 
-function getSelectedAgentValue(
+export function getSelectedAgentValue(
   provider: ProviderKind,
   modelOptions: ProviderOptions | null | undefined,
 ): string | null {
@@ -89,6 +89,20 @@ function getSelectedAgentValue(
   return selectedAgent && selectedAgent.length > 0 && !isBuiltInModeAgent(provider, selectedAgent)
     ? selectedAgent
     : defaultAgent;
+}
+
+/** The provider option that stores the effort level, when the descriptor does not name it. */
+export function resolveEffortOptionId(provider: ProviderKind, descriptorId: string | undefined) {
+  return (
+    descriptorId ??
+    (provider === "kilo" || provider === "opencode"
+      ? "variant"
+      : provider === "pi" || provider === "gemini"
+        ? "thinkingLevel"
+        : provider === "claudeAgent"
+          ? "effort"
+          : "reasoningEffort")
+  );
 }
 
 function findAgentLabel(
@@ -342,17 +356,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         onSelectionComplete?.();
         return;
       }
-      const optionId =
-        primarySelectDescriptor?.id ??
-        (provider === "kilo" || provider === "opencode"
-          ? "variant"
-          : provider === "pi"
-            ? "thinkingLevel"
-            : provider === "claudeAgent"
-              ? "effort"
-              : provider === "gemini"
-                ? "thinkingLevel"
-                : "reasoningEffort");
+      const optionId = resolveEffortOptionId(provider, primarySelectDescriptor?.id);
       commitTrait(buildProviderOptionPatch(provider, optionId, nextOption.value));
     },
     [

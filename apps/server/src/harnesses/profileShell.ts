@@ -18,6 +18,7 @@ const COMMANDS = {
   gemini: "gemini",
   codebuddy: "codebuddy",
   pi: "pi",
+  muse: "muse",
 } as const;
 
 export async function prepareProfileShell(input: {

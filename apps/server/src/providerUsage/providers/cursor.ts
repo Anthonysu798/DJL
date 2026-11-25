@@ -1,7 +1,7 @@
 // FILE: providerUsage/providers/cursor.ts
-// Purpose: Live Cursor usage fetcher. Reads the Cursor access token from its VS Code-style
-// state.vscdb (key cursorAuth/accessToken) or the macOS keychain ("cursor-access-token")
-// read-only, then calls the Cursor DashboardService (Connect RPC) for the current billing
+// Purpose: Live Cursor usage fetcher. Reads the cursor-agent token from the macOS keychain
+// ("cursor-access-token") and the editor's state.vscdb (key cursorAuth/accessToken),
+// read-only, using the first that is unexpired and accepted, then calls the Cursor DashboardService (Connect RPC) for the current billing
 // period usage + credit grants. Reference: openusage plugins/cursor/plugin.js.
 
 import nodePath from "node:path";
@@ -48,22 +48,28 @@ function stateDbPaths(ctx: ProviderUsageContext): string[] {
   return [nodePath.join(ctx.homeDir, ".config", ...segments)];
 }
 
-async function resolveCursorAuth(ctx: ProviderUsageContext): Promise<CursorAuth | null> {
-  for (const dbPath of stateDbPaths(ctx)) {
-    const values = await readItemTableValues({ dbPath, keys: [ACCESS_TOKEN_KEY, PLAN_KEY] });
-    const accessToken = asString(values[ACCESS_TOKEN_KEY]);
-    if (accessToken) {
-      const plan = asString(values[PLAN_KEY]);
-      return { accessToken, ...(plan ? { plan } : {}) };
-    }
-  }
-
+// The cursor-agent CLI login (Keychain) comes first: that is the account DJL runs. The Cursor
+// editor's own token is a fallback, and a stale editor token must never hide a valid CLI one.
+async function resolveCursorAuthCandidates(ctx: ProviderUsageContext): Promise<CursorAuth[]> {
+  const candidates: CursorAuth[] = [];
   const keychain = await readKeychainPassword({
     service: KEYCHAIN_SERVICE,
     platform: ctx.platform,
   });
-  const token = keychain ? asString(keychain) : undefined;
-  return token ? { accessToken: token } : null;
+  const keychainToken = keychain ? asString(keychain) : undefined;
+  if (keychainToken) {
+    candidates.push({ accessToken: keychainToken });
+  }
+
+  for (const dbPath of stateDbPaths(ctx)) {
+    const values = await readItemTableValues({ dbPath, keys: [ACCESS_TOKEN_KEY, PLAN_KEY] });
+    const accessToken = asString(values[ACCESS_TOKEN_KEY]);
+    if (accessToken && accessToken !== keychainToken) {
+      const plan = asString(values[PLAN_KEY]);
+      candidates.push({ accessToken, ...(plan ? { plan } : {}) });
+    }
+  }
+  return candidates;
 }
 
 function cursorHeaders(accessToken: string): Record<string, string> {
@@ -137,61 +143,76 @@ export function parseCursorUsage(input: {
   });
 }
 
+async function fetchCursorUsage(auth: CursorAuth, nowMs: number) {
+  const usageResult = await fetchJson({
+    url: USAGE_URL,
+    method: "POST",
+    headers: cursorHeaders(auth.accessToken),
+    body: {},
+  });
+  if (isAuthFailureStatus(usageResult.status)) {
+    return null;
+  }
+  if (!usageResult.ok) {
+    return errorSnapshot(
+      "cursor",
+      nowMs,
+      SOURCE,
+      `Cursor usage request failed (${usageResult.status}).`,
+    );
+  }
+
+  // Credit grants are best-effort — absence shouldn't fail the snapshot.
+  let creditsJson: unknown;
+  try {
+    const creditsResult = await fetchJson({
+      url: CREDITS_URL,
+      method: "POST",
+      headers: cursorHeaders(auth.accessToken),
+      body: {},
+    });
+    if (creditsResult.ok) {
+      creditsJson = creditsResult.json;
+    }
+  } catch {
+    creditsJson = undefined;
+  }
+
+  return parseCursorUsage({
+    usage: usageResult.json,
+    credits: creditsJson,
+    nowMs,
+    ...(auth.plan ? { planName: titleCase(auth.plan) } : {}),
+  });
+}
+
 export const cursorUsageFetcher: ProviderUsageFetcher = {
   provider: "cursor",
   async fetch(ctx) {
-    const auth = await resolveCursorAuth(ctx);
-    if (!auth) {
-      return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
-    }
-    const expMs = decodeJwtExpMs(auth.accessToken);
-    if (expMs !== null && expMs <= ctx.nowMs) {
-      return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
-    }
-
-    try {
-      const usageResult = await fetchJson({
-        url: USAGE_URL,
-        method: "POST",
-        headers: cursorHeaders(auth.accessToken),
-        body: {},
-      });
-      if (isAuthFailureStatus(usageResult.status)) {
-        return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
+    let lastError: ReturnType<typeof errorSnapshot> | null = null;
+    for (const auth of await resolveCursorAuthCandidates(ctx)) {
+      const expMs = decodeJwtExpMs(auth.accessToken);
+      if (expMs !== null && expMs <= ctx.nowMs) {
+        continue;
       }
-      if (!usageResult.ok) {
-        return errorSnapshot(
+      try {
+        const snapshot = await fetchCursorUsage(auth, ctx.nowMs);
+        if (snapshot === null) {
+          continue;
+        }
+        if ((snapshot.status ?? "ok") === "ok") {
+          return snapshot;
+        }
+        lastError = snapshot;
+      } catch {
+        lastError = errorSnapshot(
           "cursor",
           ctx.nowMs,
           SOURCE,
-          `Cursor usage request failed (${usageResult.status}).`,
+          "Could not reach the Cursor dashboard.",
         );
       }
-
-      // Credit grants are best-effort — absence shouldn't fail the snapshot.
-      let creditsJson: unknown;
-      try {
-        const creditsResult = await fetchJson({
-          url: CREDITS_URL,
-          method: "POST",
-          headers: cursorHeaders(auth.accessToken),
-          body: {},
-        });
-        if (creditsResult.ok) {
-          creditsJson = creditsResult.json;
-        }
-      } catch {
-        creditsJson = undefined;
-      }
-
-      return parseCursorUsage({
-        usage: usageResult.json,
-        credits: creditsJson,
-        nowMs: ctx.nowMs,
-        ...(auth.plan ? { planName: titleCase(auth.plan) } : {}),
-      });
-    } catch {
-      return errorSnapshot("cursor", ctx.nowMs, SOURCE, "Could not reach the Cursor dashboard.");
     }
+    return lastError ?? needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
   },
 };

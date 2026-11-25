@@ -52,6 +52,7 @@ import { DocumentIntelligenceLive } from "./work/Layers/DocumentIntelligence";
 import { DocumentRendererLive } from "./work/Layers/DocumentRenderer";
 import { ProjectMemoryLive } from "./memory/Layers/ProjectMemory";
 import { MemoryReactorLive } from "./orchestration/Layers/MemoryReactor";
+import { AccountFailoverReactorLive } from "./orchestration/Layers/AccountFailoverReactor";
 import { AiDetectorServiceLive } from "./aiDetector/Layers/AiDetectorService";
 import { GroupServiceLive } from "./groups/Layers/GroupService";
 import { GroupRepositoryLive } from "./persistence/Layers/GroupRepository";
@@ -91,6 +92,10 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(projectMemoryLayer),
   );
+  const accountFailoverReactorLayer = AccountFailoverReactorLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+    Layer.provideMerge(ServerSettingsLive),
+  );
   const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(studioOutputReactorLayer),
@@ -113,6 +118,7 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(studioOutputReactorLayer),
     Layer.provideMerge(workPreparationQueueLayer),
     Layer.provideMerge(memoryReactorLayer),
+    Layer.provideMerge(accountFailoverReactorLayer),
   );
   const threadDeletionReactorLayer = ThreadDeletionReactorLive.pipe(
     Layer.provideMerge(profileStatsArchiveLayer),

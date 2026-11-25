@@ -20,6 +20,8 @@ const SIGN_IN_GUIDE: Record<HarnessId, SignInGuide> = {
   cursor: "browser",
   grok: "browser",
   kimi: "browser",
+  // `muse login` opens the browser with its device code itself.
+  muse: "browser",
   gemini: "pick",
   iflow: "pick",
   qwen: "pick",

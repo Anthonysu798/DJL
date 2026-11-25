@@ -57,6 +57,7 @@ const TECHNICAL_ALLOWLIST = new Set([
   "Qwen Code",
   "GitHub Copilot",
   "CodeBuddy Code",
+  "Muse Code",
   "Droid",
   "Kilo",
   "Pi",

@@ -14,6 +14,18 @@ export const string = (value: unknown): string => {
   if (typeof value !== "string" || !value) throw new Error("Expected nonempty protocol string");
   return value;
 };
+// JSON-RPC puts the useful reason in `data.message` ("Invalid params" alone tells nobody anything).
+function nativeErrorMessage(error: JsonObject): string {
+  const message = typeof error.message === "string" ? error.message : "Native protocol error";
+  const data = error.data;
+  const detail =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? (data as JsonObject).message
+      : undefined;
+  return typeof detail === "string" && detail && detail !== message
+    ? `${message}: ${detail}`
+    : message;
+}
 export function bounded<T>(promise: Promise<T>, milliseconds = 30_000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(
@@ -83,10 +95,7 @@ export class NativeRpc {
             if (!waiter) continue;
             clearTimeout(waiter.timer);
             this.pending.delete(message.id);
-            if (message.error)
-              waiter.reject(
-                new Error(String(object(message.error).message ?? "Native protocol error")),
-              );
+            if (message.error) waiter.reject(new Error(nativeErrorMessage(object(message.error))));
             else waiter.resolve(message.result);
           } else throw new Error("Invalid native protocol envelope");
         }

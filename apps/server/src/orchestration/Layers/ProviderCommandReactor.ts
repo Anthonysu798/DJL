@@ -2,7 +2,12 @@ import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { computerApprovalGate } from "../../computer/ComputerApprovalGate";
 import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
 import { executeComputerTool } from "../../work/computerTools";
-import { DJL_PLUGIN_MENTION_PREFIX, resolveBuiltInPluginReferences } from "@djl/contracts";
+import {
+  DEFAULT_CLI_ACCOUNT_ID,
+  DJL_PLUGIN_MENTION_PREFIX,
+  resolveBuiltInPluginReferences,
+} from "@djl/contracts";
+import { STARTER_SKILL_PATH_PREFIX } from "@djl/starter-skills";
 import { resolveDjlPluginMentions } from "../../plugins/pluginMentions";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { listThreadCampaigns } from "../../marketing/chatTools";
@@ -84,6 +89,7 @@ import {
   resolveServerMentions,
 } from "../../servers/serverMentionPrompt.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
+import { resolveStarterSkillReferences } from "../../provider/starterSkills.ts";
 import {
   TextGeneration,
   type BranchNameGenerationInput,
@@ -1172,10 +1178,47 @@ const make = Effect.gen(function* () {
         : [],
     );
     input = resolveDjlPluginMentions(input);
+    if (input.skills?.some((skill) => skill.path.startsWith(STARTER_SKILL_PATH_PREFIX))) {
+      // New-chat topics attach DJL's bundled skills by id; give the inliner real files.
+      const starter = resolveStarterSkillReferences(input.skills);
+      if (starter.missing.length > 0) {
+        yield* Effect.logWarning("bundled starter skills not found", {
+          threadId: input.threadId,
+          skills: starter.missing,
+        });
+      }
+      input = { ...input, skills: starter.skills };
+    }
     yield* Effect.promise(() => beginComputerUseTurn(input.threadId, { allowActivityHistory }));
     const thread = yield* resolveThread(input.threadId);
     if (!thread) {
       return;
+    }
+    // A different subscription account keeps its sessions in another folder, so the old
+    // session cannot continue there: start fresh on the new account and carry the chat over.
+    const requestedAccountId = chatAccountIdOf(input.providerOptions);
+    const accountProvider = input.providerOptions?.codex?.cliAccountId ? "codex" : "claudeAgent";
+    // A chat that never chose an account runs on the app-wide one (or the normal sign-in).
+    const previousAccountId =
+      chatAccountIdOf(threadProviderOptions.get(input.threadId)) ??
+      (requestedAccountId !== undefined
+        ? ((yield* serverSettings.getSettings).cliAccounts.active[accountProvider] ??
+          DEFAULT_CLI_ACCOUNT_ID)
+        : undefined);
+    if (
+      requestedAccountId !== undefined &&
+      previousAccountId !== undefined &&
+      requestedAccountId !== previousAccountId
+    ) {
+      yield* providerService
+        .stopSession({ threadId: input.threadId })
+        .pipe(Effect.catch(() => Effect.void));
+      freshSessionContextBootstrapThreadIds.add(input.threadId);
+      yield* Effect.logInfo("provider command reactor switched chat account", {
+        threadId: input.threadId,
+        from: previousAccountId,
+        to: requestedAccountId,
+      });
     }
     const activeSessionBeforeEnsure = yield* providerService
       .listSessions()
@@ -2898,5 +2941,10 @@ const make = Effect.gen(function* () {
     drain: worker.drain,
   } satisfies ProviderCommandReactorShape;
 });
+
+/** The subscription account a turn asked for (Claude Code / Codex options), if any. */
+export function chatAccountIdOf(options: ProviderStartOptions | undefined): string | undefined {
+  return options?.codex?.cliAccountId ?? options?.claudeAgent?.cliAccountId;
+}
 
 export const ProviderCommandReactorLive = Layer.effect(ProviderCommandReactor, make);

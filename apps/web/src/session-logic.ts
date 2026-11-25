@@ -78,6 +78,7 @@ export interface WorkLogEntry {
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
   siteReady?: WorkLogSiteReady;
+  accountSwitch?: WorkLogAccountSwitch;
   // Source activity kind, kept so the timeline can pick a kind-specific icon
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
@@ -86,6 +87,15 @@ export interface WorkLogEntry {
 
 // Created-automation rows render as a dedicated card (icon + name + cadence + Open)
 // instead of a plain tool-call line, so carry just the fields that card needs.
+/** An automatic move to another subscription account after the previous one hit its limit. */
+export interface WorkLogAccountSwitch {
+  provider: string;
+  fromName: string;
+  toName: string;
+  toEmail: string | null;
+  resetsAt: string | null;
+}
+
 export interface WorkLogAutomation {
   id: string;
   name: string;
@@ -862,7 +872,7 @@ function shouldKeepActivityForWorkLog(
 
   // Created-automation milestones are thread-scoped and carry no provider turn id;
   // keep them so the transcript card survives once the thread has turn-stamped messages.
-  if (activity.kind === "automation.created") {
+  if (activity.kind === "automation.created" || activity.kind === "account.switched") {
     return true;
   }
   // The Website tool's Publish card has no turn id either (it comes from a tool server).
@@ -1028,6 +1038,15 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const subagentAction = extractCollabAction(payload, subagents);
   if (subagentAction) {
     entry.subagentAction = subagentAction;
+  }
+  if (activity.kind === "account.switched" && payload) {
+    entry.accountSwitch = {
+      provider: typeof payload.provider === "string" ? payload.provider : "",
+      fromName: typeof payload.fromName === "string" ? payload.fromName : "",
+      toName: typeof payload.toName === "string" ? payload.toName : "",
+      toEmail: typeof payload.toEmail === "string" ? payload.toEmail : null,
+      resetsAt: typeof payload.resetsAt === "string" ? payload.resetsAt : null,
+    };
   }
   if (activity.kind === "automation.created") {
     const automation = extractWorkLogAutomation(payload);

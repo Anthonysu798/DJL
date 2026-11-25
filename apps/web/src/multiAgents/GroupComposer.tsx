@@ -12,6 +12,7 @@ import {
   type UploadChatAttachment,
 } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
+import { resolveSkillOrigin, skillGroupKey } from "~/lib/skillOrigin";
 import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -164,6 +165,7 @@ export function GroupComposer(props: {
           id: `skill:${skill.path}`,
           type: "skill",
           skill,
+          group: skillGroupKey(resolveSkillOrigin(skill), "group"),
           label: skill.interface?.displayName ?? skill.name,
           description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
         }))

@@ -18,7 +18,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   IconCheck,
-  IconBolt,
   IconDownload,
   IconExternalLink,
   IconUpload,
@@ -45,7 +44,7 @@ import {
   type Stored,
 } from "./client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 gsap.registerPlugin(useGSAP);
 
 export function MarketingChatCards({
@@ -57,7 +56,6 @@ export function MarketingChatCards({
   isWorking: boolean;
   onPrompt?: (text: string) => Promise<boolean>;
 }) {
-  const { t } = useTranslation("chat");
   const query = useQuery({
     queryKey: ["marketing-chat", threadId],
     queryFn: () => loadThreadMarketing(threadId),
@@ -84,16 +82,6 @@ export function MarketingChatCards({
       aria-label="Marketing previews"
       className="mx-auto w-full max-w-3xl space-y-4 px-5 py-4"
     >
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          render={<Link to="/social/$socialThreadId" params={{ socialThreadId: threadId }} />}
-        >
-          <IconBolt size={15} aria-hidden="true" />
-          {t("socialAgent.open", { defaultValue: "Social tools" })}
-        </Button>
-      </div>
       <MultiPostChatCard threadId={threadId} onSeeAll={() => open("queue")} />
       {query.data?.campaigns.map((c) => (
         <MarketingChatCard

@@ -21,7 +21,15 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { TFunction } from "i18next";
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { formatLocaleRelativeTime } from "../i18n/intl";
 
@@ -70,6 +78,7 @@ import {
   SettingsSection,
 } from "../components/settings/SettingsPanelPrimitives";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
+import { CliAccountsSettingsPanel } from "../components/settings/CliAccountsSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { RemoteSettingsPanel } from "../components/settings/RemoteSettingsPanel";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
@@ -126,8 +135,10 @@ import {
 } from "../notifications/taskCompletion";
 import {
   normalizeSettingsSection,
+  settingsMergedSectionAnchorId,
   SETTINGS_NAV_ITEMS,
   SETTINGS_TARGETS,
+  type SettingsSectionId,
 } from "../settingsNavigation";
 import {
   SETTINGS_CARD_ROW_CLASS_NAME,
@@ -436,6 +447,8 @@ function SettingsRouteView() {
     qwen: Boolean(settings.qwenBinaryPath),
     copilot: Boolean(settings.copilotBinaryPath),
     codebuddy: Boolean(settings.codebuddyBinaryPath),
+    doubao: Boolean(settings.doubaoBinaryPath),
+    deepseek: Boolean(settings.deepseekBinaryPath),
     droid: Boolean(settings.droidBinaryPath),
     kilo: Boolean(settings.kiloBinaryPath || settings.kiloServerUrl || settings.kiloServerPassword),
     opencode: Boolean(
@@ -445,6 +458,7 @@ function SettingsRouteView() {
       settings.openCodeServerPassword,
     ),
     pi: Boolean(settings.piBinaryPath || settings.piAgentDir),
+    muse: Boolean(settings.museBinaryPath),
     djlCloud: false,
     group: false,
   });
@@ -463,10 +477,13 @@ function SettingsRouteView() {
     qwen: "",
     copilot: "",
     codebuddy: "",
+    doubao: "",
+    deepseek: "",
     droid: "",
     kilo: "",
     opencode: "",
     pi: "",
+    muse: "",
     djlCloud: "",
     group: "",
   });
@@ -544,6 +561,18 @@ function SettingsRouteView() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSection, settingsTarget]);
+  // Links to a page that is now a section of another page land on that section.
+  const requestedSection = typeof routeSearch.section === "string" ? routeSearch.section : null;
+  useEffect(() => {
+    const merged = SETTINGS_NAV_ITEMS.find((item) => item.id === requestedSection);
+    if (!merged?.mergedInto || settingsTarget) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(settingsMergedSectionAnchorId(merged.id))
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [requestedSection, settingsTarget]);
   const managedWorktrees = serverWorktreesQuery.data?.worktrees;
   const worktreesByWorkspaceRoot = useMemo(() => {
     type WorktreeGroup = {
@@ -840,10 +869,13 @@ function SettingsRouteView() {
       qwen: false,
       copilot: false,
       codebuddy: false,
+      doubao: false,
+      deepseek: false,
       droid: false,
       kilo: false,
       opencode: false,
       pi: false,
+      muse: false,
       djlCloud: false,
       group: false,
     });
@@ -859,10 +891,13 @@ function SettingsRouteView() {
       qwen: "",
       copilot: "",
       codebuddy: "",
+      doubao: "",
+      deepseek: "",
       droid: "",
       kilo: "",
       opencode: "",
       pi: "",
+      muse: "",
       djlCloud: "",
       group: "",
     });
@@ -1536,7 +1571,7 @@ function SettingsRouteView() {
                 void changeRendererLocale(language);
               }}
               ariaLabel={t("appearance.language.ariaLabel")}
-              triggerClassName="w-full sm:w-52"
+              triggerClassName="w-full @md:w-52"
               valueContent={
                 settings.language === "system"
                   ? t("appearance.language.options.system")
@@ -1584,7 +1619,7 @@ function SettingsRouteView() {
                 updateSettings({ timestampFormat: value });
               }}
               ariaLabel={t("appearance.timeFormat.ariaLabel")}
-              triggerClassName="w-full sm:w-40"
+              triggerClassName="w-full @md:w-40"
               valueContent={timestampFormatLabels[settings.timestampFormat]}
             >
               <SelectItem hideIndicator value="locale">
@@ -1695,7 +1730,7 @@ function SettingsRouteView() {
               ) : null
             }
             control={
-              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+              <div className="flex w-full items-center justify-end gap-2 @md:w-auto">
                 <Input
                   type="number"
                   size="sm"
@@ -1704,7 +1739,7 @@ function SettingsRouteView() {
                   step={1}
                   inputMode="numeric"
                   variant="soft"
-                  className="w-full text-right sm:w-20"
+                  className="w-full text-right @md:w-20"
                   value={String(settings.chatFontSizePx)}
                   onChange={(event) => {
                     const nextValue = event.target.value.trim();
@@ -1737,7 +1772,7 @@ function SettingsRouteView() {
               ) : null
             }
             control={
-              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+              <div className="flex w-full items-center justify-end gap-2 @md:w-auto">
                 <Input
                   type="number"
                   size="sm"
@@ -1746,7 +1781,7 @@ function SettingsRouteView() {
                   step={1}
                   inputMode="numeric"
                   variant="soft"
-                  className="w-full text-right sm:w-20"
+                  className="w-full text-right @md:w-20"
                   value={String(settings.terminalFontSizePx)}
                   onChange={(event) => {
                     const nextValue = event.target.value.trim();
@@ -1779,7 +1814,7 @@ function SettingsRouteView() {
               ) : null
             }
             control={
-              <div className="flex w-full items-center justify-end sm:w-auto">
+              <div className="flex w-full items-center justify-end @md:w-auto">
                 <Autocomplete
                   items={visibleTerminalFontFamilySuggestions}
                   mode="none"
@@ -1799,7 +1834,7 @@ function SettingsRouteView() {
                     spellCheck={false}
                     autoComplete="off"
                     placeholder={t("appearance.terminalFont.placeholder")}
-                    className="w-full sm:w-56"
+                    className="w-full @md:w-56"
                     aria-label={t("appearance.terminalFont.ariaLabel")}
                   />
                   <AutocompletePopup className="w-56 min-w-56 font-system-ui">
@@ -1873,7 +1908,7 @@ function SettingsRouteView() {
             ) : null
           }
           control={
-            <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
+            <div className="flex w-full items-center gap-2 @md:w-auto @md:justify-end">
               <Button size="xs" variant="outline" onClick={() => void sendTestNotification()}>
                 {t("notifications.desktop.test")}
               </Button>
@@ -2008,7 +2043,7 @@ function SettingsRouteView() {
                   className={SETTINGS_CARD_ROW_CLASS_NAME}
                   data-slot="settings-row"
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-4 @md:flex-row @md:items-start @md:justify-between">
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="space-y-0.5">
                         <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
@@ -2050,7 +2085,7 @@ function SettingsRouteView() {
                       </div>
                     </div>
 
-                    <div className="flex w-full shrink-0 flex-col items-end gap-2 sm:w-auto">
+                    <div className="flex w-full shrink-0 flex-col items-end gap-2 @md:w-auto">
                       <Button
                         size="xs"
                         variant="destructive"
@@ -2420,10 +2455,52 @@ function SettingsRouteView() {
     </div>
   );
 
+  // A former page shown as a section of the page it was merged into.
+  const renderMergedSection = (
+    section: SettingsSectionId,
+    content: ReactNode,
+    // `describe: false` when the panel opens with its own explanation.
+    options: { readonly first?: boolean; readonly describe?: boolean } = {},
+  ) => {
+    const item = SETTINGS_NAV_ITEMS.find((candidate) => candidate.id === section);
+    if (!item || (item.desktopOnly && !isElectron)) return null;
+    return (
+      <section
+        id={settingsMergedSectionAnchorId(section)}
+        aria-labelledby={`${settingsMergedSectionAnchorId(section)}-title`}
+        className={cn(
+          "scroll-mt-6 space-y-5",
+          !options.first && "border-t border-[color:var(--color-border)] pt-10",
+        )}
+      >
+        <div>
+          <h2
+            id={`${settingsMergedSectionAnchorId(section)}-title`}
+            className="text-lg font-semibold tracking-tight text-foreground"
+          >
+            {t(item.labelKey)}
+          </h2>
+          {options.describe === false ? null : (
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {t(item.descriptionKey)}
+            </p>
+          )}
+        </div>
+        {content}
+      </section>
+    );
+  };
+
   const renderActivePanel = () => {
     switch (activeSection) {
       case "general":
-        return renderGeneralPanel();
+        return (
+          <div className="space-y-12">
+            {renderGeneralPanel()}
+            {renderMergedSection("notifications", renderNotificationsPanel())}
+            {renderMergedSection("behavior", renderBehaviorPanel())}
+          </div>
+        );
       case "appearance":
         return renderAppearancePanel();
       case "computer":
@@ -2460,13 +2537,19 @@ function SettingsRouteView() {
         return renderArchivedPanel();
       case "accounts":
         return (
-          <div className="space-y-6">
-            {settingsTarget === SETTINGS_TARGETS.providerUpdates
-              ? renderProviderUpdatesSection()
-              : null}
-            <HarnessAccountsPanel
-              revealPlans={settingsTarget === SETTINGS_TARGETS.modelProviders}
-            />
+          <div className="space-y-12">
+            {renderMergedSection("ai-accounts", <CliAccountsSettingsPanel />, {
+              first: true,
+              describe: false,
+            })}
+            <div className="space-y-6 border-t border-[color:var(--color-border)] pt-10">
+              {settingsTarget === SETTINGS_TARGETS.providerUpdates
+                ? renderProviderUpdatesSection()
+                : null}
+              <HarnessAccountsPanel
+                revealPlans={settingsTarget === SETTINGS_TARGETS.modelProviders}
+              />
+            </div>
           </div>
         );
       case "local-models":
@@ -2476,13 +2559,27 @@ function SettingsRouteView() {
       case "profile":
         return <ProfileSettingsPanel />;
       case "plugins":
-        return <PluginsSettingsPanel />;
+        return (
+          <div className="space-y-12">
+            <PluginsSettingsPanel />
+            {renderMergedSection("skills", <SkillsSettingsPanel />)}
+          </div>
+        );
       case "skills":
         return <SkillsSettingsPanel />;
       case "usage":
         return <ProviderUsageSettingsPanel />;
+      case "ai-accounts":
+        return <CliAccountsSettingsPanel />;
       case "advanced":
-        return renderAdvancedPanel();
+        return (
+          <div className="space-y-12">
+            {renderAdvancedPanel()}
+            {renderMergedSection("worktrees", renderWorktreesPanel())}
+            {renderMergedSection("servers", <ServersSettingsPanel />)}
+            {renderMergedSection("shortcuts", <KeyboardShortcutsSettingsPanel />)}
+          </div>
+        );
       default:
         return null;
     }
@@ -2522,16 +2619,18 @@ function SettingsRouteView() {
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto">
             {activeSection === "remote" ? (
-              <div className="mx-auto w-full max-w-4xl px-5 pt-5 pb-10 sm:px-8">
+              <div className="@container mx-auto w-full max-w-4xl px-5 pt-5 pb-10 sm:px-8">
                 {renderActivePanel()}
               </div>
             ) : activeSection === "profile" ? (
               // Profile is a self-contained dashboard: it owns its own header (avatar,
               // name, share) so it skips the section title bar, and gets a slightly wider
               // pane than the form sections to fit the heatmap + two-column layout.
-              <div className="mx-auto w-full max-w-3xl px-6 py-8">{renderActivePanel()}</div>
+              <div className="@container mx-auto w-full max-w-3xl px-6 py-8">
+                {renderActivePanel()}
+              </div>
             ) : (
-              <div className="djl-settings-content mx-auto w-full max-w-[776px] px-6 pt-[72px] pb-12">
+              <div className="djl-settings-content @container mx-auto w-full max-w-[776px] px-6 pt-[72px] pb-12">
                 <div className="mb-12 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-[26px] font-semibold tracking-tight text-foreground">

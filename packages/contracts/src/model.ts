@@ -153,6 +153,12 @@ export const CopilotModelOptions = Schema.Struct({});
 export type CopilotModelOptions = typeof CopilotModelOptions.Type;
 export const CodeBuddyModelOptions = Schema.Struct({});
 export type CodeBuddyModelOptions = typeof CodeBuddyModelOptions.Type;
+export const DoubaoModelOptions = Schema.Struct({});
+export type DoubaoModelOptions = typeof DoubaoModelOptions.Type;
+export const DeepSeekModelOptions = Schema.Struct({});
+export type DeepSeekModelOptions = typeof DeepSeekModelOptions.Type;
+export const MuseModelOptions = Schema.Struct({});
+export type MuseModelOptions = typeof MuseModelOptions.Type;
 export const DjlCloudModelOptions = Schema.Struct({});
 export type DjlCloudModelOptions = typeof DjlCloudModelOptions.Type;
 
@@ -176,6 +182,9 @@ export const ProviderModelOptions = Schema.Struct({
   qwen: Schema.optional(QwenModelOptions),
   copilot: Schema.optional(CopilotModelOptions),
   codebuddy: Schema.optional(CodeBuddyModelOptions),
+  doubao: Schema.optional(DoubaoModelOptions),
+  deepseek: Schema.optional(DeepSeekModelOptions),
+  muse: Schema.optional(MuseModelOptions),
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
@@ -515,6 +524,69 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     {
       slug: "auto",
       name: "Auto",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  // ark-code-latest follows the model chosen in the Volcengine Ark console (including Auto).
+  doubao: [
+    {
+      slug: "ark-code-latest",
+      name: "Ark Code (console model)",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+    {
+      slug: "doubao-seed-2.0-code",
+      name: "Doubao Seed 2.0 Code",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  deepseek: [
+    {
+      slug: "deepseek-v4-pro",
+      name: "DeepSeek V4 Pro",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+    {
+      slug: "deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  // Muse lists its models after sign-in; "default" keeps the model Muse is configured with.
+  muse: [
+    {
+      slug: "default",
+      name: "Muse default",
       capabilities: {
         reasoningEffortLevels: [],
         supportsFastMode: false,
@@ -1040,6 +1112,9 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSl
   qwen: "qwen3-coder-plus",
   copilot: "auto",
   codebuddy: "default-model",
+  doubao: "ark-code-latest",
+  deepseek: "deepseek-v4-pro",
+  muse: "default",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
@@ -1063,6 +1138,9 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
   qwen: {},
   copilot: {},
   codebuddy: {},
+  doubao: {},
+  deepseek: {},
+  muse: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1211,6 +1289,9 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   qwen: "Qwen Code",
   copilot: "GitHub Copilot",
   codebuddy: "CodeBuddy Code",
+  doubao: "Doubao",
+  deepseek: "DeepSeek",
+  muse: "Muse Code",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

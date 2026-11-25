@@ -25,3 +25,16 @@ Package-level licenses retained inside vendored source trees continue to apply t
 ## MultiPost
 
 DJL embeds the Apache-2.0 public components of leaperone/MultiPost-Extension, commit `5522ca01100a58572de3a652aebd7851f5fa648a`. Original sources and hashes are retained in `packages/multipost/vendor`; DJL adds a separate browser host and submission gating. Proprietary MultiPost Agent components are not included. See `docs/licenses/MULTIPOST_LICENSE`. The Aliyun adapter uses Turndown 7.2.0 (MIT); its license is retained in `packages/multipost/vendor/TURNDOWN_LICENSE`.
+
+## Starter skills
+
+The new-chat topics attach agent skills bundled from these repositories, each copied unmodified at a pinned commit with its license file kept inside the skill folder (`packages/starter-skills/skills/<id>`, listed with commits and hashes in `packages/starter-skills/sources.json`):
+
+- anthropics/skills (Apache-2.0): docx, xlsx, pptx, theme-factory, frontend-design.
+- anthropics/knowledge-work-plugins (Apache-2.0): build-dashboard.
+- coreyhaines31/marketingskills (MIT): copy-editing.
+- addyosmani/agent-skills (MIT): frontend-ui-engineering, code-review-and-quality, documentation-and-adrs.
+- obra/superpowers (MIT): systematic-debugging.
+- github/awesome-copilot (MIT): create-readme.
+
+The `djl-*` skills in the same folder are DJL's own and share DJL's MIT license.

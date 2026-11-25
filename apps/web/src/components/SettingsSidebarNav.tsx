@@ -23,6 +23,7 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import {
   SETTINGS_NAV_GROUPS,
   SETTINGS_NAV_ITEMS,
+  SETTINGS_PAGE_ITEMS,
   type SettingsSectionId,
 } from "../settingsNavigation";
 import {
@@ -202,7 +203,7 @@ export function SettingsSidebarNav(props: {
       ) : (
         <nav aria-label={t("navigation.sectionsAriaLabel")} className="flex flex-col">
           {SETTINGS_NAV_GROUPS.map((group) => {
-            const items = SETTINGS_NAV_ITEMS.filter(
+            const items = SETTINGS_PAGE_ITEMS.filter(
               (item) => item.group === group.id && (!item.desktopOnly || isElectron),
             );
             if (items.length === 0) {

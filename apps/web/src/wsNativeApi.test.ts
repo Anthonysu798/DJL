@@ -306,6 +306,9 @@ describe("wsNativeApi", () => {
           qwen: { enabled: true, binaryPath: "qwen", customModels: [] },
           copilot: { enabled: true, binaryPath: "copilot", customModels: [] },
           codebuddy: { enabled: true, binaryPath: "codebuddy", customModels: [] },
+          doubao: { enabled: true, binaryPath: "claude", region: "china", customModels: [] },
+          deepseek: { enabled: true, binaryPath: "claude", customModels: [] },
+          muse: { enabled: true, binaryPath: "muse", customModels: [] },
           droid: { enabled: true, binaryPath: "droid", customModels: [] },
           kilo: {
             enabled: true,
@@ -327,6 +330,7 @@ describe("wsNativeApi", () => {
         },
         skills: { disabled: [] },
         localModels: { harnesses: { claudeAgent: true, codex: true, opencode: true } },
+        cliAccounts: { accounts: [], active: {}, autoSwitch: true },
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);

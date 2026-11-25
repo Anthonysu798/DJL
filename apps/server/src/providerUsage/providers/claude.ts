@@ -13,12 +13,7 @@ import type {
   ServerProviderUsageSnapshot,
 } from "@djl/contracts";
 
-import {
-  decodeKeychainJson,
-  readJsonFile,
-  readKeychainPassword,
-  refreshOAuthAccessToken,
-} from "../credentials";
+import { decodeKeychainJson, readJsonFile, readKeychainPassword } from "../credentials";
 import { fetchJson, isAuthFailureStatus, isRateLimitStatus, parseRetryAfterMs } from "../http";
 import {
   asFiniteNumber,
@@ -37,12 +32,9 @@ import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
 
 const SOURCE = "claude-oauth-usage";
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
-const REFRESH_URL = "https://platform.claude.com/v1/oauth/token";
-const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
-const SCOPES =
-  "user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload";
-const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+// Treat tokens this close to expiry as expired, so the CLI gets a chance to refresh first.
+const EXPIRY_BUFFER_MS = 60 * 1000;
 
 interface ClaudeCreds {
   accessToken: string;
@@ -77,7 +69,35 @@ function readClaudeCreds(record: Record<string, unknown> | null): ClaudeCreds | 
   };
 }
 
+// Claude Code names the Keychain item for a custom CLAUDE_CONFIG_DIR after the folder:
+// `Claude Code-credentials-` + the first 8 hex chars of sha256(the NFC-normalized path).
+export function claudeKeychainServiceForConfigDir(configDir: string): string {
+  const digest = createHash("sha256").update(configDir.normalize("NFC")).digest("hex");
+  return `${KEYCHAIN_SERVICE}-${digest.slice(0, 8)}`;
+}
+
+async function resolveAccountClaudeCreds(
+  ctx: ProviderUsageContext,
+  configDir: string,
+): Promise<ClaudeCreds[]> {
+  const candidates: ClaudeCreds[] = [];
+  const fromFile = readClaudeCreds(
+    asRecord(await readJsonFile(nodePath.join(configDir, ".credentials.json"))),
+  );
+  if (fromFile) candidates.push(fromFile);
+  const keychainAccount = asString(ctx.env.USER) ?? asString(ctx.env.LOGNAME);
+  const keychain = await readKeychainPassword({
+    service: claudeKeychainServiceForConfigDir(configDir),
+    ...(keychainAccount !== undefined ? { account: keychainAccount } : {}),
+    platform: ctx.platform,
+  });
+  const fromKeychain = keychain ? readClaudeCreds(asRecord(decodeKeychainJson(keychain))) : null;
+  if (fromKeychain) candidates.push(fromKeychain);
+  return candidates;
+}
+
 async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<ClaudeCreds[]> {
+  if (ctx.accountDir) return resolveAccountClaudeCreds(ctx, ctx.accountDir);
   const candidates: ClaudeCreds[] = [];
   const paths: string[] = [];
   if (ctx.env.CLAUDE_CONFIG_DIR) {
@@ -123,8 +143,8 @@ function hasProfileScope(creds: ClaudeCreds): boolean {
   return creds.scopes.length === 0 || creds.scopes.includes("user:profile");
 }
 
-function shouldRefreshClaudeCreds(creds: ClaudeCreds, nowMs: number): boolean {
-  return creds.expiresAtMs !== undefined && creds.expiresAtMs <= nowMs + REFRESH_BUFFER_MS;
+function isClaudeCredsExpired(creds: ClaudeCreds, nowMs: number): boolean {
+  return creds.expiresAtMs !== undefined && creds.expiresAtMs <= nowMs + EXPIRY_BUFFER_MS;
 }
 
 function claudePlanName(creds: ClaudeCreds): string | undefined {
@@ -144,31 +164,6 @@ function claudeCredentialCacheKey(ctx: ProviderUsageContext, creds: ClaudeCreds)
   const stableSecret = creds.refreshToken ?? creds.accessToken;
   const digest = createHash("sha256").update(stableSecret).digest("base64url").slice(0, 18);
   return `${ctx.homeDir}:${digest}`;
-}
-
-function applyRefreshedClaudeCreds(
-  creds: ClaudeCreds,
-  refreshed: { accessToken: string; refreshToken?: string; expiresAtMs?: number },
-): ClaudeCreds {
-  return {
-    ...creds,
-    accessToken: refreshed.accessToken,
-    refreshToken: refreshed.refreshToken ?? creds.refreshToken,
-    expiresAtMs: refreshed.expiresAtMs ?? creds.expiresAtMs,
-  };
-}
-
-async function refreshClaudeCreds(creds: ClaudeCreds): Promise<ClaudeCreds | null> {
-  if (!creds.refreshToken) {
-    return null;
-  }
-  const refreshed = await refreshOAuthAccessToken({
-    refreshUrl: REFRESH_URL,
-    refreshToken: creds.refreshToken,
-    clientId: CLIENT_ID,
-    scope: SCOPES,
-  });
-  return refreshed ? applyRefreshedClaudeCreds(creds, refreshed) : null;
 }
 
 export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName?: string }) {
@@ -241,6 +236,101 @@ export function __resetClaudeUsageRateLimitState(): void {
   claudeRateLimit.reset();
 }
 
+type ClaudeAttempt =
+  | { readonly kind: "done"; readonly snapshot: ServerProviderUsageSnapshot }
+  // Every candidate was expired or rejected: the Claude CLI may be able to refresh itself.
+  | { readonly kind: "auth"; readonly fallback: ServerProviderUsageSnapshot | null };
+
+async function attemptClaudeUsage(
+  ctx: ProviderUsageContext,
+  candidates: ReadonlyArray<ClaudeCreds>,
+): Promise<ClaudeAttempt> {
+  let inferenceOnlySnapshot: ServerProviderUsageSnapshot | null = null;
+  let lastErrorSnapshot: ServerProviderUsageSnapshot | null = null;
+  let authFailed = false;
+
+  for (const creds of candidates) {
+    if (!hasProfileScope(creds)) {
+      const planName = claudePlanName(creds);
+      inferenceOnlySnapshot = buildSnapshot({
+        provider: "claudeAgent",
+        nowMs: ctx.nowMs,
+        status: "ok",
+        source: SOURCE,
+        ...(planName ? { planName } : {}),
+      });
+      continue;
+    }
+
+    // Never redeem Claude Code's refresh token here: it is single-use and rotating, so
+    // refreshing outside the CLI logs the CLI itself out. Expired tokens go back to the CLI.
+    if (isClaudeCredsExpired(creds, ctx.nowMs)) {
+      authFailed = true;
+      continue;
+    }
+
+    const rateLimitKey = claudeCredentialCacheKey(ctx, creds);
+    // Inside an active rate-limit cooldown, skip only for the credential that originally hit it.
+    const cooldownSnapshot = claudeRateLimit.serveDuringCooldown(rateLimitKey, ctx.nowMs);
+    if (cooldownSnapshot) {
+      return { kind: "done", snapshot: cooldownSnapshot };
+    }
+
+    try {
+      const result = await fetchClaudeUsage(creds.accessToken);
+      if (isAuthFailureStatus(result.status)) {
+        authFailed = true;
+        continue;
+      }
+      if (isRateLimitStatus(result.status)) {
+        // Account/IP-level throttle: back off (respecting Retry-After) and keep the last values
+        // instead of blanking. Trying the next credential would only earn more 429s.
+        return {
+          kind: "done",
+          snapshot: claudeRateLimit.enterCooldown(
+            rateLimitKey,
+            ctx.nowMs,
+            parseRetryAfterMs(result.headers, ctx.nowMs),
+          ),
+        };
+      }
+      if (!result.ok) {
+        lastErrorSnapshot = errorSnapshot(
+          "claudeAgent",
+          ctx.nowMs,
+          SOURCE,
+          `Claude usage request failed (${result.status}).`,
+        );
+        continue;
+      }
+      const planName = claudePlanName(creds);
+      const snapshot = parseClaudeUsage({
+        json: result.json,
+        nowMs: ctx.nowMs,
+        ...(planName ? { planName } : {}),
+      });
+      claudeRateLimit.rememberLastGood(rateLimitKey, snapshot);
+      return { kind: "done", snapshot };
+    } catch {
+      lastErrorSnapshot = errorSnapshot(
+        "claudeAgent",
+        ctx.nowMs,
+        SOURCE,
+        "Could not reach the Claude usage endpoint.",
+      );
+    }
+  }
+
+  const fallback = inferenceOnlySnapshot ?? lastErrorSnapshot;
+  if (authFailed) {
+    return { kind: "auth", fallback };
+  }
+  return {
+    kind: "done",
+    snapshot: fallback ?? needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE),
+  };
+}
+
 export const claudeUsageFetcher: ProviderUsageFetcher = {
   provider: "claudeAgent",
   async fetch(ctx) {
@@ -249,93 +339,20 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
       return needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE);
     }
 
-    let inferenceOnlySnapshot: ReturnType<typeof buildSnapshot> | null = null;
-    let lastErrorSnapshot: ServerProviderUsageSnapshot | null = null;
+    const first = await attemptClaudeUsage(ctx, candidates);
+    if (first.kind === "done") {
+      return first.snapshot;
+    }
 
-    for (const creds of candidates) {
-      if (!hasProfileScope(creds)) {
-        const planName = claudePlanName(creds);
-        inferenceOnlySnapshot = buildSnapshot({
-          provider: "claudeAgent",
-          nowMs: ctx.nowMs,
-          status: "ok",
-          source: SOURCE,
-          ...(planName ? { planName } : {}),
-        });
-        continue;
-      }
-
-      const rateLimitKey = claudeCredentialCacheKey(ctx, creds);
-      let activeCreds = creds;
-      if (shouldRefreshClaudeCreds(activeCreds, ctx.nowMs)) {
-        const refreshed = await refreshClaudeCreds(activeCreds);
-        if (refreshed) {
-          activeCreds = refreshed;
-        } else if (activeCreds.expiresAtMs !== undefined && activeCreds.expiresAtMs <= ctx.nowMs) {
-          continue;
-        }
-      }
-
-      // Inside an active rate-limit cooldown, skip only for the credential that originally hit it.
-      const cooldownSnapshot = claudeRateLimit.serveDuringCooldown(rateLimitKey, ctx.nowMs);
-      if (cooldownSnapshot) {
-        return cooldownSnapshot;
-      }
-
-      try {
-        let result = await fetchClaudeUsage(activeCreds.accessToken);
-        if (isAuthFailureStatus(result.status) && activeCreds.refreshToken) {
-          const refreshed = await refreshClaudeCreds(activeCreds);
-          if (refreshed) {
-            activeCreds = refreshed;
-            result = await fetchClaudeUsage(activeCreds.accessToken);
-          }
-        }
-        if (isAuthFailureStatus(result.status)) {
-          continue;
-        }
-        if (isRateLimitStatus(result.status)) {
-          // Account/IP-level throttle: back off (respecting Retry-After) and keep the last values
-          // instead of blanking. Trying the next credential would only earn more 429s.
-          return claudeRateLimit.enterCooldown(
-            rateLimitKey,
-            ctx.nowMs,
-            parseRetryAfterMs(result.headers, ctx.nowMs),
-          );
-        }
-        if (!result.ok) {
-          lastErrorSnapshot = errorSnapshot(
-            "claudeAgent",
-            ctx.nowMs,
-            SOURCE,
-            `Claude usage request failed (${result.status}).`,
-          );
-          continue;
-        }
-        const planName = claudePlanName(activeCreds);
-        const snapshot = parseClaudeUsage({
-          json: result.json,
-          nowMs: ctx.nowMs,
-          ...(planName ? { planName } : {}),
-        });
-        claudeRateLimit.rememberLastGood(rateLimitKey, snapshot);
-        return snapshot;
-      } catch {
-        lastErrorSnapshot = errorSnapshot(
-          "claudeAgent",
-          ctx.nowMs,
-          SOURCE,
-          "Could not reach the Claude usage endpoint.",
-        );
-        continue;
+    // Let the Claude CLI refresh and persist its own token, then read the stores again.
+    if (ctx.refreshCliCredentials && (await ctx.refreshCliCredentials("claudeAgent"))) {
+      const second = await attemptClaudeUsage(ctx, await resolveClaudeCredCandidates(ctx));
+      if (second.kind === "done") {
+        return second.snapshot;
       }
     }
 
-    return (
-      inferenceOnlySnapshot ??
-      lastErrorSnapshot ??
-      needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE)
-    );
+    return first.fallback ?? needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE);
   },
 };
 

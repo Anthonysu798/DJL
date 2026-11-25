@@ -8,6 +8,13 @@ import AgentWorkspacesView from "./AgentWorkspacesView";
 import { workspaceTerminalSessions } from "./workspaceTerminalSessions";
 import { useAgentWorkspaceStore, type AgentWorkspace } from "~/agentWorkspaceStore";
 import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function QueryWrapper(props: { children: ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>;
+}
 
 const backend = vi.hoisted(() => ({
   listeners: new Set<(event: TerminalEvent) => void>(),
@@ -123,7 +130,9 @@ describe("retained workspace terminal navigation", () => {
         else identities.set(config.runtimeKey, terminal);
       });
     };
-    const screen = await render(<AgentWorkspacesView projectId={null} />);
+    const screen = await render(<AgentWorkspacesView projectId={null} />, {
+      wrapper: QueryWrapper,
+    });
     try {
       // Visit every pane once; cold panes may legitimately initialize lazily.
       for (const workspace of workspaces) {

@@ -9,6 +9,10 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { SettingsSection } from "./SettingsPanelPrimitives";
 import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError";
+import {
+  SETTINGS_ACCOUNT_ROW_ACTIONS_CLASS_NAME,
+  SETTINGS_ACCOUNT_TEXT_ROW_CLASS_NAME,
+} from "~/settingsPanelStyles";
 
 const TOOLS_KEY = ["harness-tools"] as const;
 // Shared with the accounts list, which offers to install the same CLIs.
@@ -169,11 +173,11 @@ export function HarnessToolsPanel({ disabled = false }: { disabled?: boolean }) 
         return (
           <div
             key={id}
-            className="flex flex-wrap items-center gap-3 px-4 py-4"
+            className={SETTINGS_ACCOUNT_TEXT_ROW_CLASS_NAME}
             aria-label={label}
             role="group"
           >
-            <div className="min-w-44 flex-1">
+            <div className="min-w-0">
               <div className="text-sm font-medium">{label}</div>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span>
@@ -217,34 +221,36 @@ export function HarnessToolsPanel({ disabled = false }: { disabled?: boolean }) 
                 </p>
               ) : null}
             </div>
-            <a
-              href={docs}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-muted-foreground underline underline-offset-4"
-            >
-              {t("accounts.setup")}
-            </a>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={
-                busy ||
-                !tool ||
-                (tool.installed
-                  ? !tool.canUpdate || (tool.status === "current" && tool.compatible !== false)
-                  : !tool.canInstall)
-              }
-              onClick={() => maintain.mutate([id])}
-            >
-              {active === id || tool?.maintenanceStatus === "running"
-                ? t("tools.working")
-                : !tool?.installed
-                  ? t("tools.install")
-                  : tool.status === "current" && tool.compatible !== false
-                    ? t("tools.current")
-                    : t("tools.update")}
-            </Button>
+            <div className={SETTINGS_ACCOUNT_ROW_ACTIONS_CLASS_NAME}>
+              <a
+                href={docs}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-muted-foreground underline underline-offset-4"
+              >
+                {t("accounts.setup")}
+              </a>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={
+                  busy ||
+                  !tool ||
+                  (tool.installed
+                    ? !tool.canUpdate || (tool.status === "current" && tool.compatible !== false)
+                    : !tool.canInstall)
+                }
+                onClick={() => maintain.mutate([id])}
+              >
+                {active === id || tool?.maintenanceStatus === "running"
+                  ? t("tools.working")
+                  : !tool?.installed
+                    ? t("tools.install")
+                    : tool.status === "current" && tool.compatible !== false
+                      ? t("tools.current")
+                      : t("tools.update")}
+              </Button>
+            </div>
           </div>
         );
       })}

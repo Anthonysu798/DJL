@@ -1,6 +1,7 @@
 import { SOCIAL_PLUGIN, SOCIAL_PLUGIN_MENTION, mcpMention } from "@djl/contracts";
-import type { ServerRecord } from "@djl/contracts";
+import type { ProviderSkillDescriptor, ServerRecord } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
+import { orderSkillsByGroup, resolveSkillOrigin, skillGroupKey } from "~/lib/skillOrigin";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
@@ -131,6 +132,7 @@ describe("groupCommandItems", () => {
           enabled: true,
           scope: "project",
         },
+        group: "codex",
         label: "check-code",
         description: "Review recent code changes",
       },
@@ -153,6 +155,67 @@ describe("groupCommandItems", () => {
         items: [items[2]],
       },
     ]);
+  });
+});
+
+const skill = (
+  name: string,
+  scope: string,
+  path: string,
+  plugin?: string,
+): ProviderSkillDescriptor => ({
+  name,
+  path,
+  enabled: true,
+  scope,
+  ...(plugin ? { plugin } : {}),
+});
+
+describe("$ skill groups", () => {
+  it("puts the provider's own skills first, then built-in, Claude, Codex and shared", () => {
+    const skills = [
+      skill("share", "agents", "/h/.agents/skills/share/SKILL.md"),
+      skill("social-publish", "built-in", "builtin://djl/social/publish"),
+      skill("check-code", "codex", "/h/.codex/skills/check-code/SKILL.md"),
+      skill(
+        "superpowers:brainstorming",
+        "claude",
+        "/p/skills/brainstorming/SKILL.md",
+        "superpowers",
+      ),
+      skill("frontend", "claude", "/h/.claude/skills/frontend/SKILL.md"),
+    ];
+    const items = orderSkillsByGroup(
+      skills.map(
+        (entry): Extract<ComposerCommandItem, { type: "skill" }> => ({
+          id: `skill:${entry.path}`,
+          type: "skill",
+          skill: entry,
+          group: skillGroupKey(resolveSkillOrigin(entry), "claudeAgent"),
+          label: entry.name,
+          description: entry.name,
+        }),
+      ),
+      (item) => item.group,
+    );
+
+    const groups = groupCommandItems(items, "skill", true, "claudeAgent");
+    expect(groups.map((group) => [group.id, group.items.map((item) => item.label)])).toEqual([
+      ["suggested", ["superpowers:brainstorming", "frontend"]],
+      ["builtin", ["social-publish"]],
+      ["codex", ["check-code"]],
+      ["shared", ["share"]],
+    ]);
+    expect(groups[0]?.labelValues).toEqual({ provider: "Claude" });
+  });
+
+  it("treats project .claude skills as Claude and Doubao chats as Claude Code", () => {
+    const origin = resolveSkillOrigin(
+      skill("lint", "project", "/repo/.claude/skills/lint/SKILL.md"),
+    );
+    expect(origin).toMatchObject({ kind: "claude", provider: "claudeAgent", project: true });
+    expect(skillGroupKey(origin, "doubao")).toBe("suggested");
+    expect(skillGroupKey(origin, "codex")).toBe("claude");
   });
 });
 

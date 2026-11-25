@@ -25,6 +25,7 @@ import {
 } from "../chatRouteRecovery";
 import { useMountedRef } from "../hooks/useMountedRef";
 import type { ContainerChatFailure } from "../lib/containerChatFailure";
+import { classifyProviderFailure } from "../lib/providerFailurePresentation";
 import type { StartContainerChatResult } from "../lib/startContainerChat";
 import { readNativeApi } from "../nativeApi";
 import { useSplitViewStore } from "../splitViewStore";
@@ -197,6 +198,24 @@ export function RestoreOrCreateChatRoute({
   useEffect(() => {
     if (chatFailure) getStartupSession()?.setStatus("runtime-error");
   }, [chatFailure]);
+
+  // A dropped link to DJL's background service (common while it is still starting) is retried
+  // once without showing anything; only a second failure reaches the person.
+  const retryingQuietly =
+    chatFailure !== null &&
+    attempt === 0 &&
+    classifyProviderFailure(chatFailure.detail) === "connection";
+  useEffect(() => {
+    if (!retryingQuietly) return;
+    // Clear the failure in the same update as the retry so it never flashes on screen.
+    const timer = window.setTimeout(() => {
+      setChatFailure(null);
+      setAttempt((value) => value + 1);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [retryingQuietly]);
+
+  if (retryingQuietly) return <SplashScreen />;
 
   return (
     <SplashScreen

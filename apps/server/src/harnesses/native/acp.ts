@@ -5,6 +5,16 @@ import type { NativeDriverFactory } from "./types";
 import type { PluginGatewaySession } from "../../plugins/PluginGateway";
 import type { ProviderSendTurnInput, ProviderSessionStartInput } from "@djl/contracts";
 import { nonNegativeInteger, positiveInteger } from "../../provider/tokenUsage";
+import { selectAcpFullAccessPermissionOptionId } from "../../provider/acp/AcpAdapterSupport";
+
+function acpPermissionOptions(params: JsonObject) {
+  const kinds = ["allow_once", "allow_always", "reject_once", "reject_always"] as const;
+  return (Array.isArray(params.options) ? params.options : []).flatMap((entry) => {
+    const option = object(entry);
+    const kind = kinds.find((candidate) => candidate === option.kind);
+    return kind && typeof option.optionId === "string" ? [{ kind, optionId: option.optionId }] : [];
+  });
+}
 
 export function readAcpModels(session: JsonObject): Array<{ slug: string; name: string }> {
   const legacy = object(session.models ?? {}).availableModels;
@@ -60,6 +70,10 @@ export function createNativeAcpDriver(config: {
   };
   authenticate?: (rpc: NativeRpc, init: JsonObject) => Promise<void>;
   modelFilter?: (modelId: string) => boolean;
+  /** A DJL-side slug meaning "keep the runtime's own default model"; never sent to the CLI. */
+  defaultModelSlug?: string;
+  /** Maps a DJL model slug to the exact value the runtime advertises; undefined keeps its own. */
+  resolveModelId?: (session: JsonObject, model: string) => string | undefined;
   modeId: (session: JsonObject, turn: ProviderSendTurnInput) => string | undefined;
 }): NativeDriverFactory {
   return async (input, sink, _workTools, plugins) => {
@@ -88,6 +102,14 @@ export function createNativeAcpDriver(config: {
         if (method !== "session/request_permission" || params.sessionId !== id || replaying) {
           rpc.reject(requestId);
           return;
+        }
+        // Full access means the user already approved every tool call for this chat.
+        if (input.runtimeMode === "full-access") {
+          const optionId = selectAcpFullAccessPermissionOptionId(acpPermissionOptions(params));
+          if (optionId) {
+            rpc.respond(requestId, { outcome: { outcome: "selected", optionId } });
+            return;
+          }
         }
         const tool = object(params.toolCall ?? {});
         const requestType =
@@ -203,7 +225,8 @@ export function createNativeAcpDriver(config: {
         }),
       );
       id = resume ?? string(session.sessionId);
-      const resolveModel = (requested?: string) => {
+      const resolveModel = (requestedModel?: string) => {
+        const requested = requestedModel === config.defaultModelSlug ? undefined : requestedModel;
         if (!config.modelFilter) return requested;
         if (requested && !config.modelFilter(requested))
           throw new Error(`${config.label} requires a subscription model`);
@@ -214,23 +237,20 @@ export function createNativeAcpDriver(config: {
           throw new Error(`Sign in to ${config.label}; no subscription models are available`);
         return selected;
       };
+      const setModel = async (model: string | undefined) => {
+        const modelId =
+          model && config.resolveModelId ? config.resolveModelId(session, model) : model;
+        if (modelId) await rpc.request("session/set_model", { sessionId: id, modelId });
+      };
       let initialModel = resolveModel(input.modelSelection?.model);
-      if (initialModel)
-        await rpc.request("session/set_model", {
-          sessionId: id,
-          modelId: initialModel,
-        });
+      await setModel(initialModel);
       replaying = false;
       return {
         id,
         async send(turn) {
           assistantOpen = false;
           const modelId = resolveModel(turn.modelSelection?.model ?? initialModel);
-          if (modelId)
-            await rpc.request("session/set_model", {
-              sessionId: id,
-              modelId,
-            });
+          await setModel(modelId);
           initialModel = modelId;
           const modeId = config.modeId(session, turn);
           if (modeId) await rpc.request("session/set_mode", { sessionId: id, modeId });

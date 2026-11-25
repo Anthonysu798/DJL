@@ -24,6 +24,9 @@ const PROVIDER_STATUS_CACHE_IDS = [
   "kilo",
   "opencode",
   "pi",
+  "muse",
+  "doubao",
+  "deepseek",
   "djlCloud",
 ] as const satisfies ReadonlyArray<ServerProviderStatus["provider"]>;
 

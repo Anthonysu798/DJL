@@ -163,6 +163,7 @@ export {
   SiHuggingface,
   SiIntellijidea,
   SiLinear,
+  SiMeta,
   SiNotion,
   SiOpenai,
   SiPhpstorm,

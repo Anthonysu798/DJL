@@ -103,13 +103,18 @@
       "groups": {
         "agentModels": "切换智能体继续",
         "builtIn": "内置",
+        "claudeSkills": "Claude Code",
+        "codexSkills": "Codex",
         "local": "本地",
         "mcp": "MCP 服务器",
+        "otherSkills": "其他技能",
         "plugins": "插件",
         "provider": "提供者",
         "servers": "服务器",
+        "sharedSkills": "共享",
         "skills": "技能",
-        "subagents": "子代理"
+        "subagents": "子代理",
+        "suggestedSkills": "适用于 {{provider}}"
       },
       "handoffReady": "智能体已就绪",
       "handoffReadyDescription": "对话、笔记和草稿已保留。发送下一条指令即可继续。",
@@ -128,7 +133,11 @@
       },
       "runNativeCommand": "运行 {{provider}} 原生命令",
       "searchFilesHint": "键入以搜索文件",
-      "searchingMentions": "搜索中提及..."
+      "searchingMentions": "搜索中提及...",
+      "skillOrigin": {
+        "project": "项目",
+        "shared": "共享"
+      }
     },
     "composer": {
       "actions": {
@@ -427,32 +436,32 @@
       "openRepositoryFallback": "应用内浏览器无法打开 GitHub。",
       "providerFailure": {
         "authentication": {
-          "action": "登录或更新提供商凭据，然后重试。",
-          "title": "需要登录提供商"
+          "action": "你的 AI 账号需要重新登录。登录后再发送一次消息。",
+          "title": "请重新登录以继续"
         },
         "commandMissing": {
-          "action": "安装或配置提供商命令，然后重试。",
-          "title": "找不到提供商命令"
+          "action": "请在设置中安装，然后再发送一次消息。",
+          "title": "这个 AI 工具还没有设置好"
         },
         "connection": {
-          "action": "检查提供商服务或网络，然后重试。",
-          "title": "提供商连接已中断"
+          "action": "请检查网络连接，然后再发送一次消息。",
+          "title": "连接已断开"
         },
         "generic": {
-          "action": "重试任务。如果再次失败，请检查提供商设置。",
-          "title": "任务已停止"
+          "action": "请再发送一次消息。如果反复出现，可以换一个 AI 模型试试。",
+          "title": "这次回复中断了"
         },
         "permission": {
-          "action": "检查提供商的文件权限，然后重试。",
-          "title": "提供商访问受阻"
+          "action": "请确认 DJL 可以打开这个文件夹，然后再发送一次消息。",
+          "title": "DJL 无法打开所需的文件"
         },
         "rateLimit": {
-          "action": "等待限制重置或切换提供商，然后重试。",
-          "title": "已达到提供商限制"
+          "action": "请等待额度重置，或切换到其他账号后再发送。",
+          "title": "已达到套餐用量上限"
         },
         "workspaceMissing": {
-          "action": "请选择现有的项目文件夹，然后重新发送消息。",
-          "title": "工作文件夹不可用"
+          "action": "请选择一个仍然存在的文件夹，然后再发送一次消息。",
+          "title": "找不到这个文件夹"
         }
       },
       "renameThreadFailed": "重命名线程失败",
@@ -584,6 +593,337 @@
       },
       "unavailable": "{{provider}} 提供商不可用。"
     },
+    "home": {
+      "mascot": "和 DJL 打个招呼",
+      "modeLabel": "任务类型",
+      "modes": {
+        "code": "代码",
+        "work": "工作"
+      },
+      "suggestionsLabel": "{{topic}}的推荐提示",
+      "topics": {
+        "apps": {
+          "label": "应用",
+          "suggestions": {
+            "s1": {
+              "label": "做一个习惯打卡应用",
+              "prompt": "帮我做一个简单的习惯打卡应用，可以添加习惯、每天打勾，还能看到连续打卡的天数。界面要简洁，所有数据都保存在这台电脑上。"
+            },
+            "s2": {
+              "label": "做一个记账预算计算器",
+              "prompt": "帮我做一个小巧的预算计算器：我按类别填入每月收入和各项支出，它告诉我还剩多少钱，并配一张简单的图表。做好后告诉我怎么打开。"
+            },
+            "s3": {
+              "label": "给孩子做个答题游戏",
+              "prompt": "做一个色彩丰富的答题游戏，适合 8 到 10 岁的孩子，包含 10 道选择题，最后显示得分，并有一个“再玩一次”按钮。"
+            },
+            "s4": {
+              "label": "把表格变成小应用",
+              "prompt": "我会发给你一份表格。请把它做成一个小应用，让我不用打开表格就能搜索、筛选和添加数据。"
+            }
+          }
+        },
+        "automation": {
+          "label": "自动化",
+          "suggestions": {
+            "s1": {
+              "label": "批量重命名照片",
+              "prompt": "把我选定文件夹里的所有照片按拍摄日期重命名，比如“2026-05-14 海边 01.jpg”。改名之前先把修改清单给我看一下。"
+            },
+            "s2": {
+              "label": "整理下载文件夹",
+              "prompt": "把我的“下载”文件夹按文件类型分到不同的子文件夹里（文档、图片、视频、安装包、其他）。移动之前先告诉我你打算移动哪些文件。"
+            },
+            "s3": {
+              "label": "把多个表格合并成一个",
+              "prompt": "把一个文件夹里的所有表格合并成一张表，保持相同的列，并新增一列标明每一行来自哪个文件。"
+            },
+            "s4": {
+              "label": "做一个每日总结脚本",
+              "prompt": "帮我写一个每天早上运行的脚本，列出我昨天改动过的文件，并生成一份简短的总结。请用通俗的话告诉我怎么运行它。"
+            }
+          }
+        },
+        "data": {
+          "label": "数据",
+          "suggestions": {
+            "s1": {
+              "label": "分析销售表的趋势",
+              "prompt": "我会发给你一份销售表格。请找出主要趋势、业绩最好和最差的月份，以及任何异常情况，然后用五条要点加一张简单的图表总结出来。"
+            },
+            "s2": {
+              "label": "清理杂乱的表格",
+              "prompt": "帮我清理我发给你的表格：统一格式不一致的日期和名称，删除重复的行，并列出你做的每一处修改，方便我核对。"
+            },
+            "s3": {
+              "label": "做一个简单的数据看板",
+              "prompt": "把我的数据做成一页数据看板，包含三到四个关键数字和两张图表。如果我还没发数据，就用明确标注的示例数字。"
+            },
+            "s4": {
+              "label": "对比两份名单",
+              "prompt": "对比我发给你的两份名单，告诉我哪些在两份里都有，哪些只在第一份里，哪些只在第二份里。"
+            }
+          }
+        },
+        "docs": {
+          "label": "技术文档",
+          "suggestions": {
+            "s1": {
+              "label": "为项目写一份 README",
+              "prompt": "阅读这个项目，写一份清晰的 README：它是做什么的、怎么安装、怎么运行、遇到问题去哪里求助。内容简短、语气友好。"
+            },
+            "s2": {
+              "label": "用大白话解释代码",
+              "prompt": "用不懂编程的人也能看懂的话，解释这个项目是做什么的，然后列出主要组成部分以及各自的用途。"
+            },
+            "s3": {
+              "label": "编写接口文档",
+              "prompt": "为这个项目里的接口写一份简明的文档：每个接口要传什么、会返回什么，并各附一个示例。"
+            },
+            "s4": {
+              "label": "写一份环境搭建步骤",
+              "prompt": "写一份分步骤的搭建说明，让新同事在一台全新的电脑上照着就能完成，包括先装什么，以及怎么确认一切正常。"
+            }
+          }
+        },
+        "documents": {
+          "label": "文档",
+          "suggestions": {
+            "s1": {
+              "label": "总结一份长文档",
+              "prompt": "把我发给你的文档浓缩成一页：主要内容、涉及的决定或截止日期，以及我应该就此提出的三个问题。"
+            },
+            "s2": {
+              "label": "写一份周报",
+              "prompt": "根据我的笔记写一份周报，分三个小节：已完成的工作、遇到的阻碍、下一步计划。控制在 300 字以内，凡是你推测的内容都要标出来。"
+            },
+            "s3": {
+              "label": "做一个会议纪要模板",
+              "prompt": "做一个可以反复使用的会议纪要模板，包含参会人、议程、决定事项，以及注明负责人和截止日期的待办事项。"
+            },
+            "s4": {
+              "label": "帮我校对润色文字",
+              "prompt": "帮我校对我发给你的文字。改正错别字和语法问题，让表达更清楚、更简洁，同时保留我的语气。把你改动的地方标出来。"
+            }
+          }
+        },
+        "email": {
+          "label": "邮件",
+          "suggestions": {
+            "s1": {
+              "label": "写一封礼貌的跟进邮件",
+              "prompt": "帮我写一封礼貌而清楚的跟进邮件，发给一位已经一周没回复的人。附上邮件标题，名字和日期的位置留空。"
+            },
+            "s2": {
+              "label": "回复一条棘手的消息",
+              "prompt": "帮我回复我贴过来的这条消息。语气要冷静、专业，先认可对方的观点，再提出下一步建议。"
+            },
+            "s3": {
+              "label": "请同事给草稿提意见",
+              "prompt": "写一封简短的邮件，请同事在指定日期前对我的草稿提意见，并让对方只需写几句评论就能轻松回复。"
+            },
+            "s4": {
+              "label": "向团队宣布一项变动",
+              "prompt": "就我描述的一项变动，写一份友好的团队通知：改什么、什么时候改、有什么好处，以及有问题该找谁。"
+            }
+          }
+        },
+        "fixes": {
+          "label": "修复问题",
+          "suggestions": {
+            "s1": {
+              "label": "查查按钮为什么没反应",
+              "prompt": "这个项目里有个按钮点了没反应。帮我找出原因并修好，再用一两句话解释问题出在哪里。"
+            },
+            "s2": {
+              "label": "解决一条报错",
+              "prompt": "我会贴一条报错信息。请在这个项目里找到它的来源，修复根本原因，并告诉我怎么确认它已经消失。"
+            },
+            "s3": {
+              "label": "让慢吞吞的页面变快",
+              "prompt": "这个项目里有一个页面加载很慢。找出拖慢它的原因，修复影响最大的那个，并告诉我快了多少。"
+            },
+            "s4": {
+              "label": "适配手机屏幕",
+              "prompt": "让这个网站在手机上正常显示：用小屏尺寸逐页检查，修复所有超出屏幕或小到不好点按的地方。"
+            }
+          }
+        },
+        "planning": {
+          "label": "规划",
+          "suggestions": {
+            "s1": {
+              "label": "规划项目时间表",
+              "prompt": "帮我规划一个项目。先问我三个简单的问题，然后做一份时间表，包含里程碑和负责人，并把风险最大的环节标出来。"
+            },
+            "s2": {
+              "label": "把笔记整理成待办清单",
+              "prompt": "把我零散的笔记整理成一份清晰的待办清单，按优先级分组，并把今天最先要做的三件事放在最上面。"
+            },
+            "s3": {
+              "label": "策划一次团建活动",
+              "prompt": "为大约 15 人策划一次半天的团建活动：一份日程安排、一份需要预订的事项清单，以及附示例费用的大致预算。"
+            },
+            "s4": {
+              "label": "准备一场会议",
+              "prompt": "帮我准备一场重要的会议：会议目标、我必须讲清楚的三个要点、对方可能会问的问题，以及每个问题的简短回答。"
+            }
+          }
+        },
+        "research": {
+          "label": "调研",
+          "suggestions": {
+            "s1": {
+              "label": "买东西前比一比",
+              "prompt": "比较我说的这类产品里最热门的几款。做一张表格，列出价格、主要功能、优点和缺点，再告诉我哪一款适合大多数人以及原因。"
+            },
+            "s2": {
+              "label": "帮我调研一个话题",
+              "prompt": "调研我指定的话题，给我一份简短的介绍：关键事实、主要观点，以及三个可靠来源的链接。"
+            },
+            "s3": {
+              "label": "了解一家公司",
+              "prompt": "用 400 字以内的篇幅，讲讲我说的这家公司靠什么赚钱、主要竞争对手有哪些，以及它所在的市场正在发生哪些变化。"
+            },
+            "s4": {
+              "label": "核实一个说法",
+              "prompt": "帮我核实我贴过来的这个说法是不是真的。告诉我可靠来源怎么说、你有多大把握，以及还有哪些地方不确定。"
+            }
+          }
+        },
+        "review": {
+          "label": "代码审查",
+          "suggestions": {
+            "s1": {
+              "label": "审查我最近的改动",
+              "prompt": "审查这个项目最近的改动，看看有没有 bug、令人困惑的命名和缺失的错误处理。把最重要的问题列在最前面。"
+            },
+            "s2": {
+              "label": "为功能补上测试",
+              "prompt": "为这个项目的主要功能补上测试，运行一遍，再用通俗的话告诉我这些测试检查了什么、有没有通过。"
+            },
+            "s3": {
+              "label": "排查安全隐患",
+              "prompt": "检查这个项目有没有常见的安全问题，比如代码里写死了密钥，或者没有校验用户输入，并为最严重的几个问题给出修复建议。"
+            },
+            "s4": {
+              "label": "整理杂乱的代码",
+              "prompt": "找出这个项目里最乱的部分，在不改变功能的前提下把它整理干净，然后说明你做了哪些改进。"
+            }
+          }
+        },
+        "slides": {
+          "label": "演示文稿",
+          "suggestions": {
+            "s1": {
+              "label": "把笔记做成 PPT",
+              "prompt": "把我的笔记做成一份 6 页的演示文稿：一页封面，每页讲一个要点，最后一页做简短总结。"
+            },
+            "s2": {
+              "label": "写一份融资路演大纲",
+              "prompt": "为我描述的想法列一份 10 页的路演 PPT 大纲：要解决的问题、解决方案、目标用户、盈利方式、团队介绍，以及融资需求。"
+            },
+            "s3": {
+              "label": "做一份培训课件",
+              "prompt": "做一份简短的培训课件，把我指定的主题讲给零基础的人听，配上简单的例子，最后附三道小测验题。"
+            },
+            "s4": {
+              "label": "做一份项目进展汇报",
+              "prompt": "做一份 5 页的项目进展汇报：目前进度、取得的成果、遇到的问题、下一步计划，以及我需要哪些支持。"
+            }
+          }
+        },
+        "websites": {
+          "label": "网站",
+          "suggestions": {
+            "s1": {
+              "label": "做一个个人网站",
+              "prompt": "做一个简单的个人网站，包含首页、关于我页面和联系方式板块。要在手机上也好看，并告诉我怎么打开它。"
+            },
+            "s2": {
+              "label": "做一个产品落地页",
+              "prompt": "为我描述的产品做一个落地页，包含醒目的标题、三大卖点、简短的常见问题，以及一个注册按钮。"
+            },
+            "s3": {
+              "label": "做一个小店官网",
+              "prompt": "为一家小店做一个四页的网站：首页、服务项目、关于我们和联系我们，并写上营业时间、预留地图的位置。"
+            },
+            "s4": {
+              "label": "做一个待办清单网页",
+              "prompt": "做一个待办清单网页，我可以添加、勾选和删除任务，重新打开页面时清单还在。"
+            }
+          }
+        }
+      },
+      "skillsLabel": "此任务使用的技能",
+      "removeSkill": "移除{{name}}",
+      "skills": {
+        "docx": {
+          "name": "Word 文档",
+          "description": "创建和编辑真正的 Word 文件，标题、表格和排版规范。"
+        },
+        "copy-editing": {
+          "name": "文字润色",
+          "description": "校对并精简文字，保留你的语气。"
+        },
+        "xlsx": {
+          "name": "电子表格",
+          "description": "读取、整理和制作 Excel 与 CSV 文件，公式和图表都能用。"
+        },
+        "build-dashboard": {
+          "name": "数据看板",
+          "description": "把数据做成一页可交互的看板，突出关键数字和图表。"
+        },
+        "pptx": {
+          "name": "PPT 幻灯片",
+          "description": "制作真正的 PowerPoint 演示文稿，版式清爽、易读。"
+        },
+        "theme-factory": {
+          "name": "幻灯片主题",
+          "description": "为幻灯片和文档套用协调的配色与字体主题。"
+        },
+        "djl-research": {
+          "name": "调研",
+          "description": "基于真实来源调研，公平比较各选项，每个结论都注明出处。"
+        },
+        "djl-email": {
+          "name": "邮件写作",
+          "description": "写出清晰、得体、下一步明确的邮件。"
+        },
+        "djl-planning": {
+          "name": "计划",
+          "description": "把目标拆成带日期、负责人、风险和检查点的小步骤。"
+        },
+        "frontend-design": {
+          "name": "前端设计",
+          "description": "让页面有独特、用心的设计，而不是模板感。"
+        },
+        "frontend-ui-engineering": {
+          "name": "应用界面",
+          "description": "构建无障碍、适配各种尺寸的应用界面。"
+        },
+        "systematic-debugging": {
+          "name": "系统化排错",
+          "description": "先找到根本原因，再动手修改。"
+        },
+        "djl-automation": {
+          "name": "安全自动化",
+          "description": "每次修改前先预览，从不删除，并保留撤销清单。"
+        },
+        "code-review-and-quality": {
+          "name": "代码审查",
+          "description": "从正确性、安全、性能和可读性审查代码。"
+        },
+        "documentation-and-adrs": {
+          "name": "技术文档",
+          "description": "写出解释原因的文档，并找出与代码不符的旧文档。"
+        },
+        "create-readme": {
+          "name": "README 撰写",
+          "description": "写出清晰的 README：做什么、怎么安装和运行。"
+        }
+      }
+    },
     "image": {
       "download": "下载生成的图片",
       "downloadError": "无法下载生成的图片",
@@ -659,6 +999,26 @@
       "noPiModels": "未找到 Pi 模型",
       "search": "搜索模型或提供商",
       "setUpLocalAi": "设置本地 AI…"
+    },
+    "modelPanel": {
+      "aboutEffort": "关于思考强度",
+      "addProvider": "添加 AI 提供商",
+      "checking": "正在检查 {{provider}}…",
+      "effortNote": "强度越高，回答前思考得越久。Ultracode 还会让 Claude 自行规划多步骤的工作流程。",
+      "effortNoteBasic": "强度越高，回答前思考得越久。",
+      "fastMode": "快速模式",
+      "faster": "更快",
+      "noFavourites": "给模型加星标，它就会出现在这里。",
+      "recommended": "推荐",
+      "searchPlaceholder": "搜索模型...",
+      "signInTo": "登录 {{provider}} 才能使用它的模型。",
+      "smarter": "更聪明",
+      "unavailable": "{{provider}} 暂时不可用。",
+      "account": "账号",
+      "accountLeft": "剩余 {{percent}}%",
+      "accountDefaultTag": "默认",
+      "accountSignedOut": "未登录",
+      "makeDefault": "设为新聊天默认"
     },
     "models": {
       "addFavorite": "在最爱中添加{{name}}",
@@ -983,7 +1343,6 @@
       "library": "素材库",
       "loading": "正在加载社交工具…",
       "navigation": "社交工具",
-      "open": "社交工具",
       "product": "产品链接",
       "publishingHistory": "发布记录",
       "results": "效果分析",
@@ -1512,6 +1871,11 @@
       "unpublish": "下线",
       "unpublishTitle": "下线 {{address}}？",
       "unpublishDescription": "网站会立即下线，地址会被释放，任何人都可以使用。你的项目文件仍保留在这台电脑上。"
+    },
+    "accountSwitch": {
+      "switched": "已切换到 {{to}}：{{from}} 已达到用量上限。",
+      "resets": "将在 {{time}} 重置。",
+      "mainAccount": "主账号"
     }
   },
   "common": {
@@ -1626,7 +1990,25 @@
   },
   "settings": {
     "accounts": {
+      "addAnotherTool": "添加其他 AI 工具（{{total}}）",
       "checking": "正在检查…",
+      "claudeCompatible": {
+        "description": "豆包和 DeepSeek 编程套餐通过 Claude Code 运行，使用你套餐的 API 密钥。请先安装 Claude Code，在这里保存密钥，然后选择“用于新对话”。",
+        "getKey": "获取 API 密钥",
+        "keyLabel": "{{provider}} API 密钥",
+        "keyMissing": "未保存 API 密钥",
+        "keyPlaceholder": "粘贴你的 API 密钥",
+        "keySaved": "已保存 API 密钥",
+        "loadError": "无法检查已保存的 API 密钥。",
+        "region": "豆包区域",
+        "regionChina": "中国大陆",
+        "regionInternational": "国际版（BytePlus）",
+        "remove": "移除",
+        "replacePlaceholder": "粘贴新密钥以替换已保存的密钥",
+        "save": "保存",
+        "saveError": "保存失败，请重试。",
+        "title": "编程套餐"
+      },
       "codingPlansDescription": "在 OpenCode 登录中，为 GLM 选择 Z.AI Coding Plan，为 Kimi 选择 Kimi For Coding，或选择你的 MiniMax 编程套餐服务商。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code 和 Pi 在上方通过官方 CLI 连接，直接复用这些 CLI 已登录的账号。",
       "codingPlansTitle": "中国模型与编程套餐",
       "default": "新对话默认使用",
@@ -1663,6 +2045,9 @@
       "installNotDetected": "安装后未找到 {{provider}}。请查看设置指南，然后重试。",
       "loadError": "无法检查账户。",
       "loginFor": "登录 {{provider}}",
+      "moreOptions": "更多连接方式",
+      "moreOptionsDescription": "编程套餐 API 密钥、工具更新和其他套餐。",
+      "noneConnected": "还没有登录任何 AI 工具。在下方选择一个并登录。",
       "openCodeExistingKept": "已保留现有 CLI 登录信息：{{providers}}。",
       "openCodeLegacyAvailable": "DJL 中有可复制的已保存登录信息：{{providers}}。现有 CLI 登录信息将保留，原始 DJL 凭据也会备份保留。",
       "openCodeSharedLogin": "OpenCode 与已安装的 OpenCode CLI 共用登录信息。在此登录也会更新 CLI 的登录信息。",
@@ -1691,6 +2076,33 @@
       "resetAriaLabel": "将{{label}}重置为默认值",
       "resetToDefault": "重置为默认值",
       "restoreDefaults": "恢复默认设置"
+    },
+    "aiAccounts": {
+      "addAccount": "添加账户",
+      "addAndSignIn": "添加并登录",
+      "cancel": "取消",
+      "description": "添加更多 Claude Code 和 Codex 订阅,查看每个账户的剩余额度,并选择新对话使用的账户。",
+      "error": "AI 账户出现问题。",
+      "inUse": "使用中",
+      "mainAccount": "主账户",
+      "nameLabel": "新的 {{provider}} 账户名称",
+      "namePlaceholder": "起个名字,例如工作或个人",
+      "noUsage": "暂无用量",
+      "refresh": "刷新用量",
+      "remove": "移除",
+      "removeConfirm": "移除 {{name}}?DJL 会退出该账户并删除其保存的登录信息。",
+      "signIn": "登录",
+      "signInAgain": "重新登录",
+      "status": {
+        "signedIn": "已登录",
+        "signedOut": "未登录",
+        "unavailable": "已在账户中关闭",
+        "unknown": "无法检查登录状态"
+      },
+      "switchNote": "新对话使用标记为“使用中”的账户。已开始的对话继续使用原来的账户。",
+      "usageUnavailable": "暂时无法获取用量",
+      "autoSwitch": "自动切换账号",
+      "autoSwitchHint": "聊天所用账号达到 5 小时或每周上限时，DJL 会改用剩余用量最多的已登录账号继续，并在聊天中注明。"
     },
     "appearance": {
       "baseFontSize": {
@@ -2274,6 +2686,11 @@
           "description": "按键绑定、恢复工具和版本信息。",
           "eyebrow": "系统工具",
           "label": "高级"
+        },
+        "aiAccounts": {
+          "description": "多个 Claude 和 Codex 订阅,以及新对话使用的账户。",
+          "eyebrow": "切换账户",
+          "label": "AI 账户"
         },
         "appearance": {
           "description": "语言、主题、字体和时间格式。",
@@ -3424,6 +3841,7 @@
       "working": "正在处理…"
     },
     "usage": {
+      "cannotShow": "暂时无法显示用量。",
       "learnMore": "了解更多",
       "left": "剩余 {{remaining}}",
       "loading": "正在加载提供商用量…",
@@ -3448,7 +3866,7 @@
           "on-track": "符合进度"
         }
       },
-      "privacyDescription": "用量从各提供商 CLI 本地保存的凭据中读取，并直接向提供商获取。OAuth 提供商可能通过官方令牌端点刷新短期令牌；若显示“未登录”，请使用其 CLI 重新认证。",
+      "privacyDescription": "DJL 使用这台电脑上的登录信息，直接从各个 AI 服务读取用量。如果某个账号显示“未登录”，请在“账户”中重新登录。",
       "rateLimits": {
         "current": "当前",
         "fiveHours": "5 小时",
@@ -3460,14 +3878,16 @@
       },
       "rateLimitsRemaining": "剩余速率限额",
       "remainingAriaLabel": "{{label}}：剩余 {{remaining}}",
+      "signInToSee": "登录 {{provider}} 后即可查看剩余用量。",
+      "signedInNoUsage": "你已登录 {{provider}}。下次聊天后会显示用量。",
       "source": "用量来源：{{source}}",
       "status": {
         "notSignedIn": "未登录",
+        "signedIn": "已登录",
         "unavailable": "不可用",
         "unsupported": "不支持"
       },
-      "title": "提供商用量",
-      "unavailableWithDetail": "用量不可用。{{detail}}"
+      "title": "提供商用量"
     },
     "couldNotCheckPermissions": "无法检查权限",
     "keyboardFocus": "键盘焦点",
@@ -3618,7 +4038,6 @@
     },
     "multiAgents": {
       "title": "多智能体",
-      "beta": "测试版",
       "newGroup": "新建群聊",
       "groups": "群聊",
       "emptyTitle": "把你的智能体拉进一个群聊",
@@ -4042,7 +4461,7 @@
       "settings": {
         "action": "开始教程",
         "basicTitle": "基础功能教程",
-        "description": "重新播放智能体模式、项目、本地 AI 推荐和设置的引导。",
+        "description": "重新观看“工作和代码”、项目、本地 AI 推荐和设置的引导。",
         "section": "开始使用",
         "title": "新手教程"
       },
@@ -4061,8 +4480,8 @@
           "title": "选择本地 AI 擅长方向"
         },
         "project-mode": {
-          "description": "任务围绕文件夹或代码项目并需要持续上下文时，请使用项目模式。",
-          "title": "项目模式"
+          "description": "在输入框下方选择文件夹，任务就会放进该项目。不选的话，会放到“最近”。",
+          "title": "项目"
         },
         "settings": {
           "description": "点击这里可以更改语言、模型、外观和软件行为。",
@@ -4073,8 +4492,8 @@
           "title": "随时重新查看教程"
         },
         "work-mode": {
-          "description": "开始任务后，输入 @ 即可切换到其他智能体，并保留任务上下文。",
-          "title": "智能体模式"
+          "description": "处理文档、调研和日常事务选“工作”，开发或修复软件选“代码”。选一个主题即可获得现成的提示。",
+          "title": "工作或代码"
         }
       }
     },
@@ -4432,7 +4851,8 @@
         "newThread": "新话题",
         "newWorkspace": "新工作区",
         "social": "社交发布",
-        "socialNeedsChat": "请先开始一个聊天，社交发布内容会保存在聊天里。"
+        "socialNeedsChat": "请先开始一个聊天，社交发布内容会保存在聊天里。",
+        "newChat": "新对话"
       },
       "adding": "正在添加...",
       "addProject": "添加项目",
@@ -4477,7 +4897,7 @@
       "automationCount_other": "{{count}} 次自动化",
       "browse": "浏览",
       "cancelAddProject": "取消添加项目",
-      "chats": "聊天记录",
+      "chats": "最近",
       "confirm": {
         "archiveThread": "存档线条 \"{{title}}\"?\n存档的线程从侧边栏中隐藏,但可以稍后恢复.",
         "deleteThread": "删除线条“{{title}} ” ?\n这永久地澄清了这个线程的对话历史.",
@@ -4820,6 +5240,50 @@
       "spinClockwise": "顺时针旋转",
       "spinCounterClockwise": "逆时针旋转",
       "title": "2026 世界杯"
+    },
+    "skillsStore": {
+      "title": "技能",
+      "hint": "技能教 Claude Code 和 Codex 把某类任务做好。安装后的技能会出现在 $ 菜单里。",
+      "search": "搜索技能",
+      "installed": "已安装",
+      "reviewedResults": "DJL 已审核",
+      "liveResults": "来自 skills.sh",
+      "liveHint": "未经 DJL 审核。使用前请先看看它会做什么。",
+      "searching": "正在搜索 skills.sh…",
+      "searchFailed": "无法连接 skills.sh，请稍后再试。",
+      "noMatches": "没有匹配的技能。",
+      "builtIn": "内置",
+      "unreviewed": "未审核",
+      "install": "安装",
+      "installNamed": "安装 {{name}}",
+      "installing": "正在安装…",
+      "working": "处理中…",
+      "update": "更新",
+      "remove": "移除",
+      "installedTag": "已安装",
+      "edited": "你在安装后修改过这个技能。",
+      "installs": "{{value}} 次安装",
+      "notOnGitHub": "不在 GitHub 上",
+      "viewOnGitHub": "在 GitHub 查看",
+      "previewFailed": "无法加载这个技能。",
+      "scriptsWarning": "这个技能包含智能体可以运行的脚本。",
+      "unreviewedNote": "DJL 尚未审核这个技能。使用前请先看看它会做什么。",
+      "builtInNote": "DJL 自带此技能。可在 $ 菜单或首页的主题中选择。",
+      "consentScriptsTitle": "安装会运行脚本的技能？",
+      "consentScriptsBody": "{{name}} 包含智能体可以在你电脑上运行的文件。只在你信任 {{owner}} 时安装。",
+      "consentEditsTitle": "覆盖你的修改？",
+      "consentEditsBody": "你在安装后修改过 {{name}}。更新会覆盖你的修改。",
+      "installAnyway": "仍然安装",
+      "replaceChanges": "覆盖我的修改",
+      "categories": {
+        "design": "设计",
+        "coding": "编程",
+        "documents": "文档",
+        "writing": "写作",
+        "research": "调研与规划",
+        "data": "数据",
+        "tools": "工具"
+      }
     }
   },
   "whatsNew": {
@@ -5657,10 +6121,20 @@
       "terminalHint": "选择这些终端共用的账号。第二个订阅请使用另一个账号配置。",
       "title": "工作空间",
       "useThisAccount": "使用此账户",
-      "welcomeDescription": "并排运行编程智能体，按项目整理终端，为每个订阅使用独立的账号配置。",
+      "welcomeDescription": "在项目文件夹里并排运行编程智能体。设置中的账号在这里可直接使用。",
       "welcomeTitle": "为你的智能体打造工作空间",
       "workspaceHint": "在命名的工作空间中整理终端，并选择运行的项目目录。",
-      "workspacePlaceholder": "我的项目"
+      "workspacePlaceholder": "我的项目",
+      "mainAccount": "主账号",
+      "accountsFromSettings": "与“设置 → 账户”共用，无需再次登录。",
+      "startTitle": "开始工作",
+      "startDescription": "选择一个账号，即可用它打开终端。每个账号各自保持登录。",
+      "startWith": "启动 {{provider}}",
+      "shellHint": "普通终端，可运行任何工具",
+      "moreOptions": "更多选项",
+      "readyAccounts": "可直接使用",
+      "mainTag": "主账号",
+      "browseFolderMenu": "选择其他文件夹…"
     },
     "branch": {
       "actions": {

@@ -13,11 +13,13 @@ import { PILL_CLASS_NAME, statusPill } from "~/components/settings/ProviderUsage
 import { CentralIcon } from "~/lib/central-icons";
 import type { ProviderUsageTone } from "~/lib/providerUsageDisplay";
 import { createAccountRateLimitsSelector } from "~/lib/rateLimits";
+import { CLI_ACCOUNTS_USAGE_QUERY_KEY } from "~/lib/cliAccountsQuery";
 import {
   fetchAllProviderUsage,
   serverAllProviderUsageQueryOptions,
   serverConfigQueryOptions,
   serverQueryKeys,
+  serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
 import {
   deriveUsageRingEntries,
@@ -56,7 +58,7 @@ const RING_TONE_CLASS_NAME: Record<ProviderUsageTone, string> = {
 
 function UsageRingEntryBlock({ entry }: { entry: UsageRingEntry }) {
   const { t } = useTranslation("settings");
-  const pill = statusPill(entry.status, t);
+  const pill = statusPill(entry.status, t, entry.cliSignedIn);
   const hasUsage = entry.rows.length > 0 || entry.usageLines.length > 0 || entry.credits !== null;
 
   return (
@@ -65,6 +67,12 @@ function UsageRingEntryBlock({ entry }: { entry: UsageRingEntry }) {
         <div className="flex min-w-0 items-center gap-2">
           <ProviderIcon provider={entry.provider} className="size-4 shrink-0" />
           <span className="truncate text-xs font-semibold text-foreground">{entry.name}</span>
+          {entry.inUse ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-1.5 text-[10px] leading-4 font-medium text-emerald-600 dark:text-emerald-300">
+              <span className="size-1 rounded-full bg-emerald-400" />
+              {t("aiAccounts.inUse")}
+            </span>
+          ) : null}
         </div>
         {pill ? (
           <span className={cn(PILL_CLASS_NAME, pill.className)}>{pill.label}</span>
@@ -136,11 +144,25 @@ export function UsageRingButton(props: { rail?: boolean; onManageUsage: () => vo
     ).then(() =>
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage().slice(0, 2) }),
     );
+    if (finished.some((provider) => provider === "claudeAgent" || provider === "codex")) {
+      void queryClient.invalidateQueries({ queryKey: CLI_ACCOUNTS_USAGE_QUERY_KEY });
+    }
     if (finished.some((provider) => provider === "djlCloud" || provider === "group")) {
       void queryClient.invalidateQueries({ queryKey: CLOUD_ACCOUNT_QUERY_KEY });
     }
   }, [queryClient, runningTurns]);
   const config = useQuery(serverConfigQueryOptions());
+  // Extra AI accounts come from settings; their usage is only read when there are some.
+  const settings = useQuery(serverSettingsQueryOptions());
+  const aiAccountSettings = settings.data?.cliAccounts;
+  const hasAiAccounts = (aiAccountSettings?.accounts.length ?? 0) > 0;
+  const aiUsage = useQuery({
+    queryKey: CLI_ACCOUNTS_USAGE_QUERY_KEY,
+    queryFn: () => ensureNativeApi().cliAccounts.usage({}),
+    enabled: hasAiAccounts,
+    refetchInterval,
+    refetchIntervalInBackground: false,
+  });
   // Limits reported mid-turn; the selector stays equal while replies stream.
   const liveRateLimits = useStore(useMemo(() => createAccountRateLimitsSelector(), []));
   const entries = useMemo(
@@ -150,10 +172,23 @@ export function UsageRingButton(props: { rail?: boolean; onManageUsage: () => vo
         providerStatuses: config.data?.providers ?? [],
         cloud: cloud.data,
         liveRateLimits,
+        ...(hasAiAccounts && aiAccountSettings
+          ? {
+              aiAccounts: {
+                accounts: aiAccountSettings.accounts,
+                active: aiAccountSettings.active,
+                usage: aiUsage.data?.usage ?? [],
+                mainLabel: t("aiAccounts.mainAccount"),
+              },
+            }
+          : {}),
         t,
         locale: i18n.resolvedLanguage ?? i18n.language,
       }),
     [
+      aiAccountSettings,
+      aiUsage.data,
+      hasAiAccounts,
       cloud.data,
       config.data?.providers,
       i18n.language,
@@ -177,7 +212,7 @@ export function UsageRingButton(props: { rail?: boolean; onManageUsage: () => vo
       onOpenChange={(open) => {
         if (!open) return;
         // Never a forced refresh: the server decides whether its own cache is still good.
-        for (const query of [usage, cloud]) {
+        for (const query of hasAiAccounts ? [usage, cloud, aiUsage] : [usage, cloud]) {
           if (Date.now() - query.dataUpdatedAt > OPEN_REFETCH_AGE_MS) {
             void query.refetch({ cancelRefetch: false });
           }
@@ -248,7 +283,7 @@ export function UsageRingButton(props: { rail?: boolean; onManageUsage: () => vo
               {loading ? t("usage.loading") : t("usage.noLimitData")}
             </p>
           ) : (
-            entries.map((entry) => <UsageRingEntryBlock key={entry.provider} entry={entry} />)
+            entries.map((entry) => <UsageRingEntryBlock key={entry.key} entry={entry} />)
           )}
         </div>
         <PopoverClose

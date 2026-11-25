@@ -42,7 +42,7 @@ export function SettingsSelectControl({
   value,
   onValueChange,
   ariaLabel,
-  triggerClassName = "w-full sm:w-44",
+  triggerClassName = "w-full @md:w-44",
   valueContent,
   children,
 }: {
@@ -95,7 +95,7 @@ export function SettingsSegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="inline-flex w-full items-center gap-1 sm:w-auto"
+      className="inline-flex w-full items-center gap-1 @md:w-auto"
     >
       {options.map((option) => {
         const isActive = option.value === value;
@@ -108,7 +108,7 @@ export function SettingsSegmentedControl<T extends string>({
             variant={isActive ? "secondary" : "ghost"}
             className={cn(
               SETTINGS_CONTROL_RADIUS_CLASS_NAME,
-              "flex-1 sm:flex-none",
+              "flex-1 @md:flex-none",
               !isActive && "text-muted-foreground",
             )}
             onClick={() => onValueChange(option.value)}

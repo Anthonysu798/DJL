@@ -193,7 +193,7 @@ export function ThemePackEditor({
   return (
     <div className={cn(SETTINGS_CARD_CLASS_NAME, "overflow-hidden")}>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 @md:py-3.5">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-foreground">{copy.title}</h3>
           {!isPristine ? (
@@ -206,7 +206,7 @@ export function ThemePackEditor({
             </button>
           ) : null}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <ImportThemeDialog copy={copy} onImport={handleImport} />
           <button
             type="button"
@@ -360,11 +360,11 @@ function ThemeRow({ label, children }: { label: string; children: React.ReactNod
     <div
       className={cn(
         SETTINGS_CARD_ROW_CLASS_NAME,
-        "flex min-h-12 items-center justify-between gap-3",
+        "flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-2",
       )}
     >
       <span className="text-sm text-foreground/90">{label}</span>
-      <div className="flex shrink-0 items-center gap-2">{children}</div>
+      <div className="ml-auto flex max-w-full shrink-0 items-center gap-2">{children}</div>
     </div>
   );
 }
@@ -592,7 +592,11 @@ function FontInput({
       onBlur={() => setDraft(null)}
       spellCheck={false}
       aria-label={ariaLabel}
-      className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, "w-56", mono && "font-chat-code")}
+      className={cn(
+        SETTINGS_CONTROL_RADIUS_CLASS_NAME,
+        "w-56 max-w-full",
+        mono && "font-chat-code",
+      )}
     />
   );
 }

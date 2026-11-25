@@ -8,6 +8,13 @@ import AgentWorkspacesView from "./AgentWorkspacesView";
 import { useAgentWorkspaceStore } from "~/agentWorkspaceStore";
 import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
 import type { AgentWorkspace } from "~/agentWorkspaceStore";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function QueryWrapper(props: { children: ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>;
+}
 
 const backend = vi.hoisted(() => ({
   listeners: new Set<(event: TerminalEvent) => void>(),
@@ -82,7 +89,9 @@ describe("workspace maximize interaction", () => {
         profiles: [],
         activeId: workspace.id,
       });
-      const screen = await render(<AgentWorkspacesView projectId={null} />);
+      const screen = await render(<AgentWorkspacesView projectId={null} />, {
+        wrapper: QueryWrapper,
+      });
       const canvas = document.querySelector<HTMLElement>(".agent-terminal-canvas")!;
       try {
         canvas.scrollTop = canvas.scrollHeight;

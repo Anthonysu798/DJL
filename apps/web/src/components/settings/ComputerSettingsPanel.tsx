@@ -490,7 +490,7 @@ export function ComputerSettingsPanel({
             }
           >
             {cursorColorMode === "custom" ? (
-              <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:gap-4">
+              <div className="flex flex-col gap-2 pt-3 @md:flex-row @md:gap-4">
                 <CursorColorField
                   label={t("settings:fill")}
                   value={settings.agentCursorFillColor ?? ""}
@@ -528,7 +528,7 @@ export function ComputerSettingsPanel({
               ) : null
             }
             control={
-              <div className="flex w-full items-center gap-3 sm:w-auto sm:justify-end">
+              <div className="flex w-full items-center gap-3 @md:w-auto @md:justify-end">
                 <Switch
                   checked={settings.autoOpenComputerPane}
                   onCheckedChange={(checked) =>

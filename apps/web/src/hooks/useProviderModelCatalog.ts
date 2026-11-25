@@ -145,6 +145,14 @@ export function useProviderModelCatalog(input: {
       enabled: selectedProvider === "codebuddy" || discoveryEnabled,
     }),
   );
+  const museDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "muse",
+      binaryPath: settings.museBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "muse" || discoveryEnabled,
+    }),
+  );
   const droidDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "droid",
@@ -294,10 +302,21 @@ export function useProviderModelCatalog(input: {
         customModelsByProvider.codebuddy,
         modelHintByProvider?.codebuddy,
       ),
+      doubao: getAppModelOptions(
+        "doubao",
+        customModelsByProvider.doubao,
+        modelHintByProvider?.doubao,
+      ),
+      deepseek: getAppModelOptions(
+        "deepseek",
+        customModelsByProvider.deepseek,
+        modelHintByProvider?.deepseek,
+      ),
       droid: getAppModelOptions("droid", customModelsByProvider.droid, modelHintByProvider?.droid),
       kilo: getAppModelOptions("kilo", customModelsByProvider.kilo, modelHintByProvider?.kilo),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, modelHintByProvider?.pi),
+      muse: getAppModelOptions("muse", customModelsByProvider.muse, modelHintByProvider?.muse),
       djlCloud: getAppModelOptions(
         "djlCloud",
         customModelsByProvider.djlCloud,
@@ -324,10 +343,14 @@ export function useProviderModelCatalog(input: {
       qwen: qwenDynamicModelsQuery.data,
       copilot: copilotDynamicModelsQuery.data,
       codebuddy: codebuddyDynamicModelsQuery.data,
+      // Doubao and DeepSeek serve a fixed model list, so there is nothing to discover.
+      doubao: undefined,
+      deepseek: undefined,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      muse: museDynamicModelsQuery.data,
       djlCloud: djlCloudDynamicModelsQuery.data,
       group: undefined,
     };
@@ -347,6 +370,7 @@ export function useProviderModelCatalog(input: {
       "kilo",
       "opencode",
       "pi",
+      "muse",
       "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
@@ -381,6 +405,7 @@ export function useProviderModelCatalog(input: {
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    museDynamicModelsQuery.data,
     djlCloudDynamicModelsQuery.data,
   ]);
 
@@ -415,10 +440,13 @@ export function useProviderModelCatalog(input: {
       qwen: qwenDynamicModelsQuery.data?.models ?? [],
       copilot: copilotDynamicModelsQuery.data?.models ?? [],
       codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
+      doubao: [],
+      deepseek: [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      muse: museDynamicModelsQuery.data?.models ?? [],
       djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
       group: [],
     }),
@@ -437,6 +465,7 @@ export function useProviderModelCatalog(input: {
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      museDynamicModelsQuery.data?.models,
       djlCloudDynamicModelsQuery.data?.models,
     ],
   );

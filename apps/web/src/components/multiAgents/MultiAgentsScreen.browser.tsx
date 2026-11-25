@@ -104,11 +104,11 @@ afterEach(async () => {
 });
 
 describe("MultiAgentsScreen", () => {
-  it("lists groups with the Beta badge and opens the first one", async () => {
+  it("lists groups without a Beta badge and opens the first one", async () => {
     state.groups = [group];
     await mount();
     await expect.element(page.getByRole("heading", { name: /Multi agents/ })).toBeVisible();
-    await expect.element(page.getByText("Beta", { exact: true })).toBeVisible();
+    expect(page.getByText("Beta", { exact: true }).elements()).toHaveLength(0);
     await expect.element(page.getByRole("button", { name: /Launch team/ })).toBeVisible();
     await expect.element(page.getByText("chat for Launch team")).toBeVisible();
   });

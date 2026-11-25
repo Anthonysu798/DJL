@@ -14,6 +14,7 @@
     "DJL_BROWSER_USE_PIPE_PATH",
     "DJL_BROWSER_PERF",
     "DJL_PROVIDER_RUNTIME_IDLE_STOP_MS",
+    "DJL_DEV_FAKE_USAGE_LIMIT",
     "DJL_GROK_ACP_DEBUG",
     "DJL_WEB_SOURCEMAP",
     "DJL_SERVER_SOURCEMAP",
@@ -37,31 +38,20 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        "dist-electron/**",
-        ".next/**",
-        "!.next/cache/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": [
-        "^typecheck"
-      ],
+      "dependsOn": ["^typecheck"],
       "outputs": [],
       "cache": false
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "cache": false,
       "outputs": []
     }

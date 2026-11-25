@@ -115,7 +115,9 @@ export function settingsSectionLabel(
   section: SettingsSectionId,
   t: SettingsTranslate = defaultSettingsT,
 ): string {
-  const item = SETTINGS_NAV_ITEMS.find((candidate) => candidate.id === section);
+  // A merged section is found on its page, so results name that page.
+  const merged = SETTINGS_NAV_ITEMS.find((candidate) => candidate.id === section)?.mergedInto;
+  const item = SETTINGS_NAV_ITEMS.find((candidate) => candidate.id === (merged ?? section));
   return item ? t(item.labelKey) : section;
 }
 

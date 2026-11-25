@@ -10,6 +10,8 @@ import * as nodePath from "node:path";
 
 import type { ProviderKind, ProviderSkillReference } from "@djl/contracts";
 
+import { isStarterSkillPath } from "./starterSkills.ts";
+
 // Per-skill cap keeps a single oversized SKILL.md from eating the turn budget.
 const MAX_INLINE_SKILL_CONTENT_CHARS = 24_000;
 
@@ -27,25 +29,18 @@ function pathSegments(path: string): Set<string> {
 export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: string): boolean {
   const segments = pathSegments(skillPath);
   switch (provider) {
-    case "codex":
-      // Codex injects structured skill items only from roots it knows: its own
-      // folders plus `~/.djl/skills`, which DJL registers at session start
-      // via skills/extraRoots/set. Skills resolved from other providers' folders
-      // must be inlined.
-      return [".claude", ".cursor", ".agents"].some((dir) => segments.has(dir));
-    case "cursor":
-      // cursor-agent natively scans .cursor/.agents/.claude/.codex skill roots;
-      // only DJL-owned paths need inlining.
-      return segments.has(".djl") || segments.has(".djl");
-    case "claudeAgent":
-      // Claude Code only loads skills from .claude/skills folders.
-      return !segments.has(".claude");
     case "pi":
       // Pi loads its own skill set; anything resolved from a cross-provider
       // folder is portable and must be inlined.
-      return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
+      return (
+        CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir)) ||
+        isStarterSkillPath(skillPath)
+      );
     default:
-      // gemini/grok/droid/kilo/opencode have no native skill support.
+      // The native bridges (Codex, Claude Code and the plans it serves, Cursor, Muse, ...)
+      // send text only, with no structured skill items, and a mid-message `$skill` or
+      // `/skill` is not reliably resolved. Inlining is the one path that always works, for
+      // a provider's own skills and for skills from another provider's folder alike.
       return true;
   }
 }
@@ -72,7 +67,8 @@ export async function buildInlineSkillInstructions(input: {
     }
     let trimmed = content.trim();
     if (trimmed.length > MAX_INLINE_SKILL_CONTENT_CHARS) {
-      trimmed = `${trimmed.slice(0, MAX_INLINE_SKILL_CONTENT_CHARS)}\n[skill content truncated]`;
+      // Long skills still work: the agent can read the rest from the file itself.
+      trimmed = `${trimmed.slice(0, MAX_INLINE_SKILL_CONTENT_CHARS)}\n[skill content truncated: read the rest of ${JSON.stringify(skill.path)} before you start]`;
     }
     const block = `<skill name=${JSON.stringify(skill.name)} dir=${JSON.stringify(
       nodePath.dirname(skill.path),

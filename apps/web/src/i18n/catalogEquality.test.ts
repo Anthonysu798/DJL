@@ -30,6 +30,8 @@ const ENGLISH_EQUAL_INVARIANTS = new Map<string, string>([
   ["settings.rrggbb", "#rrggbb"],
   ["chat.panels.names.git", "Git"],
   ["chat.panels.names.side", "Side"],
+  ["chat.commandMenu.groups.claudeSkills", "Claude Code"],
+  ["chat.commandMenu.groups.codexSkills", "Codex"],
   ["settings.navigation.groups.djl", "DJL"],
   ["settings.cloud.name", "DJL Cloud"],
   ["settings.cloud.title", "DJL Cloud"],
@@ -149,6 +151,9 @@ describe("secondary locale catalog translations", () => {
             ]
           : locale === "fr"
             ? [
+                // "Code" and "Documents" are the same words in French.
+                "chat.home.modes.code",
+                "chat.home.topics.documents.label",
                 "settings.computerUse.agentSource",
                 "settings.computerUse.events.action",
                 "settings.localModels.setup.useCases.document",

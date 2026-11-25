@@ -1,6 +1,6 @@
 // FILE: providerUsage/providers/claude.test.ts
-// Purpose: Covers Claude's OAuth refresh path so expired Claude Code credentials still
-// produce usage snapshots after the provider refreshes the access token.
+// Purpose: Covers Claude's credential handling: expired or rejected Claude Code tokens are
+// refreshed by the Claude CLI itself, never by redeeming its rotating refresh token here.
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -66,34 +66,69 @@ afterEach(() => {
 });
 
 describe("claudeUsageFetcher", () => {
-  it("refreshes expired file credentials in memory before fetching live usage", async () => {
-    const originalExpiresAt = NOW_MS - 60_000;
+  it("asks the Claude CLI to refresh an expired token instead of redeeming it", async () => {
     const { homeDir, credentialsPath } = makeClaudeHome({
       accessToken: "expired-access-token",
-      refreshToken: "old-refresh-token",
-      expiresAt: originalExpiresAt,
+      refreshToken: "cli-owned-refresh-token",
+      expiresAt: NOW_MS - 60_000,
       scopes: ["user:profile"],
       subscriptionType: "pro",
     });
 
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      const target = String(url);
-      if (target.includes("/oauth/token")) {
-        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        expect(body.refresh_token).toBe("old-refresh-token");
-        return jsonResponse({
-          access_token: "fresh-access-token",
-          refresh_token: "new-refresh-token",
-          expires_in: 3600,
-        });
-      }
-
+      expect(String(url)).not.toContain("/oauth/token");
       const headers = init?.headers as Record<string, string>;
-      expect(headers.Authorization).toBe("Bearer fresh-access-token");
+      expect(headers.Authorization).toBe("Bearer cli-refreshed-access-token");
       return jsonResponse({
         five_hour: { utilization: 12, resets_at: "2026-06-09T12:00:00Z" },
       });
     });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Simulates `claude auth status` rotating and persisting its own token.
+    const refreshCliCredentials = vi.fn(async () => {
+      writeFileSync(
+        credentialsPath,
+        JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "cli-refreshed-access-token",
+            refreshToken: "cli-rotated-refresh-token",
+            expiresAt: NOW_MS + 8 * 60 * 60 * 1000,
+            scopes: ["user:profile"],
+            subscriptionType: "pro",
+          },
+        }),
+        "utf8",
+      );
+      return true;
+    });
+
+    const snapshot = await claudeUsageFetcher.fetch({
+      homeDir,
+      env: {},
+      platform: "linux",
+      nowMs: NOW_MS,
+      refreshCliCredentials,
+    });
+
+    expect(refreshCliCredentials).toHaveBeenCalledWith("claudeAgent");
+    expect(snapshot.status).toBe("ok");
+    expect(snapshot.limits.find((limit) => limit.window === "5h")?.usedPercent).toBe(12);
+    expect(snapshot.planName).toBe("Pro");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readSavedOauth(credentialsPath).claudeAiOauth.refreshToken).toBe(
+      "cli-rotated-refresh-token",
+    );
+  });
+
+  it("never posts to the OAuth token endpoint when no CLI refresh is available", async () => {
+    const { homeDir } = makeClaudeHome({
+      accessToken: "expired-access-token",
+      refreshToken: "cli-owned-refresh-token",
+      expiresAt: NOW_MS - 60_000,
+      scopes: ["user:profile"],
+    });
+    const fetchMock = vi.fn(async () => jsonResponse({}));
     vi.stubGlobal("fetch", fetchMock);
 
     const snapshot = await claudeUsageFetcher.fetch({
@@ -103,38 +138,24 @@ describe("claudeUsageFetcher", () => {
       nowMs: NOW_MS,
     });
 
-    expect(snapshot.status).toBe("ok");
-    expect(snapshot.limits.find((limit) => limit.window === "5h")?.usedPercent).toBe(12);
-    expect(snapshot.planName).toBe("Pro");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-
-    const saved = readSavedOauth(credentialsPath);
-    expect(saved.claudeAiOauth.accessToken).toBe("expired-access-token");
-    expect(saved.claudeAiOauth.refreshToken).toBe("old-refresh-token");
-    expect(saved.claudeAiOauth.expiresAt).toBe(originalExpiresAt);
+    expect(snapshot.status).toBe("needs-auth");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("refreshes and retries when the usage endpoint rejects a stale token", async () => {
-    const { homeDir } = makeClaudeHome({
+  it("re-reads credentials after the CLI refreshes a token the usage endpoint rejected", async () => {
+    const { homeDir, credentialsPath } = makeClaudeHome({
       accessToken: "stale-access-token",
-      refreshToken: "refresh-after-401",
+      refreshToken: "cli-owned-refresh-token",
       expiresAt: NOW_MS + 60 * 60 * 1000,
       scopes: ["user:profile"],
     });
 
-    let usageCalls = 0;
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      const target = String(url);
-      if (target.includes("/oauth/token")) {
-        return jsonResponse({ access_token: "retried-access-token", expires_in: 3600 });
-      }
-
-      usageCalls += 1;
-      if (usageCalls === 1) {
+      expect(String(url)).not.toContain("/oauth/token");
+      const headers = init?.headers as Record<string, string>;
+      if (headers.Authorization === "Bearer stale-access-token") {
         return jsonResponse({ error: "invalid_token" }, 401);
       }
-
-      const headers = init?.headers as Record<string, string>;
       expect(headers.Authorization).toBe("Bearer retried-access-token");
       return jsonResponse({
         seven_day: { utilization: 45, resets_at: "2026-06-15T12:00:00Z" },
@@ -142,16 +163,33 @@ describe("claudeUsageFetcher", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
+    const refreshCliCredentials = vi.fn(async () => {
+      writeFileSync(
+        credentialsPath,
+        JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "retried-access-token",
+            expiresAt: NOW_MS + 60 * 60 * 1000,
+            scopes: ["user:profile"],
+          },
+        }),
+        "utf8",
+      );
+      return true;
+    });
+
     const snapshot = await claudeUsageFetcher.fetch({
       homeDir,
       env: {},
       platform: "linux",
       nowMs: NOW_MS,
+      refreshCliCredentials,
     });
 
     expect(snapshot.status).toBe("ok");
     expect(snapshot.limits.find((limit) => limit.window === "Weekly")?.usedPercent).toBe(45);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(refreshCliCredentials).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("falls through to the next credential source when the first token is rejected", async () => {
@@ -313,5 +351,59 @@ describe("claudeUsageFetcher", () => {
     const duringCooldown = await claudeUsageFetcher.fetch({ ...ctx, nowMs: NOW_MS + 30_000 });
     expect(duringCooldown.status).toBe("error");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("claudeUsageFetcher for an extra account", () => {
+  it("reads only the account's own login, never the normal one", async () => {
+    const { homeDir } = makeClaudeHome({
+      accessToken: "normal-login-token",
+      expiresAt: NOW_MS + 60 * 60 * 1000,
+      scopes: ["user:profile"],
+    });
+    const { configDir } = makeClaudeConfigDir({
+      accessToken: "work-account-token",
+      expiresAt: NOW_MS + 60 * 60 * 1000,
+      scopes: ["user:profile"],
+      subscriptionType: "max",
+    });
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer work-account-token");
+      return jsonResponse({ five_hour: { utilization: 40, resets_at: "2026-06-09T12:00:00Z" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const snapshot = await claudeUsageFetcher.fetch({
+      homeDir,
+      env: {},
+      platform: "linux",
+      nowMs: NOW_MS,
+      accountDir: configDir,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(snapshot.status ?? "ok").toBe("ok");
+  });
+
+  it("reports a signed-out account instead of borrowing the normal login", async () => {
+    const { homeDir } = makeClaudeHome({
+      accessToken: "normal-login-token",
+      expiresAt: NOW_MS + 60 * 60 * 1000,
+      scopes: ["user:profile"],
+    });
+    const emptyAccount = mkdtempSync(nodePath.join(os.tmpdir(), "djl-claude-empty-"));
+    tempDirs.push(emptyAccount);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const snapshot = await claudeUsageFetcher.fetch({
+      homeDir,
+      env: {},
+      platform: "linux",
+      nowMs: NOW_MS,
+      accountDir: emptyAccount,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(snapshot.status).toBe("needs-auth");
   });
 });

@@ -4,11 +4,23 @@ import {
   HarnessProfileAccountInput,
   HarnessLoginInput,
   HarnessEndLoginInput,
+  ClaudeCompatibleSetKeyInput,
   HarnessMaintainToolInput,
 } from "./harnessAccounts";
 import { CloudBrowserSignInCompleteInput, CloudEmptyInput, CloudSignInPollInput } from "./cloud";
 import { CodingPlanConnectInput, CodingPlanIdInput } from "./codingPlans";
 import { SitesNameInput, SitesPublishInput, SitesThreadInput, SitesUnpublishInput } from "./sites";
+import {
+  CliAccountAddInput,
+  CliAccountRemoveInput,
+  CliAccountSetActiveInput,
+  CliAccountsUsageInput,
+} from "./cliAccounts";
+import {
+  SkillsStorePreviewInput,
+  SkillsStoreSearchInput,
+  SkillsStoreSkillInput,
+} from "./skillsStore";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -321,6 +333,18 @@ export const WS_METHODS = {
   codingPlansConnect: "codingPlans.connect",
   codingPlansDisconnect: "codingPlans.disconnect",
   codingPlansImportFromOpenCode: "codingPlans.importFromOpenCode",
+  harnessListClaudeCompatibleKeys: "harnesses.listClaudeCompatibleKeys",
+  harnessSetClaudeCompatibleKey: "harnesses.setClaudeCompatibleKey",
+  cliAccountsList: "cliAccounts.list",
+  cliAccountsAdd: "cliAccounts.add",
+  cliAccountsRemove: "cliAccounts.remove",
+  cliAccountsSetActive: "cliAccounts.setActive",
+  cliAccountsUsage: "cliAccounts.usage",
+  skillsStoreSnapshot: "skillsStore.snapshot",
+  skillsStoreSearch: "skillsStore.search",
+  skillsStorePreview: "skillsStore.preview",
+  skillsStoreInstall: "skillsStore.install",
+  skillsStoreRemove: "skillsStore.remove",
   cloudGetStatus: "cloud.getStatus",
   cloudStartSignIn: "cloud.startSignIn",
   cloudPollSignIn: "cloud.pollSignIn",
@@ -609,6 +633,18 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.codingPlansConnect, CodingPlanConnectInput),
   tagRequestBody(WS_METHODS.codingPlansDisconnect, CodingPlanIdInput),
   tagRequestBody(WS_METHODS.codingPlansImportFromOpenCode, CodingPlanIdInput),
+  tagRequestBody(WS_METHODS.harnessListClaudeCompatibleKeys, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.harnessSetClaudeCompatibleKey, ClaudeCompatibleSetKeyInput),
+  tagRequestBody(WS_METHODS.cliAccountsList, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.cliAccountsAdd, CliAccountAddInput),
+  tagRequestBody(WS_METHODS.cliAccountsRemove, CliAccountRemoveInput),
+  tagRequestBody(WS_METHODS.cliAccountsSetActive, CliAccountSetActiveInput),
+  tagRequestBody(WS_METHODS.cliAccountsUsage, CliAccountsUsageInput),
+  tagRequestBody(WS_METHODS.skillsStoreSnapshot, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.skillsStoreSearch, SkillsStoreSearchInput),
+  tagRequestBody(WS_METHODS.skillsStorePreview, SkillsStorePreviewInput),
+  tagRequestBody(WS_METHODS.skillsStoreInstall, SkillsStoreSkillInput),
+  tagRequestBody(WS_METHODS.skillsStoreRemove, SkillsStoreSkillInput),
   tagRequestBody(WS_METHODS.cloudGetStatus, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudStartSignIn, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudPollSignIn, CloudSignInPollInput),

@@ -36,6 +36,8 @@ const MODEL_OPTIONS_BY_PROVIDER = {
   qwen: [{ slug: "qwen3-coder-plus", name: "Qwen3 Coder Plus" }],
   copilot: [{ slug: "auto", name: "Auto" }],
   codebuddy: [{ slug: "default-model", name: "Auto" }],
+  doubao: [{ slug: "ark-code-latest", name: "Ark Code (console model)" }],
+  deepseek: [{ slug: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }],
   droid: [
     {
       slug: "gpt-5.6-luna",
@@ -74,6 +76,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
       upstreamProviderName: "Anthropic",
     },
   ],
+  muse: [{ slug: "default", name: "Muse default" }],
   djlCloud: [
     { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
     { slug: "gpt-5", name: "GPT-5" },

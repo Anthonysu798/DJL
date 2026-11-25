@@ -1,3 +1,4 @@
+import type { ProviderKind } from "@djl/contracts";
 import { useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CentralIcon } from "~/lib/central-icons";
@@ -17,6 +18,8 @@ export type DesktopRailItem = {
 
 export function DesktopShellChrome(props: {
   title: string;
+  /** The active chat's provider once a message was sent; its logo replaces the chat icon. */
+  titleProvider?: ProviderKind | null;
   items: DesktopRailItem[];
   onNewChat: () => void;
   newChatLabel: string;
@@ -39,6 +42,7 @@ export function DesktopShellChrome(props: {
         </div>
         <DesktopWorkspaceTabs
           title={props.title}
+          provider={props.titleProvider ?? null}
           onNewChat={props.onNewChat}
           newChatLabel={props.newChatLabel}
         />

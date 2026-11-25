@@ -4,7 +4,13 @@ import { MarketingChatCards } from "../marketing/MarketingChatCards";
 // Layer: Chat transcript shell
 // Depends on: MessagesTimeline and ChatView's list-owned scroll contract.
 
-import { type MessageId, type ThreadId, type ThreadMarker, type TurnId } from "@djl/contracts";
+import {
+  type MessageId,
+  type ProviderKind,
+  type ThreadId,
+  type ThreadMarker,
+  type TurnId,
+} from "@djl/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
@@ -51,6 +57,8 @@ interface ChatTranscriptPaneProps {
   hasMessages: boolean;
   isRevertingCheckpoint: boolean;
   isWorking: boolean;
+  /** Provider running the live turn; shown beside the Thinking status. */
+  workingProvider?: ProviderKind | null;
   followLiveOutput: boolean;
   listRef: RefObject<LegendListRef | null>;
   timelineControllerRef?: RefObject<MessagesTimelineController | null>;
@@ -109,6 +117,7 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   hasMessages,
   isRevertingCheckpoint,
   isWorking,
+  workingProvider = null,
   followLiveOutput,
   listRef,
   timelineControllerRef,
@@ -210,6 +219,7 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
             key={activeThreadId}
             hasMessages={hasMessages}
             isWorking={isWorking}
+            workingProvider={workingProvider}
             worktreeSetup={worktreeSetup}
             activeTurnId={activeTurnId ?? null}
             activeTurnInProgress={activeTurnInProgress}

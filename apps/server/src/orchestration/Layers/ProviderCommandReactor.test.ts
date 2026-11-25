@@ -3395,6 +3395,40 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
+  it("restarts on a different subscription account and carries the chat over", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const send = (id: string, text: string, cliAccountId: string) =>
+      Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe(`cmd-account-${id}`),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: { messageId: asMessageId(`account-${id}`), role: "user", text, attachments: [] },
+          providerOptions: { codex: { cliAccountId } },
+          runtimeMode: "approval-required",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          createdAt: now,
+        }),
+      );
+
+    await send("1", "First question on Personal", "codex-personal");
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const stopsBefore = harness.stopSession.mock.calls.length;
+
+    await send("2", "Same account again", "codex-personal");
+    await waitFor(() => harness.sendTurn.mock.calls.length === 2);
+    expect(harness.stopSession.mock.calls.length).toBe(stopsBefore);
+
+    await send("3", "Continue on Work", "codex-work");
+    await waitFor(() => harness.sendTurn.mock.calls.length === 3);
+    expect(harness.stopSession.mock.calls.length).toBe(stopsBefore + 1);
+    const third = harness.sendTurn.mock.calls[2]?.[0] as { input?: string } | undefined;
+    expect(third?.input).toContain("<thread_context>");
+    expect(third?.input).toContain("First question on Personal");
+    expect(third?.input).toContain("Continue on Work");
+  });
+
   it("queues a follow-up turn while the current turn is still running", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
@@ -3668,6 +3702,37 @@ describe("ProviderCommandReactor", () => {
       mentions: [],
       skills: [],
     });
+  });
+
+  it("inlines a new-chat topic's bundled starter skill from its folder", async () => {
+    const harness = await createHarness();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-starter-skill"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-starter-skill"),
+          role: "user",
+          text: "Make a landing page for a bakery",
+          attachments: [],
+          skills: [{ name: "frontend-design", path: "djl-starter://frontend-design" }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const sent = harness.sendTurn.mock.calls[0]?.[0];
+    expect(sent?.input).toContain('<skill name="frontend-design"');
+    expect(sent?.input).toContain("Make a landing page for a bakery");
+    expect(sent?.skills).toEqual([
+      {
+        name: "frontend-design",
+        path: expect.stringMatching(/starter-skills[\\/]skills[\\/]frontend-design[\\/]SKILL\.md$/),
+      },
+    ]);
   });
 
   it("grants recorded activity only from the original selected history skill and revokes on the next turn", async () => {

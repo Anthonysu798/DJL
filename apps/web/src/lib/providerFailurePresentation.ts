@@ -31,7 +31,11 @@ export function classifyProviderFailure(detail: string | null | undefined): Prov
   if (/\b(eacces|permission denied|operation not permitted|access denied)\b/.test(normalized)) {
     return "permission";
   }
-  if (/\b(rate limit|too many requests|quota|429)\b/.test(normalized)) {
+  if (
+    /\b(rate limit|too many requests|quota|429|usage limit|hit your (?:usage )?limit|limit reached)\b/.test(
+      normalized,
+    )
+  ) {
     return "rateLimit";
   }
   if (
@@ -39,6 +43,10 @@ export function classifyProviderFailure(detail: string | null | undefined): Prov
       normalized,
     )
   ) {
+    return "connection";
+  }
+  // DJL's own link to its background service dropping mid-request (Effect interruption text).
+  if (/\b(fibers interrupted|transport disposed|reconnect superseded)\b/.test(normalized)) {
     return "connection";
   }
   return "generic";

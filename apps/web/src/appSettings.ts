@@ -111,10 +111,13 @@ type CustomModelSettingsKey =
   | "customQwenModels"
   | "customCopilotModels"
   | "customCodebuddyModels"
+  | "customDoubaoModels"
+  | "customDeepseekModels"
   | "customDroidModels"
   | "customKiloModels"
   | "customOpenCodeModels"
   | "customPiModels"
+  | "customMuseModels"
   | "customDjlCloudModels";
 export type ProviderCustomModelConfig = {
   provider: ProviderKind;
@@ -135,10 +138,13 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   qwen: new Set(getModelOptions("qwen").map((option) => option.slug)),
   copilot: new Set(getModelOptions("copilot").map((option) => option.slug)),
   codebuddy: new Set(getModelOptions("codebuddy").map((option) => option.slug)),
+  doubao: new Set(getModelOptions("doubao").map((option) => option.slug)),
+  deepseek: new Set(getModelOptions("deepseek").map((option) => option.slug)),
   droid: new Set(getModelOptions("droid").map((option) => option.slug)),
   kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
   pi: new Set(getModelOptions("pi").map((option) => option.slug)),
+  muse: new Set(getModelOptions("muse").map((option) => option.slug)),
   djlCloud: new Set(getModelOptions("djlCloud").map((option) => option.slug)),
   group: new Set<string>(),
 };
@@ -186,6 +192,11 @@ export const AppSettingsSchema = Schema.Struct({
   qwenBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   copilotBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codebuddyBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  doubaoBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  doubaoRegion: Schema.Literals(["china", "international"]).pipe(
+    withDefaults(() => "china" as const),
+  ),
+  deepseekBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   droidBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -193,6 +204,7 @@ export const AppSettingsSchema = Schema.Struct({
   openCodeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   piBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   piAgentDir: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  museBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   openCodeServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   openCodeServerPassword: Schema.String.check(Schema.isMaxLength(4096)).pipe(
     withDefaults(() => ""),
@@ -265,10 +277,13 @@ export const AppSettingsSchema = Schema.Struct({
   customQwenModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customCopilotModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customCodebuddyModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customDoubaoModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customDeepseekModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customDroidModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customKiloModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpenCodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customPiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customMuseModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customDjlCloudModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   textGenerationProvider: ProviderKind.pipe(withDefaults(() => "opencode" as const)),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
@@ -378,6 +393,20 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<
     title: "CodeBuddy Code",
     example: "deep-model",
   },
+  doubao: {
+    provider: "doubao",
+    settingsKey: "customDoubaoModels",
+    defaultSettingsKey: "customDoubaoModels",
+    title: "Doubao",
+    example: "doubao-seed-code",
+  },
+  deepseek: {
+    provider: "deepseek",
+    settingsKey: "customDeepseekModels",
+    defaultSettingsKey: "customDeepseekModels",
+    title: "DeepSeek",
+    example: "deepseek-chat",
+  },
   droid: {
     provider: "droid",
     settingsKey: "customDroidModels",
@@ -405,6 +434,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<
     defaultSettingsKey: "customPiModels",
     title: "Pi",
     example: "anthropic/claude-sonnet-4-5",
+  },
+  muse: {
+    provider: "muse",
+    settingsKey: "customMuseModels",
+    defaultSettingsKey: "customMuseModels",
+    title: "Muse Code",
+    example: "muse-code",
   },
   djlCloud: {
     provider: "djlCloud",
@@ -573,12 +609,18 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       "codebuddy",
       settings.codebuddyBinaryPath,
     ),
+    doubaoBinaryPath: normalizeProviderBinaryPathOverride("doubao", settings.doubaoBinaryPath),
+    deepseekBinaryPath: normalizeProviderBinaryPathOverride(
+      "deepseek",
+      settings.deepseekBinaryPath,
+    ),
     droidBinaryPath: normalizeProviderBinaryPathOverride("droid", settings.droidBinaryPath),
     kiloBinaryPath: normalizeProviderBinaryPathOverride("kilo", settings.kiloBinaryPath),
     openCodeBinaryPath: "",
     openCodeServerUrl: "",
     openCodeServerPassword: "",
     piBinaryPath: normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath),
+    museBinaryPath: normalizeProviderBinaryPathOverride("muse", settings.museBinaryPath),
     uiDensity: normalizeUiDensityValue(settings.uiDensity),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
@@ -593,10 +635,13 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customQwenModels: normalizeCustomModelSlugs(settings.customQwenModels, "qwen"),
     customCopilotModels: normalizeCustomModelSlugs(settings.customCopilotModels, "copilot"),
     customCodebuddyModels: normalizeCustomModelSlugs(settings.customCodebuddyModels, "codebuddy"),
+    customDoubaoModels: normalizeCustomModelSlugs(settings.customDoubaoModels, "doubao"),
+    customDeepseekModels: normalizeCustomModelSlugs(settings.customDeepseekModels, "deepseek"),
     customDroidModels: normalizeCustomModelSlugs(settings.customDroidModels, "droid"),
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
+    customMuseModels: normalizeCustomModelSlugs(settings.customMuseModels, "muse"),
     customDjlCloudModels: normalizeCustomModelSlugs(settings.customDjlCloudModels, "djlCloud"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
@@ -622,6 +667,9 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     qwenBinaryPath: settings.providers.qwen.binaryPath,
     copilotBinaryPath: settings.providers.copilot.binaryPath,
     codebuddyBinaryPath: settings.providers.codebuddy.binaryPath,
+    doubaoBinaryPath: settings.providers.doubao.binaryPath,
+    doubaoRegion: settings.providers.doubao.region,
+    deepseekBinaryPath: settings.providers.deepseek.binaryPath,
     droidBinaryPath: settings.providers.droid.binaryPath,
     kiloBinaryPath: settings.providers.kilo.binaryPath,
     kiloServerPassword: settings.providers.kilo.serverPassword,
@@ -632,6 +680,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     openCodeServerUrl: settings.providers.opencode.serverUrl,
     piAgentDir: settings.providers.pi.agentDir,
     piBinaryPath: settings.providers.pi.binaryPath,
+    museBinaryPath: settings.providers.muse.binaryPath,
     customCodexModels: settings.providers.codex.customModels,
     customClaudeModels: settings.providers.claudeAgent.customModels,
     customCursorModels: settings.providers.cursor.customModels,
@@ -642,10 +691,13 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customQwenModels: settings.providers.qwen.customModels,
     customCopilotModels: settings.providers.copilot.customModels,
     customCodebuddyModels: settings.providers.codebuddy.customModels,
+    customDoubaoModels: settings.providers.doubao.customModels,
+    customDeepseekModels: settings.providers.deepseek.customModels,
     customDroidModels: settings.providers.droid.customModels,
     customKiloModels: settings.providers.kilo.customModels,
     customOpenCodeModels: settings.providers.opencode.customModels,
     customPiModels: settings.providers.pi.customModels,
+    customMuseModels: settings.providers.muse.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
   };
@@ -796,6 +848,29 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
         : {}),
     };
   }
+  if (
+    hasOwn(patch, "doubaoBinaryPath") ||
+    hasOwn(patch, "customDoubaoModels") ||
+    hasOwn(patch, "doubaoRegion")
+  ) {
+    providers.doubao = {
+      ...(hasOwn(patch, "doubaoRegion") ? { region: patch.doubaoRegion ?? "china" } : {}),
+      ...(hasOwn(patch, "doubaoBinaryPath") ? { binaryPath: patch.doubaoBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customDoubaoModels")
+        ? { customModels: patch.customDoubaoModels ?? [] }
+        : {}),
+    };
+  }
+  if (hasOwn(patch, "deepseekBinaryPath") || hasOwn(patch, "customDeepseekModels")) {
+    providers.deepseek = {
+      ...(hasOwn(patch, "deepseekBinaryPath")
+        ? { binaryPath: patch.deepseekBinaryPath ?? "" }
+        : {}),
+      ...(hasOwn(patch, "customDeepseekModels")
+        ? { customModels: patch.customDeepseekModels ?? [] }
+        : {}),
+    };
+  }
   if (hasOwn(patch, "droidBinaryPath") || hasOwn(patch, "customDroidModels")) {
     providers.droid = {
       ...(hasOwn(patch, "droidBinaryPath") ? { binaryPath: patch.droidBinaryPath ?? "" } : {}),
@@ -853,6 +928,12 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       ...(hasOwn(patch, "customPiModels") ? { customModels: patch.customPiModels ?? [] } : {}),
     };
   }
+  if (hasOwn(patch, "museBinaryPath") || hasOwn(patch, "customMuseModels")) {
+    providers.muse = {
+      ...(hasOwn(patch, "museBinaryPath") ? { binaryPath: patch.museBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customMuseModels") ? { customModels: patch.customMuseModels ?? [] } : {}),
+    };
+  }
 
   if (Object.keys(providers).length > 0) {
     serverPatch.providers = providers;
@@ -886,6 +967,9 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "qwenBinaryPath",
     "copilotBinaryPath",
     "codebuddyBinaryPath",
+    "doubaoBinaryPath",
+    "doubaoRegion",
+    "deepseekBinaryPath",
     "droidBinaryPath",
     "kiloBinaryPath",
     "kiloServerPassword",
@@ -896,6 +980,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "openCodeServerUrl",
     "piAgentDir",
     "piBinaryPath",
+    "museBinaryPath",
     "textGenerationModel",
     "textGenerationProvider",
   ] as const) {
@@ -915,10 +1000,13 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "customQwenModels",
     "customCopilotModels",
     "customCodebuddyModels",
+    "customDoubaoModels",
+    "customDeepseekModels",
     "customDroidModels",
     "customKiloModels",
     "customOpenCodeModels",
     "customPiModels",
+    "customMuseModels",
   ] as const) {
     if (normalizedSettings[key].length > 0) {
       patch[key] = normalizedSettings[key] as never;
@@ -972,10 +1060,13 @@ export function getCustomModelsByProvider(
     qwen: getCustomModelsForProvider(settings, "qwen"),
     copilot: getCustomModelsForProvider(settings, "copilot"),
     codebuddy: getCustomModelsForProvider(settings, "codebuddy"),
+    doubao: getCustomModelsForProvider(settings, "doubao"),
+    deepseek: getCustomModelsForProvider(settings, "deepseek"),
     droid: getCustomModelsForProvider(settings, "droid"),
     kilo: getCustomModelsForProvider(settings, "kilo"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
     pi: getCustomModelsForProvider(settings, "pi"),
+    muse: getCustomModelsForProvider(settings, "muse"),
     djlCloud: getCustomModelsForProvider(settings, "djlCloud"),
     group: [],
   };
@@ -1124,10 +1215,13 @@ export function getCustomModelOptionsByProvider(
     qwen: getAppModelOptions("qwen", customModelsByProvider.qwen),
     copilot: getAppModelOptions("copilot", customModelsByProvider.copilot),
     codebuddy: getAppModelOptions("codebuddy", customModelsByProvider.codebuddy),
+    doubao: getAppModelOptions("doubao", customModelsByProvider.doubao),
+    deepseek: getAppModelOptions("deepseek", customModelsByProvider.deepseek),
     droid: getAppModelOptions("droid", customModelsByProvider.droid),
     kilo: getAppModelOptions("kilo", customModelsByProvider.kilo),
     opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
     pi: getAppModelOptions("pi", customModelsByProvider.pi),
+    muse: getAppModelOptions("muse", customModelsByProvider.muse),
     djlCloud: getAppModelOptions("djlCloud", customModelsByProvider.djlCloud),
     group: [],
   };
@@ -1148,6 +1242,8 @@ export function getProviderStartOptions(
     | "qwenBinaryPath"
     | "copilotBinaryPath"
     | "codebuddyBinaryPath"
+    | "doubaoBinaryPath"
+    | "deepseekBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "kiloServerPassword"
@@ -1158,6 +1254,7 @@ export function getProviderStartOptions(
     | "openCodeServerUrl"
     | "piAgentDir"
     | "piBinaryPath"
+    | "museBinaryPath"
   >,
 ): ProviderStartOptions | undefined {
   const codexBinaryPath = normalizeProviderBinaryPathOverride("codex", settings.codexBinaryPath);
@@ -1178,6 +1275,12 @@ export function getProviderStartOptions(
     "codebuddy",
     settings.codebuddyBinaryPath,
   );
+  const doubaoBinaryPath = normalizeProviderBinaryPathOverride("doubao", settings.doubaoBinaryPath);
+  const deepseekBinaryPath = normalizeProviderBinaryPathOverride(
+    "deepseek",
+    settings.deepseekBinaryPath,
+  );
+  const museBinaryPath = normalizeProviderBinaryPathOverride("muse", settings.museBinaryPath);
   const homePath = settings.codexHomePath.trim();
   const apiEndpoint = settings.cursorApiEndpoint.trim();
   const options: ProviderStartOptions = {
@@ -1187,6 +1290,9 @@ export function getProviderStartOptions(
     ...(qwenBinaryPath ? { qwen: { binaryPath: qwenBinaryPath } } : {}),
     ...(copilotBinaryPath ? { copilot: { binaryPath: copilotBinaryPath } } : {}),
     ...(codebuddyBinaryPath ? { codebuddy: { binaryPath: codebuddyBinaryPath } } : {}),
+    ...(doubaoBinaryPath ? { doubao: { binaryPath: doubaoBinaryPath } } : {}),
+    ...(deepseekBinaryPath ? { deepseek: { binaryPath: deepseekBinaryPath } } : {}),
+    ...(museBinaryPath ? { muse: { binaryPath: museBinaryPath } } : {}),
     ...(codexBinaryPath || homePath
       ? {
           codex: {
@@ -1234,10 +1340,13 @@ export function getCustomBinaryPathForProvider(
     | "qwenBinaryPath"
     | "copilotBinaryPath"
     | "codebuddyBinaryPath"
+    | "doubaoBinaryPath"
+    | "deepseekBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "openCodeBinaryPath"
     | "piBinaryPath"
+    | "museBinaryPath"
   >,
   provider: ProviderKind,
 ): string {
@@ -1262,6 +1371,10 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.copilotBinaryPath);
     case "codebuddy":
       return normalizeProviderBinaryPathOverride(provider, settings.codebuddyBinaryPath);
+    case "doubao":
+      return normalizeProviderBinaryPathOverride(provider, settings.doubaoBinaryPath);
+    case "deepseek":
+      return normalizeProviderBinaryPathOverride(provider, settings.deepseekBinaryPath);
     case "droid":
       return normalizeProviderBinaryPathOverride(provider, settings.droidBinaryPath);
     case "kilo":
@@ -1270,6 +1383,8 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.openCodeBinaryPath);
     case "pi":
       return normalizeProviderBinaryPathOverride(provider, settings.piBinaryPath);
+    case "muse":
+      return normalizeProviderBinaryPathOverride(provider, settings.museBinaryPath);
     case "djlCloud":
     case "group":
       return "";

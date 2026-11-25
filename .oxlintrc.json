@@ -9,7 +9,8 @@
     "**/routeTree.gen.ts",
     ".djl-*",
     ".next",
-    "cloud/packages/db/drizzle"
+    "cloud/packages/db/drizzle",
+    "packages/starter-skills/skills"
   ],
   "plugins": ["eslint", "oxc", "react", "unicorn", "typescript"],
   "categories": {

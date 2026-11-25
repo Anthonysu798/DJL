@@ -2,7 +2,7 @@
 // Purpose: The plugin directory: every plugin DJL offers, grouped by category, with one-click add.
 
 import { isPluginInstalled, type PluginCatalogEntry, type PluginsSnapshot } from "@djl/contracts";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PlusIcon, RefreshCwIcon, SearchIcon, SettingsIcon } from "~/lib/icons";
@@ -15,6 +15,8 @@ import { PluginActionsMenu } from "./PluginActionsMenu";
 import { PluginGlyph } from "./PluginGlyph";
 
 interface PluginDirectoryViewProps {
+  /** Replaces the page title, e.g. with the Plugins / Skills switch. */
+  heading?: ReactNode;
   snapshot: PluginsSnapshot | undefined;
   loading: boolean;
   error: string | undefined;
@@ -76,9 +78,11 @@ export function PluginDirectoryView(props: PluginDirectoryViewProps) {
   return (
     <div className="mx-auto w-full max-w-[1000px] px-6 pb-16 pt-8 sm:px-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("pluginLibrary.plugins")}
-        </h1>
+        {props.heading ?? (
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {t("pluginLibrary.plugins")}
+          </h1>
+        )}
         <div className="flex items-center gap-2">
           <div className="relative w-64 max-w-full">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

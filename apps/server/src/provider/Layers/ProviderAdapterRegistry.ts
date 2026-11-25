@@ -28,6 +28,9 @@ import {
   NativeCopilotAdapter,
   NativeCodeBuddyAdapter,
   NativePiAdapter,
+  NativeMuseAdapter,
+  NativeDoubaoAdapter,
+  NativeDeepSeekAdapter,
   NativeDjlCloudAdapter,
 } from "../../harnesses/native/layer";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
@@ -54,6 +57,9 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* NativeCopilotAdapter,
             yield* NativeCodeBuddyAdapter,
             yield* NativePiAdapter,
+            yield* NativeMuseAdapter,
+            yield* NativeDoubaoAdapter,
+            yield* NativeDeepSeekAdapter,
             yield* NativeDjlCloudAdapter,
             yield* NativeGroupAdapter,
           ];

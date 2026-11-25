@@ -29,6 +29,9 @@ describe("providerOrdering", () => {
       "copilot",
       "codebuddy",
       "pi",
+      "muse",
+      "doubao",
+      "deepseek",
     ]);
   });
 
@@ -54,6 +57,9 @@ describe("providerOrdering", () => {
       "copilot",
       "codebuddy",
       "pi",
+      "muse",
+      "doubao",
+      "deepseek",
     ]);
     expect(normalizeHiddenProviders(["bogus", "droid", "droid"])).toEqual([]);
   });

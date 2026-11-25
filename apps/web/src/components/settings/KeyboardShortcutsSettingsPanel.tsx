@@ -68,7 +68,7 @@ export function KeyboardShortcutsSettingsPanel() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       <div className="relative w-full">
         <Input
           type="search"
@@ -113,11 +113,11 @@ export function KeyboardShortcutsSettingsPanel() {
                   muted && "opacity-75",
                 )}
               >
-                <div className="min-w-0 space-y-0.5">
-                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "@lg:truncate")}>
                     {entry.label}
                   </div>
-                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>
+                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "@lg:truncate")}>
                     {entry.description}
                   </div>
                 </div>

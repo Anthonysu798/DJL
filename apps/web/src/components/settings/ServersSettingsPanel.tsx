@@ -283,7 +283,7 @@ export function ServersSettingsPanel() {
     <>
       <SettingsSection title={t("servers.title")}>
         {list.length > 0 ? (
-          <div className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-col gap-2.5 px-4 py-3 @md:flex-row @md:items-center @md:justify-between @md:px-5">
             <p className="text-xs text-muted-foreground">
               {t("servers.list.count", { count: list.length })}
             </p>
@@ -306,7 +306,7 @@ export function ServersSettingsPanel() {
         ) : null}
 
         {servers.isPending ? (
-          <div className="space-y-3 px-4 py-4 sm:px-5">
+          <div className="space-y-3 px-4 py-4 @md:px-5">
             {[0, 1].map((index) => (
               <div key={index} className="flex items-center gap-3">
                 <Skeleton className="size-2 rounded-full" />

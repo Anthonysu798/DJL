@@ -13,6 +13,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.2.77",
     "@djl/contracts": "workspace:*",
     "@djl/shared": "workspace:*",
+    "@djl/starter-skills": "workspace:*",
     "@effect/platform-node": "catalog:",
     "app-builder-bin": "4.2.0",
     "effect": "catalog:"

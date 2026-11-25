@@ -3,9 +3,15 @@ import { prepareProfileShell } from "./profileShell";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type { ServerSettings, TerminalAgentProfile, TerminalOpenInput } from "@djl/contracts";
+import {
+  DEFAULT_CLI_ACCOUNT_ID,
+  type ServerSettings,
+  type TerminalAgentProfile,
+  type TerminalOpenInput,
+} from "@djl/contracts";
 import { Effect } from "effect";
 import { buildHarnessInvocation } from "./accounts";
+import { withNormalCliLogin } from "./cliAccountSelection";
 import { TerminalError, type TerminalManagerShape } from "../terminal/Services/Manager";
 
 // Profiles contain CLI-owned credentials. Only their opaque ids cross the RPC boundary.
@@ -98,11 +104,18 @@ export function buildProfileTerminalLaunch(
 }
 
 export function openProfileTerminal(
-  input: TerminalOpenInput,
-  settings: ServerSettings,
+  requested: TerminalOpenInput,
+  requestedSettings: ServerSettings,
   root: string,
   manager: Pick<TerminalManagerShape, "open" | "isRunning">,
 ) {
+  // Workspaces offer the CLI's normal sign-in as the `default` account: run the installed CLI
+  // with its usual login (not the account chosen for chats), no separate profile folder.
+  const useNormalLogin = requested.agentProfile?.profileId === DEFAULT_CLI_ACCOUNT_ID;
+  const input: TerminalOpenInput = useNormalLogin
+    ? (({ agentProfile, ...rest }) => ({ ...rest, harness: agentProfile!.provider }))(requested)
+    : requested;
+  const settings = useNormalLogin ? withNormalCliLogin(requestedSettings) : requestedSettings;
   if (!input.agentProfile && !input.harness) return manager.open(input);
   return Effect.gen(function* () {
     // Reattaching a viewport must not rediscover CLIs or rewrite startup scripts.

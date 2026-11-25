@@ -187,6 +187,8 @@ export interface TestProviderAdapterHarness {
     response: TestTurnResponse,
   ) => Effect.Effect<void, never>;
   readonly getStartCount: () => number;
+  /** The provider options each session started with, in order. */
+  readonly getStartProviderOptions: () => ReadonlyArray<unknown>;
   readonly getRollbackCalls: (threadId: ThreadId) => ReadonlyArray<number>;
   readonly getInterruptCalls: (threadId: ThreadId) => ReadonlyArray<TurnId | undefined>;
   readonly listActiveSessionIds: () => ReadonlyArray<ThreadId>;
@@ -227,6 +229,7 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
     const provider = options?.provider ?? "codex";
     const runtimeEvents = yield* PubSub.unbounded<ProviderRuntimeEvent>();
     let sessionCount = 0;
+    const startProviderOptions: unknown[] = [];
     const sessions = new Map<ThreadId, SessionState>();
     const queuedResponsesForNextSession: TestTurnResponse[] = [];
     const interruptCallsBySession = new Map<ThreadId, Array<TurnId | undefined>>();
@@ -252,6 +255,7 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
         }
 
         sessionCount += 1;
+        startProviderOptions.push(input.providerOptions);
         const threadId = input.threadId;
         const createdAt = nowIso();
 
@@ -521,6 +525,7 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
     };
 
     const getStartCount = (): number => sessionCount;
+    const getStartProviderOptions = (): ReadonlyArray<unknown> => startProviderOptions;
 
     const getInterruptCalls = (threadId: ThreadId): ReadonlyArray<TurnId | undefined> => {
       const calls = interruptCallsBySession.get(threadId);
@@ -553,6 +558,7 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
       queueTurnResponse,
       queueTurnResponseForNextSession,
       getStartCount,
+      getStartProviderOptions,
       getRollbackCalls,
       getInterruptCalls,
       listActiveSessionIds,

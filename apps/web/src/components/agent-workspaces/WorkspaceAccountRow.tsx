@@ -3,28 +3,43 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentAccountProfile } from "~/agentWorkspaceStore";
 import { ensureNativeApi } from "~/nativeApi";
+import { CLI_ACCOUNTS_QUERY_KEY } from "~/lib/cliAccountsQuery";
 import { cn } from "~/lib/utils";
 import { RefreshCwIcon, CheckIcon, PencilIcon } from "~/lib/icons";
+import { ProviderIcon } from "../ProviderIcon";
 
 export const PROFILE_ACCOUNT_QUERY_KEY = ["workspace-profile-account"] as const;
+type AccountStatus = "signedIn" | "signedOut" | "unavailable" | "unknown" | "checking";
+
 export function RefreshWorkspaceAccounts() {
   const client = useQueryClient();
   const { t } = useTranslation("workspace", { keyPrefix: "agents" });
   return (
     <button
+      className="workspace-icon-button"
       aria-label={t("refreshAccounts")}
       title={t("refreshAccounts")}
-      onClick={() => void client.invalidateQueries({ queryKey: PROFILE_ACCOUNT_QUERY_KEY })}
+      onClick={() => {
+        void client.invalidateQueries({ queryKey: PROFILE_ACCOUNT_QUERY_KEY });
+        void client.invalidateQueries({ queryKey: CLI_ACCOUNTS_QUERY_KEY });
+      }}
     >
       <RefreshCwIcon className="size-3.5" />
     </button>
   );
 }
 
+/**
+ * One account in the Workspaces sidebar. App accounts (the normal sign-in and Settings → AI
+ * accounts) pass `known`, since Settings already checked them; workspace-only profiles ask
+ * their own CLI folder.
+ */
 export function WorkspaceAccountRow({
   profile,
   providerLabel,
   used,
+  known,
+  mainLabel,
   onEdit,
   selected = false,
   onSelect,
@@ -33,7 +48,10 @@ export function WorkspaceAccountRow({
   profile: AgentAccountProfile;
   providerLabel: string;
   used: number;
-  onEdit: () => void;
+  known?: { status: AccountStatus; email: string | null };
+  /** For the CLI's normal sign-in: the row shows the provider name with this tag. */
+  mainLabel?: string;
+  onEdit?: () => void;
   selected?: boolean;
   onSelect?: () => void;
   onSignIn?: () => void;
@@ -46,6 +64,7 @@ export function WorkspaceAccountRow({
         provider: profile.provider,
         profileId: profile.id,
       }),
+    enabled: !known,
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
@@ -53,70 +72,88 @@ export function WorkspaceAccountRow({
   });
   const { refetch } = account;
   useEffect(() => {
+    if (known) return;
     const refresh = () => {
       void refetch({ cancelRefetch: false });
     };
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, [refetch]);
-  const identity = account.isError ? undefined : account.data;
-  const status = account.isError ? "unknown" : (identity?.status ?? "checking");
+  }, [refetch, known]);
+  const identity = known ?? (account.isError ? undefined : account.data);
+  const status: AccountStatus = known
+    ? known.status
+    : account.isError
+      ? "unknown"
+      : (account.data?.status ?? "checking");
   const statusLabel = t(`profileStatus.${status}`);
+  const signedIn = status === "signedIn";
   return (
-    <div
-      className={cn(
-        "group mb-1 flex items-center rounded-md hover:bg-muted",
-        selected && "bg-muted",
-      )}
-    >
+    <div className="workspace-account-row group" data-selected={selected || undefined}>
       <button
-        className="flex min-w-0 flex-1 items-center gap-2 px-1 py-2 text-left"
+        className="workspace-account-main"
         aria-pressed={selected}
-        title={t("useThisAccount")}
-        onClick={status === "signedIn" ? (onSelect ?? onEdit) : (onSignIn ?? onEdit)}
+        title={signedIn ? t("useThisAccount") : t("signIn")}
+        onClick={signedIn ? (onSelect ?? onEdit) : (onSignIn ?? onEdit)}
       >
-        <span
-          role="img"
-          aria-label={statusLabel}
-          title={statusLabel}
-          className={cn(
-            "size-2 shrink-0 rounded-full",
-            status === "signedIn"
-              ? "bg-emerald-400"
-              : status === "checking"
-                ? "bg-muted-foreground"
-                : "bg-red-400",
-          )}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs">{profile.name}</span>
-          <span className="block text-[10px] text-muted-foreground">{providerLabel}</span>
+        <span className="workspace-account-logo" title={providerLabel}>
+          <ProviderIcon provider={profile.provider} className="size-4" />
           <span
-            className="block truncate text-[10px] text-muted-foreground"
+            role="img"
+            aria-label={statusLabel}
+            title={statusLabel}
+            className={cn(
+              "workspace-account-dot",
+              signedIn
+                ? "bg-emerald-400"
+                : status === "checking"
+                  ? "bg-muted-foreground"
+                  : "bg-red-400",
+            )}
+          />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-5">
+            <span className="truncate">{mainLabel ? providerLabel : profile.name}</span>
+            {mainLabel ? (
+              <span className="workspace-account-tag">{mainLabel}</span>
+            ) : (
+              <span className="sr-only"> · {providerLabel}</span>
+            )}
+          </span>
+          <span
+            className="block truncate text-[11px] leading-4 text-muted-foreground"
             title={identity?.email ?? statusLabel}
           >
-            {identity?.email ??
-              (status === "signedIn" ? t("accountEmailUnavailable") : statusLabel)}
+            {identity?.email ?? (signedIn ? t("accountEmailUnavailable") : statusLabel)}
           </span>
         </span>
-        <span className="text-[10px] text-muted-foreground">{used}</span>
-        {selected && <CheckIcon className="size-3 shrink-0" aria-label={t("selectedAccount")} />}
-      </button>
-      <div className="flex shrink-0 items-center gap-1">
-        {onSignIn && status !== "signedIn" && status !== "checking" && (
-          <button className="px-1 text-[10px] underline underline-offset-2" onClick={onSignIn}>
-            {t("signIn")}
-          </button>
+        {used > 0 && (
+          <span className="workspace-account-count" title={t("terminalCount", { count: used })}>
+            {used}
+          </span>
         )}
+        {selected && (
+          <CheckIcon
+            className="size-3.5 shrink-0 text-foreground"
+            aria-label={t("selectedAccount")}
+          />
+        )}
+      </button>
+      {onSignIn && !signedIn && status !== "checking" && (
+        <button className="workspace-account-signin" onClick={onSignIn}>
+          {t("signIn")}
+        </button>
+      )}
+      {onEdit && (
         <button
-          className="p-1 text-muted-foreground"
+          className="workspace-icon-button workspace-account-edit"
           onClick={onEdit}
           aria-label={t("editNamedAccount", { name: profile.name })}
           title={t("editAccount")}
         >
           <PencilIcon className="size-3" />
         </button>
-      </div>
+      )}
     </div>
   );
 }

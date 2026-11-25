@@ -318,6 +318,16 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codebuddy", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("codebuddy", input),
   },
+  doubao: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("doubao", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("doubao", input),
+  },
+  deepseek: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("deepseek", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("deepseek", input),
+  },
   droid: {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("droid", input),
@@ -337,6 +347,11 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("pi", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("pi", input),
+  },
+  muse: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("muse", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("muse", input),
   },
   djlCloud: {
     getState: (input) => getProviderStateFromCapabilities(input),

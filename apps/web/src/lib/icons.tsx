@@ -125,6 +125,8 @@ export const ArrowRightIcon = adaptIcon(IconArrowRight);
 export const ArrowDownIcon = adaptIcon(IconArrowDown);
 export const ArrowUpIcon = adaptIcon(IconArrowUp);
 export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
+export const BriefcaseIcon: LucideIcon = centralIconWrapper("suitcase-work");
+export const CodeIcon: LucideIcon = centralIconWrapper("code");
 export const ArrowUpDownIcon = adaptIcon(IconArrowsUpDown);
 // Single source for the robot/agent glyph. Sourced from the Central icon set so
 // every robot affordance (reasoning rows, agent-task rows, agent mention chips,

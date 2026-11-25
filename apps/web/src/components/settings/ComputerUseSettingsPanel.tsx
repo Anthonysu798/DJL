@@ -574,7 +574,7 @@ export function ComputerUseSettingsPanel({
                 />
               }
             />
-            <div className="grid gap-4 px-4 py-4 sm:grid-cols-2">
+            <div className="grid gap-4 px-4 py-4 @md:grid-cols-2">
               <label className="space-y-2 text-sm">
                 {t("computerUse.retention")}
                 <Input
@@ -623,7 +623,7 @@ export function ComputerUseSettingsPanel({
                   }
                 />
               </label>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
+              <p className="text-xs text-muted-foreground @md:col-span-2">
                 {t("computerUse.inclusionDescription")}
               </p>
               <label className="space-y-2 text-sm">
@@ -730,7 +730,7 @@ export function ComputerUseSettingsPanel({
           </div>
         )}
         {source === "passive" && !selectedHistory.isPending && (
-          <div className="grid min-w-0 gap-4 border-y px-4 py-3 text-xs sm:grid-cols-2">
+          <div className="grid min-w-0 gap-4 border-y px-4 py-3 text-xs @md:grid-cols-2">
             <div
               className="min-w-0 space-y-1 break-words"
               role="group"
@@ -1191,7 +1191,7 @@ export function ComputerUseSettingsPanel({
                 </select>
               </label>
               {clearRange === "custom" ? (
-                <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-3 @md:grid-cols-2">
                   <label className="min-w-0 space-y-1">
                     <span>{t("computerUse.clearScope.from")}</span>
                     <Input

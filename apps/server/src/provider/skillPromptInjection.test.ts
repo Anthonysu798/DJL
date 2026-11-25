@@ -8,7 +8,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildInlineSkillInstructions,
@@ -22,31 +22,40 @@ const cursorSkillPath = "/Users/me/.cursor/skills/reviewer/SKILL.md";
 const piSkillPath = "/Users/me/.pi/agent/skills/reviewer/SKILL.md";
 
 describe("shouldInlineSkillForProvider", () => {
-  it("skips codex-native and djl roots for codex but inlines foreign provider roots", () => {
-    // Codex loads .codex roots natively and ~/.djl/skills via the extra
-    // skill root registered at session start.
-    expect(shouldInlineSkillForProvider("codex", djlSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("codex", codexSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("codex", claudeSkillPath)).toBe(true);
-    expect(shouldInlineSkillForProvider("codex", cursorSkillPath)).toBe(true);
-  });
-
-  it("inlines only DJL-owned paths for cursor", () => {
-    expect(shouldInlineSkillForProvider("cursor", djlSkillPath)).toBe(true);
-    expect(shouldInlineSkillForProvider("cursor", cursorSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("cursor", codexSkillPath)).toBe(false);
-  });
-
-  it("inlines everything except .claude paths for claudeAgent", () => {
-    expect(shouldInlineSkillForProvider("claudeAgent", claudeSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("claudeAgent", djlSkillPath)).toBe(true);
-    expect(shouldInlineSkillForProvider("claudeAgent", codexSkillPath)).toBe(true);
+  it("inlines every skill for the native text-only bridges, including their own skills", () => {
+    // The native Codex, Claude Code and Cursor bridges send no structured skill items.
+    for (const provider of [
+      "codex",
+      "claudeAgent",
+      "cursor",
+      "doubao",
+      "deepseek",
+      "muse",
+    ] as const) {
+      expect(shouldInlineSkillForProvider(provider, djlSkillPath)).toBe(true);
+      expect(shouldInlineSkillForProvider(provider, codexSkillPath)).toBe(true);
+      expect(shouldInlineSkillForProvider(provider, claudeSkillPath)).toBe(true);
+      expect(shouldInlineSkillForProvider(provider, cursorSkillPath)).toBe(true);
+    }
   });
 
   it("inlines cross-provider paths for pi but not pi-native skills", () => {
     expect(shouldInlineSkillForProvider("pi", djlSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", piSkillPath)).toBe(false);
+  });
+
+  it("inlines DJL's bundled starter skills for pi too", () => {
+    const starterDir = mkdtempSync(path.join(os.tmpdir(), "starter-inline-"));
+    vi.stubEnv("DJL_STARTER_SKILLS_DIR", starterDir);
+    try {
+      expect(shouldInlineSkillForProvider("pi", path.join(starterDir, "pptx", "SKILL.md"))).toBe(
+        true,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(starterDir, { recursive: true, force: true });
+    }
   });
 
   it("always inlines for providers without native skill support", () => {
@@ -78,6 +87,26 @@ describe("buildInlineSkillInstructions", () => {
       expect(text).toContain('<skill name="reviewer"');
       expect(text).toContain("Always review carefully.");
       expect(text).not.toContain("missing");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("points the agent at the full file when a long skill is cut short", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "skill-inline-long-"));
+    const skillPath = path.join(root, ".djl", "skills", "slides", "SKILL.md");
+    try {
+      await mkdir(path.dirname(skillPath), { recursive: true });
+      await writeFile(skillPath, `# Slides\n\n${"x".repeat(30_000)}`);
+
+      const text = await buildInlineSkillInstructions({
+        provider: "claudeAgent",
+        skills: [{ name: "slides", path: skillPath }],
+        maxChars: 100_000,
+      });
+
+      expect(text).toContain(`read the rest of ${JSON.stringify(skillPath)} before you start`);
+      expect(text.length).toBeLessThan(25_000);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

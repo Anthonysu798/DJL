@@ -2,7 +2,9 @@
 // Purpose: Smooths over shell/path differences between packaged app launches and login shells.
 // Exports: PATH hydration plus base-dir helpers used by server startup.
 
+import { existsSync } from "node:fs";
 import * as OS from "node:os";
+import nodePath from "node:path";
 import { Effect, Path } from "effect";
 import {
   listLoginShellCandidates,
@@ -60,6 +62,41 @@ export function fixPath(
     }
   } catch (error) {
     logWarning("Failed to hydrate PATH from the user environment.", error);
+  }
+}
+
+// Where the AI CLIs DJL drives install themselves (Claude Code's native installer, npm -g
+// prefixes, Homebrew, Bun, Volta). Appended after the user's own PATH, so their order still
+// wins, but a slow or failing login-shell capture can no longer hide an installed CLI.
+const KNOWN_CLI_DIRS = [
+  "~/.local/bin",
+  "~/.npm-global/bin",
+  "~/.bun/bin",
+  "~/.volta/bin",
+  "~/.cargo/bin",
+  "/opt/homebrew/bin",
+  "/usr/local/bin",
+] as const;
+
+export function appendKnownCliDirs(
+  options: {
+    env?: NodeJS.ProcessEnv;
+    platform?: NodeJS.Platform;
+    homeDir?: string;
+    exists?: (path: string) => boolean;
+  } = {},
+): void {
+  const platform = options.platform ?? process.platform;
+  if (platform !== "darwin" && platform !== "linux") return;
+  const env = options.env ?? process.env;
+  const homeDir = options.homeDir ?? OS.homedir();
+  const exists = options.exists ?? existsSync;
+  const dirs = KNOWN_CLI_DIRS.map((dir) =>
+    dir.startsWith("~/") ? nodePath.join(homeDir, dir.slice(2)) : dir,
+  ).filter((dir) => exists(dir));
+  const merged = mergePathEntries(env.PATH, dirs.join(":"), platform);
+  if (merged) {
+    env.PATH = merged;
   }
 }
 

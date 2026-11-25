@@ -31,6 +31,8 @@ const USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
 type CodexAuth = { kind: "oauth"; accessToken: string; accountId?: string } | { kind: "api-key" };
 
 function authFilePaths(ctx: ProviderUsageContext): string[] {
+  // An extra account keeps its login only in its own folder (DJL forces file storage there).
+  if (ctx.accountDir) return [nodePath.join(ctx.accountDir, "auth.json")];
   const paths: string[] = [];
   if (ctx.env.CODEX_HOME) {
     paths.push(nodePath.join(ctx.env.CODEX_HOME, "auth.json"));
@@ -68,7 +70,9 @@ async function resolveCodexAuth(ctx: ProviderUsageContext): Promise<CodexAuth | 
     }
   }
 
-  const keychain = await readKeychainPassword({ service: "Codex Auth", platform: ctx.platform });
+  const keychain = ctx.accountDir
+    ? null
+    : await readKeychainPassword({ service: "Codex Auth", platform: ctx.platform });
   if (keychain) {
     const parsed = readCodexAuthRecord(asRecord(decodeKeychainJson(keychain)));
     if (parsed && parsed !== "api-key-only") {

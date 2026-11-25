@@ -103,13 +103,18 @@
       "groups": {
         "agentModels": "Continue with agent",
         "builtIn": "Built-in",
+        "claudeSkills": "Claude Code",
+        "codexSkills": "Codex",
         "local": "Local",
         "mcp": "MCP servers",
+        "otherSkills": "Other skills",
         "plugins": "Plugins",
         "provider": "Provider",
         "servers": "Servers",
+        "sharedSkills": "Shared",
         "skills": "Skills",
-        "subagents": "Subagents"
+        "subagents": "Subagents",
+        "suggestedSkills": "For {{provider}}"
       },
       "handoffReady": "Agent ready",
       "handoffReadyDescription": "Your conversation, notes, and draft are carried over. Send your next instruction to continue.",
@@ -128,7 +133,11 @@
       },
       "runNativeCommand": "Run a native {{provider}} command",
       "searchFilesHint": "Type to search for files",
-      "searchingMentions": "Searching mentions..."
+      "searchingMentions": "Searching mentions...",
+      "skillOrigin": {
+        "project": "Project",
+        "shared": "Shared"
+      }
     },
     "composer": {
       "actions": {
@@ -427,32 +436,32 @@
       "openRepositoryFallback": "The in-app browser could not open GitHub.",
       "providerFailure": {
         "authentication": {
-          "action": "Sign in or update the provider credentials, then retry.",
-          "title": "Provider sign-in is required"
+          "action": "Your AI account needs you to sign in. Sign in, then send your message again.",
+          "title": "Sign in again to continue"
         },
         "commandMissing": {
-          "action": "Install or configure the provider command, then retry.",
-          "title": "Provider command not found"
+          "action": "Install it in Settings, then send your message again.",
+          "title": "This AI tool isn't set up yet"
         },
         "connection": {
-          "action": "Check the provider service or network, then retry.",
-          "title": "Provider connection was interrupted"
+          "action": "Check your internet connection, then send your message again.",
+          "title": "The connection dropped"
         },
         "generic": {
-          "action": "Retry the task. If it fails again, check provider settings.",
-          "title": "The task stopped"
+          "action": "Send your message again. If it keeps happening, try another AI model.",
+          "title": "This reply stopped"
         },
         "permission": {
-          "action": "Check the provider's file permissions, then retry.",
-          "title": "Provider access was blocked"
+          "action": "Make sure DJL can open this folder, then send your message again.",
+          "title": "DJL couldn't open a file it needed"
         },
         "rateLimit": {
-          "action": "Wait for the limit to reset or switch providers, then retry.",
-          "title": "Provider limit reached"
+          "action": "Wait for the limit to reset or switch to another account, then send again.",
+          "title": "You've reached your plan's limit"
         },
         "workspaceMissing": {
-          "action": "Choose an existing project folder, then retry your message.",
-          "title": "Working folder unavailable"
+          "action": "Choose a folder that still exists, then send your message again.",
+          "title": "This folder can't be found"
         }
       },
       "renameThreadFailed": "Failed to rename thread",
@@ -584,6 +593,337 @@
       },
       "unavailable": "{{provider}} provider is unavailable."
     },
+    "home": {
+      "mascot": "Say hi to DJL",
+      "modeLabel": "What kind of task",
+      "modes": {
+        "code": "Code",
+        "work": "Work"
+      },
+      "suggestionsLabel": "Suggested prompts for {{topic}}",
+      "topics": {
+        "apps": {
+          "label": "Apps",
+          "suggestions": {
+            "s1": {
+              "label": "Build a habit tracker app",
+              "prompt": "Build a simple habit tracker app where I can add habits, tick them off each day and see my streaks. Keep the design clean and save everything on this computer."
+            },
+            "s2": {
+              "label": "Make a budget calculator",
+              "prompt": "Make a small budget calculator: I enter my monthly income and expenses by category, and it shows what is left and a simple chart. Explain how to open it when you are done."
+            },
+            "s3": {
+              "label": "Create a quiz game for kids",
+              "prompt": "Create a colourful quiz game for children aged 8 to 10 with 10 multiple-choice questions, a score at the end and a button to play again."
+            },
+            "s4": {
+              "label": "Turn a spreadsheet into an app",
+              "prompt": "I will share a spreadsheet. Turn it into a small app where I can search, filter and add rows without opening the spreadsheet."
+            }
+          }
+        },
+        "automation": {
+          "label": "Automations",
+          "suggestions": {
+            "s1": {
+              "label": "Rename a folder of photos",
+              "prompt": "Rename all the photos in a folder I choose by the date they were taken, like 2026-05-14 Beach 01.jpg. Show me the list of changes before you rename anything."
+            },
+            "s2": {
+              "label": "Tidy my Downloads folder",
+              "prompt": "Sort my Downloads folder into subfolders by file type (documents, images, videos, installers, other). Tell me what you will move before you move it."
+            },
+            "s3": {
+              "label": "Merge spreadsheets into one",
+              "prompt": "Combine all the spreadsheets in a folder into one sheet with the same columns, and add a column showing which file each row came from."
+            },
+            "s4": {
+              "label": "Make a daily summary script",
+              "prompt": "Write a script I can run each morning that lists the files I changed yesterday and makes a short summary note. Explain how to run it in plain words."
+            }
+          }
+        },
+        "data": {
+          "label": "Data",
+          "suggestions": {
+            "s1": {
+              "label": "Find trends in my sales sheet",
+              "prompt": "I will share a sales spreadsheet. Find the main trends, the best and worst months, and anything unusual, then summarise it in five bullet points with one simple chart."
+            },
+            "s2": {
+              "label": "Clean up a messy spreadsheet",
+              "prompt": "Clean up the spreadsheet I share: fix inconsistent dates and names, remove duplicate rows and list every change you made so I can check it."
+            },
+            "s3": {
+              "label": "Build a simple dashboard",
+              "prompt": "Turn my data into a one-page dashboard with three or four key numbers and two charts. If I have not shared data yet, use clearly labelled example numbers."
+            },
+            "s4": {
+              "label": "Compare two lists",
+              "prompt": "Compare the two lists I share and tell me which items appear in both, which are only in the first and which are only in the second."
+            }
+          }
+        },
+        "docs": {
+          "label": "Tech docs",
+          "suggestions": {
+            "s1": {
+              "label": "Write a README for my project",
+              "prompt": "Read this project and write a clear README: what it does, how to install it, how to run it and how to get help. Keep it short and friendly."
+            },
+            "s2": {
+              "label": "Explain this code simply",
+              "prompt": "Explain what this project does in plain language for someone who does not code, then list the main parts and what each one is for."
+            },
+            "s3": {
+              "label": "Document an API",
+              "prompt": "Write simple documentation for the API in this project: each endpoint, what to send, what comes back and one example for each."
+            },
+            "s4": {
+              "label": "Write setup steps",
+              "prompt": "Write step-by-step setup instructions a new teammate can follow on a fresh computer, including what to install first and how to check it works."
+            }
+          }
+        },
+        "documents": {
+          "label": "Documents",
+          "suggestions": {
+            "s1": {
+              "label": "Summarise a long document",
+              "prompt": "Summarise the document I share into one page: the main points, any decisions or deadlines, and three questions I should ask about it."
+            },
+            "s2": {
+              "label": "Write a weekly report",
+              "prompt": "Write a weekly report from my notes with three short sections: what got done, what is blocked and what is next. Keep it under 300 words and mark anything you had to guess."
+            },
+            "s3": {
+              "label": "Create a meeting notes template",
+              "prompt": "Create a reusable meeting notes template with sections for attendees, agenda, decisions, action items with owners and due dates."
+            },
+            "s4": {
+              "label": "Proofread and improve my writing",
+              "prompt": "Proofread the text I share. Fix spelling and grammar, make it clearer and more concise, and keep my tone. Show the changes you made."
+            }
+          }
+        },
+        "email": {
+          "label": "Emails",
+          "suggestions": {
+            "s1": {
+              "label": "Write a polite follow-up email",
+              "prompt": "Write a polite but clear follow-up email to someone who has not replied in a week. Include a subject line and leave blanks for names and dates."
+            },
+            "s2": {
+              "label": "Reply to a tricky message",
+              "prompt": "Help me reply to the message I paste. Keep it calm and professional, acknowledge their point and suggest a next step."
+            },
+            "s3": {
+              "label": "Ask for feedback on a draft",
+              "prompt": "Write a short email asking a colleague for feedback on my draft by a specific day, and make it easy for them to reply with just a few comments."
+            },
+            "s4": {
+              "label": "Announce a change to the team",
+              "prompt": "Write a friendly team announcement about a change I describe: what is changing, when, why it helps and who to ask with questions."
+            }
+          }
+        },
+        "fixes": {
+          "label": "Fix a bug",
+          "suggestions": {
+            "s1": {
+              "label": "Find why a button does nothing",
+              "prompt": "A button in this project does nothing when I click it. Find out why, fix it, and explain the cause in one or two sentences."
+            },
+            "s2": {
+              "label": "Fix an error message",
+              "prompt": "I will paste an error message. Find where it comes from in this project, fix the cause and tell me how to check that it is gone."
+            },
+            "s3": {
+              "label": "Speed up a slow page",
+              "prompt": "One page in this project loads slowly. Find what makes it slow, fix the biggest cause and tell me how much faster it is."
+            },
+            "s4": {
+              "label": "Make it work on phones",
+              "prompt": "Make this website look right on phones: check each page at a small screen size and fix anything that overflows or is too small to tap."
+            }
+          }
+        },
+        "planning": {
+          "label": "Planning",
+          "suggestions": {
+            "s1": {
+              "label": "Plan a project timeline",
+              "prompt": "Help me plan a project. Ask me three quick questions first, then make a timeline with milestones, owners and the riskiest step highlighted."
+            },
+            "s2": {
+              "label": "Make a to-do list from notes",
+              "prompt": "Turn my messy notes into a clear to-do list grouped by priority, with the first three things to do today at the top."
+            },
+            "s3": {
+              "label": "Plan a team event",
+              "prompt": "Plan a half-day team event for about 15 people: an agenda, a checklist of things to book and a rough budget with example costs."
+            },
+            "s4": {
+              "label": "Prepare for a meeting",
+              "prompt": "Help me prepare for an important meeting: the goal, the three points I must make, likely questions and short answers to each."
+            }
+          }
+        },
+        "research": {
+          "label": "Research",
+          "suggestions": {
+            "s1": {
+              "label": "Compare products before buying",
+              "prompt": "Compare the top options for a product I name. Make a table of price, main features, pros and cons, and tell me which one suits most people and why."
+            },
+            "s2": {
+              "label": "Research a topic for me",
+              "prompt": "Research a topic I name and give me a short briefing: the key facts, the main viewpoints and links to three trustworthy sources."
+            },
+            "s3": {
+              "label": "Understand a company",
+              "prompt": "Explain how a company I name makes money, who its main competitors are and what is changing in its market, in under 400 words."
+            },
+            "s4": {
+              "label": "Check if a claim is true",
+              "prompt": "Check whether a claim I paste is true. Show what reliable sources say, how confident you are and anything that is still unclear."
+            }
+          }
+        },
+        "review": {
+          "label": "Code review",
+          "suggestions": {
+            "s1": {
+              "label": "Review my latest changes",
+              "prompt": "Review the latest changes in this project for bugs, confusing names and missing error handling. List the most important problems first."
+            },
+            "s2": {
+              "label": "Add tests to a feature",
+              "prompt": "Add tests for the main feature in this project, run them and tell me in plain words what they check and whether they pass."
+            },
+            "s3": {
+              "label": "Check for security problems",
+              "prompt": "Look through this project for common security problems such as secrets in the code or unchecked user input, and suggest fixes for the most serious ones."
+            },
+            "s4": {
+              "label": "Tidy up messy code",
+              "prompt": "Find the messiest part of this project and tidy it up without changing what it does, then explain what you improved."
+            }
+          }
+        },
+        "slides": {
+          "label": "Slides",
+          "suggestions": {
+            "s1": {
+              "label": "Turn notes into a slide deck",
+              "prompt": "Turn my notes into a 6-slide presentation with a title slide, one idea per slide and a short summary at the end."
+            },
+            "s2": {
+              "label": "Make a pitch deck outline",
+              "prompt": "Outline a 10-slide pitch deck for an idea I describe: problem, solution, who it is for, how it makes money, the team and the ask."
+            },
+            "s3": {
+              "label": "Create a training presentation",
+              "prompt": "Create a short training presentation that teaches a topic I name to beginners, with simple examples and a three-question quiz at the end."
+            },
+            "s4": {
+              "label": "Make a project update deck",
+              "prompt": "Make a 5-slide project update: progress so far, results, problems, next steps and what help I need."
+            }
+          }
+        },
+        "websites": {
+          "label": "Websites",
+          "suggestions": {
+            "s1": {
+              "label": "Build a personal website",
+              "prompt": "Build a simple personal website with a home page, an about page and a contact section. Make it look good on phones and explain how to open it."
+            },
+            "s2": {
+              "label": "Make a landing page",
+              "prompt": "Make a landing page for a product I describe, with a clear headline, three benefits, a short FAQ and a sign-up button."
+            },
+            "s3": {
+              "label": "Create a small business site",
+              "prompt": "Create a four-page website for a small business: home, services, about and contact, with opening hours and a map placeholder."
+            },
+            "s4": {
+              "label": "Build a to-do list web page",
+              "prompt": "Build a to-do list web page where I can add, tick off and delete tasks, and the list is still there when I reopen the page."
+            }
+          }
+        }
+      },
+      "skillsLabel": "Skills for this task",
+      "removeSkill": "Remove {{name}}",
+      "skills": {
+        "docx": {
+          "name": "Word documents",
+          "description": "Creates and edits real Word files with proper headings, tables and layout."
+        },
+        "copy-editing": {
+          "name": "Copy editing",
+          "description": "Proofreads and tightens writing while keeping your voice."
+        },
+        "xlsx": {
+          "name": "Spreadsheets",
+          "description": "Reads, cleans and builds Excel and CSV files with working formulas and charts."
+        },
+        "build-dashboard": {
+          "name": "Dashboards",
+          "description": "Turns data into a one-page interactive dashboard with key numbers and charts."
+        },
+        "pptx": {
+          "name": "PowerPoint slides",
+          "description": "Builds real PowerPoint decks with clean layouts and readable slides."
+        },
+        "theme-factory": {
+          "name": "Slide themes",
+          "description": "Applies a matching colour and font theme to slides and documents."
+        },
+        "djl-research": {
+          "name": "Research",
+          "description": "Researches with real sources, compares options fairly and cites every claim."
+        },
+        "djl-email": {
+          "name": "Email writing",
+          "description": "Writes clear, kind emails with an obvious next step."
+        },
+        "djl-planning": {
+          "name": "Planning",
+          "description": "Breaks a goal into small dated steps with owners, risks and checkpoints."
+        },
+        "frontend-design": {
+          "name": "Frontend design",
+          "description": "Gives pages a distinctive, intentional look instead of a template feel."
+        },
+        "frontend-ui-engineering": {
+          "name": "App interfaces",
+          "description": "Builds accessible, responsive app screens that work on every size."
+        },
+        "systematic-debugging": {
+          "name": "Systematic debugging",
+          "description": "Finds the root cause before changing anything."
+        },
+        "djl-automation": {
+          "name": "Safe automation",
+          "description": "Previews every change first, never deletes, and keeps an undo list."
+        },
+        "code-review-and-quality": {
+          "name": "Code review",
+          "description": "Reviews code for correctness, security, speed and readability."
+        },
+        "documentation-and-adrs": {
+          "name": "Documentation",
+          "description": "Writes docs that explain why, and spots docs that no longer match the code."
+        },
+        "create-readme": {
+          "name": "README writer",
+          "description": "Writes a clear README: what it does, how to install and run it."
+        }
+      }
+    },
     "image": {
       "download": "Download generated image",
       "downloadError": "Could not download generated image",
@@ -659,6 +999,26 @@
       "noPiModels": "No Pi models found",
       "search": "Search models or providers",
       "setUpLocalAi": "Set up local AI…"
+    },
+    "modelPanel": {
+      "aboutEffort": "About effort",
+      "addProvider": "Add an AI provider",
+      "checking": "Checking {{provider}}…",
+      "effortNote": "Higher effort thinks longer before answering. Ultracode also lets Claude plan multi-step workflows on its own.",
+      "effortNoteBasic": "Higher effort thinks longer before answering.",
+      "fastMode": "Fast mode",
+      "faster": "Faster",
+      "noFavourites": "Star a model to keep it here.",
+      "recommended": "Recommended",
+      "searchPlaceholder": "Search models...",
+      "signInTo": "Sign in to {{provider}} to use its models.",
+      "smarter": "Smarter",
+      "unavailable": "{{provider}} isn't available right now.",
+      "account": "Account",
+      "accountLeft": "{{percent}}% left",
+      "accountDefaultTag": "Default",
+      "accountSignedOut": "Signed out",
+      "makeDefault": "Use for new chats"
     },
     "models": {
       "addFavorite": "Add {{name}} to favourites",
@@ -983,7 +1343,6 @@
       "library": "Media library",
       "loading": "Loading social tools…",
       "navigation": "Social tools",
-      "open": "Social tools",
       "product": "Product link",
       "publishingHistory": "Publishing history",
       "results": "Results coach",
@@ -1512,6 +1871,11 @@
       "unpublish": "Unpublish",
       "unpublishTitle": "Unpublish {{address}}?",
       "unpublishDescription": "The site goes offline right away and its address becomes free for anyone to claim. Your project files stay on this computer."
+    },
+    "accountSwitch": {
+      "switched": "Switched to {{to}}: {{from}} reached its usage limit.",
+      "resets": "It resets at {{time}}.",
+      "mainAccount": "main account"
     }
   },
   "common": {
@@ -1626,7 +1990,25 @@
   },
   "settings": {
     "accounts": {
+      "addAnotherTool": "Add another AI tool ({{total}})",
       "checking": "Checking…",
+      "claudeCompatible": {
+        "description": "Doubao and DeepSeek coding plans run through Claude Code with your plan’s API key. Install Claude Code, save the key here, then choose Use for new chats.",
+        "getKey": "Get an API key",
+        "keyLabel": "{{provider}} API key",
+        "keyMissing": "No API key saved",
+        "keyPlaceholder": "Paste your API key",
+        "keySaved": "API key saved",
+        "loadError": "Could not check saved API keys.",
+        "region": "Doubao region",
+        "regionChina": "China mainland",
+        "regionInternational": "International (BytePlus)",
+        "remove": "Remove",
+        "replacePlaceholder": "Paste a new key to replace the saved one",
+        "save": "Save",
+        "saveError": "Could not save. Try again.",
+        "title": "Coding plans"
+      },
       "codingPlansDescription": "In OpenCode sign-in, select Z.AI Coding Plan for GLM, Kimi For Coding, or your MiniMax coding-plan provider. Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, and Pi connect above with their official CLIs and reuse whatever those CLIs have signed in to.",
       "codingPlansTitle": "Chinese models and coding plans",
       "default": "Default for new chats",
@@ -1663,6 +2045,9 @@
       "installNotDetected": "DJL could not find {{provider}} after installing it. Check the setup guide, then try again.",
       "loadError": "Could not check accounts.",
       "loginFor": "Sign in to {{provider}}",
+      "moreOptions": "More ways to connect",
+      "moreOptionsDescription": "Coding-plan API keys, tool updates and other plans.",
+      "noneConnected": "No AI tool is signed in yet. Pick one below and sign in.",
       "openCodeExistingKept": "Existing CLI logins kept: {{providers}}.",
       "openCodeLegacyAvailable": "DJL has saved logins available to copy: {{providers}}. Existing CLI logins will be kept, and the original DJL credentials will remain backed up.",
       "openCodeSharedLogin": "OpenCode uses the same login as your installed OpenCode CLI. Signing in here also updates that CLI.",
@@ -1691,6 +2076,33 @@
       "resetAriaLabel": "Reset {{label}} to default",
       "resetToDefault": "Reset to default",
       "restoreDefaults": "Restore defaults"
+    },
+    "aiAccounts": {
+      "addAccount": "Add account",
+      "addAndSignIn": "Add and sign in",
+      "cancel": "Cancel",
+      "description": "Add more Claude Code and Codex subscriptions, see what each one has left, and pick the one new chats use.",
+      "error": "Something went wrong with AI accounts.",
+      "inUse": "In use",
+      "mainAccount": "Main account",
+      "nameLabel": "Name for the new {{provider}} account",
+      "namePlaceholder": "Name it, like Work or Personal",
+      "noUsage": "No usage reported yet",
+      "refresh": "Refresh usage",
+      "remove": "Remove",
+      "removeConfirm": "Remove {{name}}? DJL signs it out and deletes its saved login.",
+      "signIn": "Sign in",
+      "signInAgain": "Sign in again",
+      "status": {
+        "signedIn": "Signed in",
+        "signedOut": "Not signed in",
+        "unavailable": "Turned off in Accounts",
+        "unknown": "Couldn't check sign-in"
+      },
+      "switchNote": "New chats use the account marked In use. Chats you already started keep the account they began with.",
+      "usageUnavailable": "Usage isn't available right now",
+      "autoSwitch": "Switch accounts automatically",
+      "autoSwitchHint": "When a chat's account hits its 5-hour or weekly limit, DJL continues on the signed-in account with the most usage left and notes it in the chat."
     },
     "appearance": {
       "baseFontSize": {
@@ -2274,6 +2686,11 @@
           "description": "Keybindings, recovery, and version info.",
           "eyebrow": "System tools",
           "label": "Advanced"
+        },
+        "aiAccounts": {
+          "description": "Several Claude and Codex subscriptions, and which one new chats use.",
+          "eyebrow": "Switch accounts",
+          "label": "AI accounts"
         },
         "appearance": {
           "description": "Language, theme, typography, and time formatting.",
@@ -3424,6 +3841,7 @@
       "working": "Working…"
     },
     "usage": {
+      "cannotShow": "Usage can't be shown right now.",
       "learnMore": "Learn more",
       "left": "{{remaining}} left",
       "loading": "Loading provider usage…",
@@ -3448,7 +3866,7 @@
           "on-track": "on track"
         }
       },
-      "privacyDescription": "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. OAuth providers may refresh short-lived tokens through their official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI.",
+      "privacyDescription": "DJL reads your usage straight from each AI service, using the sign-in on this computer. If an account shows “Not signed in”, sign in again from Accounts.",
       "rateLimits": {
         "current": "Current",
         "fiveHours": "5h",
@@ -3460,14 +3878,16 @@
       },
       "rateLimitsRemaining": "Rate limits remaining",
       "remainingAriaLabel": "{{label}}: {{remaining}} left",
+      "signInToSee": "Sign in to {{provider}} to see what you have left.",
+      "signedInNoUsage": "You're signed in to {{provider}}. Usage will show after your next chat.",
       "source": "Usage source: {{source}}",
       "status": {
         "notSignedIn": "Not signed in",
+        "signedIn": "Signed in",
         "unavailable": "Unavailable",
         "unsupported": "Unsupported"
       },
-      "title": "Provider usage",
-      "unavailableWithDetail": "Usage is unavailable. {{detail}}"
+      "title": "Provider usage"
     },
     "couldNotCheckPermissions": "Could not check permissions",
     "keyboardFocus": "keyboard focus",
@@ -3618,7 +4038,6 @@
     },
     "multiAgents": {
       "title": "Multi agents",
-      "beta": "Beta",
       "newGroup": "New group",
       "groups": "Groups",
       "emptyTitle": "Put your agents in one chat",
@@ -4042,7 +4461,7 @@
       "settings": {
         "action": "Start tutorial",
         "basicTitle": "Basic tutorial",
-        "description": "Replay the guided tour for Agent mode, Projects, local AI recommendations, and Settings.",
+        "description": "Replay the guided tour for Work and Code, Projects, local AI recommendations, and Settings.",
         "section": "Getting started",
         "title": "New user tutorial"
       },
@@ -4061,8 +4480,8 @@
           "title": "Choose what local AI does best"
         },
         "project-mode": {
-          "description": "Use Projects when work belongs to a folder or codebase and needs ongoing context.",
-          "title": "Project mode"
+          "description": "Choose a folder under the message box to keep a task in that project. Without one, it goes to Recents.",
+          "title": "Projects"
         },
         "settings": {
           "description": "Open Settings here to change language, models, appearance, and app behavior.",
@@ -4073,8 +4492,8 @@
           "title": "Replay tutorials anytime"
         },
         "work-mode": {
-          "description": "Start a task, then type @ to continue with another agent and carry over its context.",
-          "title": "Agent mode"
+          "description": "Pick Work for documents, research and everyday tasks, or Code to build and fix software. Choose a topic for a ready-made prompt.",
+          "title": "Work or Code"
         }
       }
     },
@@ -4432,7 +4851,8 @@
         "newThread": "New thread",
         "newWorkspace": "New workspace",
         "social": "Social",
-        "socialNeedsChat": "Start a chat first. Social posts are kept with a chat."
+        "socialNeedsChat": "Start a chat first. Social posts are kept with a chat.",
+        "newChat": "New chat"
       },
       "adding": "Adding...",
       "addProject": "Add project",
@@ -4477,7 +4897,7 @@
       "automationCount_other": "{{count}} automations",
       "browse": "Browse",
       "cancelAddProject": "Cancel add project",
-      "chats": "Chats",
+      "chats": "Recents",
       "confirm": {
         "archiveThread": "Archive thread \"{{title}}\"?\nArchived threads are hidden from the sidebar but can be restored later.",
         "deleteThread": "Delete thread \"{{title}}\"?\nThis permanently clears conversation history for this thread.",
@@ -4820,6 +5240,50 @@
       "spinClockwise": "Spin clockwise",
       "spinCounterClockwise": "Spin counter-clockwise",
       "title": "World Cup 2026"
+    },
+    "skillsStore": {
+      "title": "Skills",
+      "hint": "Skills teach Claude Code and Codex how to do a kind of task well. Installed skills show up in the $ menu.",
+      "search": "Search skills",
+      "installed": "Installed",
+      "reviewedResults": "Reviewed by DJL",
+      "liveResults": "From skills.sh",
+      "liveHint": "Not reviewed by DJL. Check what a skill does before you use it.",
+      "searching": "Searching skills.sh…",
+      "searchFailed": "Couldn't reach skills.sh. Try again in a moment.",
+      "noMatches": "No skills match.",
+      "builtIn": "Built in",
+      "unreviewed": "Not reviewed",
+      "install": "Install",
+      "installNamed": "Install {{name}}",
+      "installing": "Installing…",
+      "working": "Working…",
+      "update": "Update",
+      "remove": "Remove",
+      "installedTag": "Installed",
+      "edited": "You changed this skill after installing it.",
+      "installs": "{{value}} installs",
+      "notOnGitHub": "Not on GitHub",
+      "viewOnGitHub": "View on GitHub",
+      "previewFailed": "Couldn't load this skill.",
+      "scriptsWarning": "This skill includes scripts the agent can run.",
+      "unreviewedNote": "DJL hasn't reviewed this skill. Read what it does before you use it.",
+      "builtInNote": "Comes with DJL. Pick it from the $ menu or a topic on the home screen.",
+      "consentScriptsTitle": "Install a skill that runs scripts?",
+      "consentScriptsBody": "{{name}} includes files the agent can run on your computer. Only install it if you trust {{owner}}.",
+      "consentEditsTitle": "Replace your changes?",
+      "consentEditsBody": "You edited {{name}} after installing it. Updating replaces your changes.",
+      "installAnyway": "Install anyway",
+      "replaceChanges": "Replace my changes",
+      "categories": {
+        "design": "Design",
+        "coding": "Coding",
+        "documents": "Documents",
+        "writing": "Writing",
+        "research": "Research and planning",
+        "data": "Data",
+        "tools": "Tools"
+      }
     }
   },
   "whatsNew": {
@@ -5657,10 +6121,20 @@
       "terminalHint": "Choose an account to share across these terminals. Use another profile for a second subscription.",
       "title": "Workspaces",
       "useThisAccount": "Use this account",
-      "welcomeDescription": "Run your coding agents side by side. Keep terminals organized by project, with a separate profile for each subscription.",
+      "welcomeDescription": "Run coding agents side by side in a project folder. Your accounts from Settings work here right away.",
       "welcomeTitle": "A workspace for your agents",
       "workspaceHint": "Group terminals in a named workspace and choose the project folder where they run.",
-      "workspacePlaceholder": "My project"
+      "workspacePlaceholder": "My project",
+      "mainAccount": "Main account",
+      "accountsFromSettings": "Same accounts as Settings → Accounts. No need to sign in again.",
+      "startTitle": "Start working",
+      "startDescription": "Pick an account to open a terminal with it. Each one keeps its own sign-in.",
+      "startWith": "Start {{provider}}",
+      "shellHint": "Plain terminal, any tool",
+      "moreOptions": "More options",
+      "readyAccounts": "Ready to use",
+      "mainTag": "Main",
+      "browseFolderMenu": "Choose another folder…"
     },
     "branch": {
       "actions": {

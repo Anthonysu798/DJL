@@ -20,6 +20,9 @@ export type NativeProvider =
   | "copilot"
   | "codebuddy"
   | "pi"
+  | "muse"
+  | "doubao"
+  | "deepseek"
   | "djlCloud"
   | "group";
 export interface NativeSink {

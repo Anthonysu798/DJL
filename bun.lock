@@ -144,6 +144,7 @@
       "devDependencies": {
         "@djl/contracts": "workspace:*",
         "@djl/shared": "workspace:*",
+        "@djl/starter-skills": "workspace:*",
         "@djl/web-app": "workspace:*",
         "@effect/language-service": "catalog:",
         "@effect/vitest": "catalog:",
@@ -172,6 +173,7 @@
         "@base-ui/react": "^1.5.0",
         "@djl/contracts": "workspace:*",
         "@djl/shared": "workspace:*",
+        "@djl/starter-skills": "workspace:*",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/modifiers": "^9.0.0",
         "@dnd-kit/sortable": "^10.0.0",
@@ -533,12 +535,22 @@
         "vitest": "catalog:",
       },
     },
+    "packages/starter-skills": {
+      "name": "@djl/starter-skills",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
     "scripts": {
       "name": "@djl/scripts",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.2.77",
         "@djl/contracts": "workspace:*",
         "@djl/shared": "workspace:*",
+        "@djl/starter-skills": "workspace:*",
         "@effect/platform-node": "catalog:",
         "app-builder-bin": "4.2.0",
         "effect": "catalog:",
@@ -880,6 +892,8 @@
     "@djl/shared": ["@djl/shared@workspace:packages/shared"],
 
     "@djl/sites": ["@djl/sites@workspace:cloud/apps/sites"],
+
+    "@djl/starter-skills": ["@djl/starter-skills@workspace:packages/starter-skills"],
 
     "@djl/stats-worker": ["@djl/stats-worker@workspace:apps/stats-worker"],
 

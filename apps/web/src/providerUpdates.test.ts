@@ -63,6 +63,9 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       qwen: { ...provider, binaryPath: "qwen" },
       copilot: { ...provider, binaryPath: "copilot" },
       codebuddy: { ...provider, binaryPath: "codebuddy" },
+      doubao: { ...provider, binaryPath: "claude", region: "china" },
+      deepseek: { ...provider, binaryPath: "claude" },
+      muse: { ...provider, binaryPath: "muse" },
       droid: { ...provider, binaryPath: "droid" },
       kilo: { ...provider, binaryPath: "kilo", serverUrl: "", serverPassword: "" },
       opencode: {
@@ -78,6 +81,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
     },
     skills: { disabled: [] },
     localModels: { harnesses: { claudeAgent: true, codex: true, opencode: true } },
+    cliAccounts: { accounts: [], active: {}, autoSwitch: true },
   };
 }
 

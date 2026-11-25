@@ -76,6 +76,10 @@ import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuer
 import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig } from "./config";
 import { listHarnessAccounts } from "./harnesses/accounts";
+import {
+  listClaudeCompatibleKeys,
+  writeClaudeCompatibleKey,
+} from "./harnesses/native/claudeCompatible";
 import { CloudAccount } from "./cloud/account";
 import { SitePublishError, SitePublisher, suggestSiteName } from "./sites/sitePublisher";
 import { createHarnessLoginController } from "./harnesses/login";
@@ -127,8 +131,17 @@ import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackp
 import { LocalModelsService } from "./localModels/LocalModelsService";
 import { CodingPlans } from "./codingPlans/CodingPlans";
 import { PluginsService } from "./plugins/PluginsService";
+import { SkillsStoreService } from "./skillsStore/SkillsStoreService";
 import { AiDetectorService } from "./aiDetector/Services/AiDetectorService";
 import { ProjectMemory } from "./memory/Services/ProjectMemory";
+import {
+  addCliAccount,
+  cliAccountsRoot,
+  cliAccountsUsage,
+  listCliAccounts,
+  removeCliAccount,
+  setActiveCliAccount,
+} from "./harnesses/cliAccounts";
 
 const MAX_DIAGNOSTIC_CHILD_PROCESSES = 80;
 const MAX_DIAGNOSTIC_ARGS_CHARS = 500;
@@ -416,6 +429,7 @@ export const makeWsRpcLayer = () =>
       const localModels = yield* LocalModelsService;
       const codingPlans = yield* CodingPlans;
       const plugins = yield* PluginsService;
+      const skillsStore = yield* SkillsStoreService;
       const projectMemory = yield* ProjectMemory;
       const aiDetector = yield* AiDetectorService;
       const open = yield* Open;
@@ -914,6 +928,9 @@ export const makeWsRpcLayer = () =>
           ),
         );
 
+      // Extra Claude Code / Codex accounts share the Agent workspace profile folders.
+      const cliAccountOptions = { root: cliAccountsRoot(config.baseDir), homeDir: config.homeDir };
+
       return WsRpcGroup.of({
         ...ownerComputerHandlers,
         [COMPUTER_WS_METHODS.setControlEnabled]: (input) =>
@@ -1378,17 +1395,21 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.localModelsRemoveModel]: (input) =>
           rpcEffect(localModels.removeModel(input), "Failed to remove local model"),
         [WS_METHODS.subscribeLocalModelEvents]: () =>
-          Stream.merge(
-            Stream.fromEffect(
-              localModels.getSnapshot.pipe(
-                Effect.map((snapshot) => ({ type: "snapshot.updated" as const, snapshot })),
-                Effect.mapError((cause) =>
-                  toWsRpcError(cause, "Failed to load local model snapshot"),
+          // Local models exist only in the desktop app. Every client subscribes, so outside it
+          // the stream stays silent: failing it made web clients reconnect in a loop.
+          config.mode !== "desktop"
+            ? Stream.never
+            : Stream.merge(
+                Stream.fromEffect(
+                  localModels.getSnapshot.pipe(
+                    Effect.map((snapshot) => ({ type: "snapshot.updated" as const, snapshot })),
+                    Effect.mapError((cause) =>
+                      toWsRpcError(cause, "Failed to load local model snapshot"),
+                    ),
+                  ),
                 ),
+                bufferLiveUiStream(localModels.events, { label: "localModels.events" }),
               ),
-            ),
-            bufferLiveUiStream(localModels.events, { label: "localModels.events" }),
-          ),
         [WS_METHODS.pluginsGetSnapshot]: () =>
           rpcEffect(plugins.getSnapshot, "Failed to load plugins"),
         [WS_METHODS.pluginsInstall]: (input) =>
@@ -2140,6 +2161,106 @@ export const makeWsRpcLayer = () =>
             ),
             "Failed to close sign-in",
           ),
+        [WS_METHODS.harnessListClaudeCompatibleKeys]: () =>
+          rpcEffect(
+            Effect.tryPromise(() => listClaudeCompatibleKeys(config.secretsDir)),
+            "Failed to read coding plan keys",
+          ),
+        [WS_METHODS.harnessSetClaudeCompatibleKey]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(async () => {
+              await writeClaudeCompatibleKey(config.secretsDir, input.provider, input.apiKey);
+              return listClaudeCompatibleKeys(config.secretsDir);
+            }).pipe(Effect.tap(() => providerHealth.refresh)),
+            "Failed to save the coding plan key",
+          ),
+        [WS_METHODS.cliAccountsList]: () =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.tryPromise(async () => ({
+                  accounts: await listCliAccounts(settings, cliAccountOptions),
+                })),
+              ),
+            ),
+            "Failed to list AI accounts",
+          ),
+        [WS_METHODS.cliAccountsAdd]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const settings = yield* serverSettings.getSettings;
+              const { account, patch } = yield* Effect.tryPromise(() =>
+                addCliAccount(settings, input, cliAccountOptions),
+              );
+              yield* serverSettings.updateSettings(patch);
+              return {
+                id: account.id,
+                provider: account.provider,
+                name: account.name,
+                isDefault: false,
+                active: false,
+                status: "signedOut" as const,
+                email: null,
+              };
+            }),
+            "Failed to add the account",
+          ),
+        [WS_METHODS.cliAccountsRemove]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const settings = yield* serverSettings.getSettings;
+              const patch = yield* Effect.tryPromise(() =>
+                removeCliAccount(settings, input.id, cliAccountOptions),
+              );
+              const next = yield* serverSettings.updateSettings(patch);
+              yield* providerHealth.refresh;
+              return {
+                accounts: yield* Effect.tryPromise(() => listCliAccounts(next, cliAccountOptions)),
+              };
+            }),
+            "Failed to remove the account",
+          ),
+        [WS_METHODS.cliAccountsSetActive]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const settings = yield* serverSettings.getSettings;
+              const patch = yield* Effect.try({
+                try: () => setActiveCliAccount(settings, input.provider, input.id),
+                catch: (cause) => cause,
+              });
+              const next = yield* serverSettings.updateSettings(patch);
+              // Accounts and the model picker reflect the account new chats now use.
+              yield* providerHealth.refresh;
+              return {
+                accounts: yield* Effect.tryPromise(() => listCliAccounts(next, cliAccountOptions)),
+              };
+            }),
+            "Failed to switch accounts",
+          ),
+        [WS_METHODS.cliAccountsUsage]: (input) =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.tryPromise(() =>
+                  cliAccountsUsage(settings, {
+                    homeDir: config.homeDir,
+                    ...(input.forceRefresh ? { forceRefresh: true } : {}),
+                  }),
+                ),
+              ),
+            ),
+            "Failed to read account usage",
+          ),
+        [WS_METHODS.skillsStoreSnapshot]: () =>
+          rpcEffect(skillsStore.snapshot, "Failed to load the skills store"),
+        [WS_METHODS.skillsStoreSearch]: (input) =>
+          rpcEffect(skillsStore.search(input.query), "Failed to search skills.sh"),
+        [WS_METHODS.skillsStorePreview]: (input) =>
+          rpcEffect(skillsStore.preview(input.id), "Failed to load the skill"),
+        [WS_METHODS.skillsStoreInstall]: (input) =>
+          rpcEffect(skillsStore.install(input), "Failed to install the skill"),
+        [WS_METHODS.skillsStoreRemove]: (input) =>
+          rpcEffect(skillsStore.remove(input.id), "Failed to remove the skill"),
         [WS_METHODS.serversList]: () => rpcEffect(serverService.list(), "Failed to list servers"),
         [WS_METHODS.serversCreate]: (input) =>
           rpcEffect(serverService.create(input), "Failed to add server"),

@@ -30,9 +30,11 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
         <AlertTitle>{t(`errors.providerFailure.${failureKind}.title`)}</AlertTitle>
         <AlertDescription>
           <span>{t(`errors.providerFailure.${failureKind}.action`)}</span>
-          {failureKind === "commandMissing" ? (
+          {failureKind === "commandMissing" || failureKind === "authentication" ? (
             <Link to="/settings" search={{ section: "accounts" }} className="text-xs underline">
-              {t("common:actions.settings")}
+              {failureKind === "authentication"
+                ? t("settings:aiAccounts.signIn")
+                : t("common:actions.settings")}
             </Link>
           ) : null}
           <TechnicalDetailsDisclosure detail={error} />

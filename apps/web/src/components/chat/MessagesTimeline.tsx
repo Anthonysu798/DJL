@@ -7,11 +7,14 @@ import { Link } from "@tanstack/react-router";
 import { classifyProviderFailure } from "../../lib/providerFailurePresentation";
 import {
   type MessageId,
+  PROVIDER_DISPLAY_NAMES,
+  type ProviderKind,
   type ProviderMentionReference,
   ThreadId,
   type ThreadMarker,
   type TurnId,
 } from "@djl/contracts";
+import { ProviderIcon } from "../ProviderIcon";
 import { resolveLatestTailUserMessageEditTarget } from "@djl/shared/conversationEdit";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
@@ -69,6 +72,7 @@ import {
   WebSearchIcon,
   WorktreeIcon,
   ZapIcon,
+  RefreshCwIcon,
 } from "~/lib/icons";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
@@ -393,6 +397,8 @@ interface MessagesTimelineProps {
   marketingCards?: ReactNode;
   hasMessages: boolean;
   isWorking: boolean;
+  /** The provider running the live turn; its logo leads the Thinking status. */
+  workingProvider?: ProviderKind | null;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
   /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
@@ -460,6 +466,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   marketingCards,
   hasMessages,
   isWorking,
+  workingProvider = null,
   activeTurnInProgress,
   activeTurnStartedAt,
   worktreeSetup = null,
@@ -1837,11 +1844,22 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       )}
 
       {row.kind === "working" && (
-        <div
-          className="shimmer pt-0.5 text-muted-foreground/70 font-system-ui"
-          style={{ fontSize: `${appTypographyScale.chatPx}px` }}
-        >
-          {t("transcript.thinking")}
+        <div className="flex items-center gap-2 pt-0.5">
+          {workingProvider ? (
+            <span
+              className="working-provider-mark"
+              role="img"
+              aria-label={PROVIDER_DISPLAY_NAMES[workingProvider]}
+            >
+              <ProviderIcon provider={workingProvider} className="size-3.5" />
+            </span>
+          ) : null}
+          <span
+            className="shimmer text-muted-foreground/70 font-system-ui"
+            style={{ fontSize: `${appTypographyScale.chatPx}px` }}
+          >
+            {t("transcript.thinking")}
+          </span>
         </div>
       )}
 
@@ -3094,6 +3112,12 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
     );
   }
 
+  // An automatic account switch renders as one quiet line, not a tool call.
+  const accountSwitch = workEntry.accountSwitch;
+  if (accountSwitch) {
+    return <AccountSwitchedNote accountSwitch={accountSwitch} compact={compact} />;
+  }
+
   // A created-automation row renders as its own card instead of a tool-call line.
   // Kept after the hooks above so the early return never changes hook order.
   const automation = workEntry.automation;
@@ -3640,6 +3664,39 @@ function ToolDetailsDisclosure(props: {
           </div>
         </DisclosureRegion>
       ) : null}
+    </div>
+  );
+}
+
+function AccountSwitchedNote(props: {
+  accountSwitch: NonNullable<TimelineWorkEntry["accountSwitch"]>;
+  compact: boolean;
+}) {
+  const { t, i18n } = useTranslation("chat");
+  const { accountSwitch } = props;
+  const resetsAt = accountSwitch.resetsAt ? new Date(accountSwitch.resetsAt) : null;
+  const to = accountSwitch.toName || accountSwitch.toEmail || t("accountSwitch.mainAccount");
+  const from = accountSwitch.fromName || t("accountSwitch.mainAccount");
+  return (
+    <div
+      role="status"
+      className={cn(
+        "flex items-center gap-2 text-[12px] text-muted-foreground",
+        props.compact ? "py-0.5" : "py-1.5",
+      )}
+    >
+      <RefreshCwIcon aria-hidden="true" className="size-3.5 shrink-0" />
+      <span className="min-w-0 text-pretty">
+        {t("accountSwitch.switched", { to, from })}
+        {resetsAt && !Number.isNaN(resetsAt.getTime())
+          ? ` ${t("accountSwitch.resets", {
+              time: resetsAt.toLocaleTimeString(i18n.language, {
+                hour: "numeric",
+                minute: "2-digit",
+              }),
+            })}`
+          : null}
+      </span>
     </div>
   );
 }

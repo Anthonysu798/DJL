@@ -296,11 +296,11 @@ export function ServerRow({
 
   return (
     <div
-      className={cn("px-4 py-4 sm:px-5", justAdded && "servers-row-enter servers-highlight-sweep")}
+      className={cn("px-4 py-4 @md:px-5", justAdded && "servers-row-enter servers-highlight-sweep")}
       data-slot="settings-row"
       data-server-id={server.id}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 @md:flex-row @md:items-center @md:justify-between">
         <button
           type="button"
           className="group flex min-w-0 flex-1 items-start gap-3 text-left"
@@ -319,7 +319,7 @@ export function ServerRow({
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="hidden px-1.5 py-0 text-[10px] font-normal sm:inline-flex"
+                  className="hidden px-1.5 py-0 text-[10px] font-normal @md:inline-flex"
                 >
                   {tag}
                 </Badge>
@@ -346,9 +346,9 @@ export function ServerRow({
           </span>
         </button>
 
-        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:justify-end">
+        <div className="flex w-full shrink-0 items-center gap-3 @md:w-auto @md:justify-end">
           {stripItems.length > 0 ? (
-            <dl className="hidden items-center gap-4 font-mono text-[11px] tabular-nums lg:flex">
+            <dl className="hidden items-center gap-4 font-mono text-[11px] tabular-nums @2xl:flex">
               {stripItems.map((item, index) => (
                 <div
                   key={item.key}
@@ -408,7 +408,7 @@ export function ServerRow({
       </div>
 
       <DisclosureRegion open={open}>
-        <div className="space-y-5 pt-5 sm:pl-5">
+        <div className="space-y-5 pt-5 @md:pl-5">
           {needsHostKeyDecision && server.lastTest ? (
             <div
               className={cn(
@@ -466,7 +466,7 @@ export function ServerRow({
           ) : null}
 
           {stats?.memory || stats?.disk ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @md:grid-cols-2">
               {stats.memory ? (
                 <Bar
                   label={t("servers.stats.memory")}
@@ -484,7 +484,7 @@ export function ServerRow({
             </div>
           ) : null}
 
-          <dl className="grid gap-y-2 text-[11px] sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-6">
+          <dl className="grid gap-y-2 text-[11px] @md:grid-cols-[9rem_minmax(0,1fr)] @md:gap-x-6">
             {details.map(([label, value]) => (
               <div key={label} className="contents">
                 <dt className="text-muted-foreground">{label}</dt>
@@ -501,7 +501,7 @@ export function ServerRow({
 
           <ServerRecentCommands serverId={server.id} open={open} />
 
-          <div className="flex flex-col gap-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 text-[11px] text-muted-foreground @md:flex-row @md:items-center @md:justify-between">
             <div className="space-y-0.5">
               {server.lastTest?.message && !needsHostKeyDecision ? (
                 <p className="font-mono text-[10px] break-words text-muted-foreground/80">

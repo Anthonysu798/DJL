@@ -85,19 +85,24 @@ export function PluginsSettingsView(props: PluginsSettingsViewProps) {
     .filter(({ plugin, skill }) => matches(skill.name, skill.description, plugin.displayName));
 
   const tab = (value: string, label: string, count: number) => (
-    <TabsTrigger value={value}>
+    <TabsTrigger value={value} className="flex-none gap-2 px-2.5">
       {label}
-      <span className="ml-1.5 text-muted-foreground">{count}</span>
+      <span className="min-w-5 rounded-full bg-muted px-1.5 text-center text-[11px] leading-[18px] font-medium tabular-nums text-muted-foreground">
+        {count}
+      </span>
     </TabsTrigger>
   );
   const empty = (text: string) => (
-    <p className="px-1 py-8 text-center text-sm text-muted-foreground">{text}</p>
+    <p className="rounded-2xl border border-dashed border-border/70 px-4 py-10 text-center text-sm text-muted-foreground">
+      {text}
+    </p>
   );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1">
+    // Container queries: the settings pane's width, not the window's, decides the layout.
+    <div className="@container space-y-6">
+      <div className="flex flex-col gap-2 @lg:flex-row @lg:items-center">
+        <div className="relative min-w-0 flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="rounded-full pl-9"
@@ -107,19 +112,21 @@ export function PluginsSettingsView(props: PluginsSettingsViewProps) {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("pluginLibrary.refresh")}
-          title={t("pluginLibrary.refresh")}
-          onClick={props.onRefresh}
-        >
-          <RefreshCwIcon className="size-4" />
-        </Button>
-        <Button type="button" size="sm" onClick={props.onBrowse}>
-          {t("pluginLibrary.browse")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("pluginLibrary.refresh")}
+            title={t("pluginLibrary.refresh")}
+            onClick={props.onRefresh}
+          >
+            <RefreshCwIcon className="size-4" />
+          </Button>
+          <Button type="button" size="sm" className="flex-1 @lg:flex-none" onClick={props.onBrowse}>
+            {t("pluginLibrary.browse")}
+          </Button>
+        </div>
       </div>
 
       {props.error ? (
@@ -129,7 +136,10 @@ export function PluginsSettingsView(props: PluginsSettingsViewProps) {
       ) : null}
 
       <Tabs defaultValue="plugins">
-        <TabsList variant="line">
+        <TabsList
+          variant="line"
+          className="w-full justify-start overflow-x-auto overflow-y-hidden border-b border-border/60 pb-1 [scrollbar-width:none]"
+        >
           {tab("plugins", t("pluginLibrary.plugins"), plugins.length)}
           {tab("apps", t("pluginLibrary.apps"), apps.length)}
           {tab("mcps", t("pluginLibrary.mcp"), servers.length)}
@@ -140,41 +150,47 @@ export function PluginsSettingsView(props: PluginsSettingsViewProps) {
           {plugins.length === 0 ? (
             empty(t(query ? "pluginLibrary.noMatches" : "pluginLibrary.noneAdded"))
           ) : (
-            <SettingsSection title={t("pluginLibrary.plugins")}>
+            <ul className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
               {plugins.map((plugin) => (
-                <SettingsRow
+                <li
                   key={plugin.id}
-                  title={
-                    <button
-                      type="button"
-                      className="inline-flex min-w-0 items-center gap-2 text-left hover:underline"
-                      onClick={() => props.onOpen(plugin)}
-                    >
-                      <PluginGlyph plugin={plugin} size="sm" />
-                      <span className="truncate">{plugin.displayName}</span>
-                    </button>
-                  }
-                  description={plugin.shortDescription}
-                  control={
-                    <>
+                  className="group relative flex items-start gap-3 rounded-2xl border border-border/60 bg-card/40 p-4 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-within:border-border hover:border-border hover:bg-card/70"
+                >
+                  <PluginGlyph plugin={plugin} size="sm" />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      {/* The whole tile opens the plugin; the switch sits above this overlay. */}
+                      <button
+                        type="button"
+                        className="min-w-0 truncate text-left text-sm font-medium text-foreground outline-none after:absolute after:inset-0 after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-ring/50"
+                        onClick={() => props.onOpen(plugin)}
+                      >
+                        {plugin.displayName}
+                      </button>
                       {plugin.builtIn ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="shrink-0 rounded-full bg-muted px-2 text-[11px] leading-5 text-muted-foreground">
                           {t("pluginLibrary.alwaysOn")}
                         </span>
                       ) : null}
-                      <Switch
-                        checked={enabledOf(plugin)}
-                        disabled={plugin.builtIn || props.pending}
-                        onCheckedChange={(checked) =>
-                          props.onSetEnabled({ pluginId: plugin.id, enabled: Boolean(checked) })
-                        }
-                        aria-label={t("pluginLibrary.toggleNamed", { name: plugin.displayName })}
-                      />
-                    </>
-                  }
-                />
+                    </div>
+                    {plugin.shortDescription ? (
+                      <p className="line-clamp-2 text-[13px] leading-5 text-muted-foreground">
+                        {plugin.shortDescription}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Switch
+                    className="relative z-10 mt-0.5 shrink-0"
+                    checked={enabledOf(plugin)}
+                    disabled={plugin.builtIn || props.pending}
+                    onCheckedChange={(checked) =>
+                      props.onSetEnabled({ pluginId: plugin.id, enabled: Boolean(checked) })
+                    }
+                    aria-label={t("pluginLibrary.toggleNamed", { name: plugin.displayName })}
+                  />
+                </li>
               ))}
-            </SettingsSection>
+            </ul>
           )}
         </TabsContent>
 
@@ -182,7 +198,7 @@ export function PluginsSettingsView(props: PluginsSettingsViewProps) {
           {apps.length === 0 ? (
             empty(t(query ? "pluginLibrary.noMatches" : "pluginLibrary.noApps"))
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-card/40 px-4">
               {apps.map(({ plugin, app }) => (
                 <PluginAppRow
                   key={`${plugin.id}:${app.id}`}

@@ -9,6 +9,16 @@ import { useAgentWorkspaceStore } from "~/agentWorkspaceStore";
 import { PROFILE_ACCOUNT_QUERY_KEY } from "./WorkspaceAccountRow";
 const backend = vi.hoisted(() => ({
   signedIn: false,
+  appAccounts: [] as Array<{
+    id: string;
+    provider: "codex" | "claudeAgent";
+    name: string;
+    isDefault: boolean;
+    active: boolean;
+    status: "signedIn" | "signedOut";
+    email: string | null;
+  }>,
+  addAccount: vi.fn(),
   listeners: new Set<(event: TerminalEvent) => void>(),
   openExternal: vi.fn(async () => {}),
   pickFolder: vi.fn(),
@@ -23,6 +33,10 @@ vi.mock("~/nativeApi", () => {
     dialogs: { pickFolder: backend.pickFolder },
     shell: { openExternal: backend.openExternal },
     server: { getConfig: async () => ({ cwd: "/tmp", homeDir: "/tmp" }) },
+    cliAccounts: {
+      list: async () => ({ accounts: backend.appAccounts }),
+      add: backend.addAccount,
+    },
     harnesses: {
       getProfileAccount: async (input: { provider: string; profileId: string }) => ({
         ...input,
@@ -47,6 +61,39 @@ vi.mock("~/nativeApi", () => {
 vi.mock("~/wsTransportEvents", () => ({ addWsTransportStateListener: () => () => {} }));
 beforeEach(() => {
   backend.signedIn = false;
+  backend.appAccounts = [
+    {
+      id: "default",
+      provider: "codex",
+      name: "",
+      isDefault: true,
+      active: true,
+      status: "signedIn",
+      email: "me@example.com",
+    },
+    {
+      id: "default",
+      provider: "claudeAgent",
+      name: "",
+      isDefault: true,
+      active: true,
+      status: "signedOut",
+      email: null,
+    },
+  ];
+  backend.addAccount.mockImplementation(async (input: { provider: "codex"; name: string }) => {
+    const account = {
+      id: "codex-abc123",
+      provider: input.provider,
+      name: input.name,
+      isDefault: false,
+      active: false,
+      status: "signedOut" as const,
+      email: null,
+    };
+    backend.appAccounts = [...backend.appAccounts, account];
+    return account;
+  });
   backend.open.mockImplementation(async (input) => ({
     ...input,
     pid: 1,
@@ -73,6 +120,8 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 async function mount() {
+  // Desktop width, where the sidebar shows the account list.
+  await page.viewport(1440, 900);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const screen = await render(
     <QueryClientProvider client={client}>
@@ -117,16 +166,16 @@ describe("simple workspace onboarding", () => {
       .element(page.getByRole("textbox", { name: "Working folder", exact: true }))
       .toHaveValue("/tmp/existing");
   });
-  it("starts sign-in without requiring a label, verifies identity, and selects the account without adding a pane", async () => {
+  it("adds a Codex account to Settings, signs it in, and selects it without adding a pane", async () => {
     const { client } = await mount();
     await page.getByRole("button", { name: "Add account", exact: true }).first().click();
     await page.getByRole("button", { name: "Sign in with Codex", exact: true }).click();
     await vi.waitFor(() => expect(backend.open).toHaveBeenCalled());
-    const profile = useAgentWorkspaceStore.getState().profiles[0]!;
-    expect(profile.name).toBe("Codex");
+    expect(backend.addAccount).toHaveBeenCalledWith({ provider: "codex", name: "Codex 2" });
+    expect(useAgentWorkspaceStore.getState().profiles).toHaveLength(0);
     expect(backend.open).toHaveBeenCalledWith(
       expect.objectContaining({
-        agentProfile: { provider: "codex", profileId: profile.id, action: "login" },
+        agentProfile: { provider: "codex", profileId: "codex-abc123", action: "login" },
       }),
     );
     const input = backend.open.mock.calls[0]![0];
@@ -148,7 +197,7 @@ describe("simple workspace onboarding", () => {
     await expect.element(useAccount).toBeEnabled();
     await useAccount.click();
     await vi.waitFor(() =>
-      expect(useAgentWorkspaceStore.getState().selectedProfileId).toBe(profile.id),
+      expect(useAgentWorkspaceStore.getState().selectedProfileId).toBe("codex-abc123"),
     );
     expect(useAgentWorkspaceStore.getState().workspaces[0]!.panes).toHaveLength(0);
     expect(backend.close).toHaveBeenCalledWith(
@@ -160,6 +209,24 @@ describe("simple workspace onboarding", () => {
     await page.getByRole("button", { name: "New terminal", exact: true }).first().click();
     await expect
       .element(page.getByRole("combobox", { name: "Account profile", exact: true }))
-      .toHaveTextContent("Codex · Codex");
+      .toHaveTextContent("Codex · Codex 2");
+  });
+
+  it("starts the normal Codex sign-in in one click, with no new login", async () => {
+    await mount();
+    await expect.element(page.getByText("me@example.com").first()).toBeVisible();
+    await page.getByRole("button", { name: /Start Codex/ }).click();
+    expect(useAgentWorkspaceStore.getState().workspaces[0]!.panes).toEqual([
+      expect.objectContaining({ profileId: "default-codex", action: "run" }),
+    ]);
+    await vi.waitFor(() =>
+      expect(backend.open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentProfile: { provider: "codex", profileId: "default", action: "run" },
+        }),
+      ),
+    );
+    // A signed-out normal sign-in is not offered as a one-click start.
+    expect(page.getByRole("button", { name: /Start Claude Code/ }).elements()).toHaveLength(0);
   });
 });

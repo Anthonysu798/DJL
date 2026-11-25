@@ -142,7 +142,7 @@ export function RemoteSettingsPanel() {
   const enabled = remoteIsConfigured && state?.enabled === true;
 
   return (
-    <div className="remote-settings">
+    <div className="remote-settings @container">
       <RemoteHero />
       <section
         className="remote-access-bar"

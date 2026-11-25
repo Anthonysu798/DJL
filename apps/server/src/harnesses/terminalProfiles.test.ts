@@ -158,3 +158,52 @@ describe("shared-login terminal harness launches", () => {
     },
   );
 });
+
+describe("workspace terminals on the normal sign-in", () => {
+  it("runs the `default` account as the installed CLI with its usual login, not a profile folder", async () => {
+    const root = await mkdtemp(join(tmpdir(), "djl-terminal-default-"));
+    const settings = structuredClone(DEFAULT_SERVER_SETTINGS);
+    // Even when chats use an extra account, the workspace's main account keeps the normal login.
+    const configuredSettings = {
+      ...settings,
+      providers: {
+        ...settings.providers,
+        codex: { ...settings.providers.codex, binaryPath: "/bin/echo" },
+      },
+      cliAccounts: {
+        accounts: [{ id: "codex-abc", provider: "codex" as const, name: "Work", dir: "/x/work" }],
+        active: { codex: "codex-abc" },
+        autoSwitch: true,
+      },
+    };
+    const manager = {
+      isRunning: () => Effect.succeed(false),
+      open: vi.fn(() => Effect.succeed({} as never)),
+    };
+    try {
+      await Effect.runPromise(
+        openProfileTerminal(
+          {
+            threadId: "w",
+            terminalId: "t",
+            cwd: root,
+            agentProfile: { provider: "codex", profileId: "default", action: "run" },
+          },
+          configuredSettings,
+          root,
+          manager,
+        ),
+      );
+      const [input, command] = manager.open.mock.calls[0] as unknown as [
+        { agentProfile?: unknown; env?: Record<string, string> },
+        { persistentShell?: boolean },
+      ];
+      expect(command?.persistentShell).toBe(true);
+      expect(input.agentProfile).toBeUndefined();
+      expect(JSON.stringify(input)).not.toContain("/x/work");
+      expect(JSON.stringify(input)).not.toContain("/codex/default");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

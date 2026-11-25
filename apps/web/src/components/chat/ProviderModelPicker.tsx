@@ -61,7 +61,7 @@ function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): o
   return option.available;
 }
 
-function resolveLiveProviderAvailability(provider: ServerProviderStatus | undefined): {
+export function resolveLiveProviderAvailability(provider: ServerProviderStatus | undefined): {
   disabled: boolean;
   labelKey: string | null;
 } {
@@ -109,7 +109,7 @@ const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option
 // locked provider for the current thread). Without that carve-out, hiding the
 // provider you're already using would erase the entry that lets you switch
 // away from it.
-function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
+export function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
   options: ReadonlyArray<T>,
   hiddenProviders: ReadonlySet<ProviderKind>,
   protectedProviders: ReadonlySet<ProviderKind>,
@@ -170,7 +170,7 @@ function resolveSelectedModelLabel(input: {
   });
 }
 
-function buildModelSearchText(option: ProviderModelOption): string {
+export function buildModelSearchText(option: ProviderModelOption): string {
   return [
     option.name,
     option.slug,
