@@ -26,7 +26,7 @@ const group = (id, threadId, guests) => ({
   threadId,
   projectId: `${id}-project`,
   name: id,
-  folder: `/Users/owner/${id}`,
+  folder: `/srv/owner/${id}`,
   brief: "owner's private brief",
   members: [{ id: `${id}-m1`, groupId: id, provider: "claudeAgent", handle: "Claude" }],
   guests,
@@ -38,7 +38,7 @@ const thread = (id, text) => ({
   title: id,
   createdAt: "2026-11-24T10:00:00.000Z",
   updatedAt: "2026-11-24T10:01:00.000Z",
-  worktreePath: "/Users/owner/secret-folder",
+  worktreePath: "/srv/owner/secret-folder",
   modelSelection: { provider: "group", model: "group" },
   runtimeMode: "approval-required",
   messages: [
@@ -50,8 +50,8 @@ const thread = (id, text) => ({
       turnId: "t1",
       tone: "tool",
       kind: "tool.completed",
-      summary: "cat /Users/owner/.ssh/id_rsa",
-      payload: { itemType: "command_execution", data: { command: "cat /Users/owner/.ssh/id_rsa" } },
+      summary: "cat /srv/owner/.ssh/id_rsa",
+      payload: { itemType: "command_execution", data: { command: "cat /srv/owner/.ssh/id_rsa" } },
       createdAt: "2026-11-24T10:00:02.000Z",
     },
   ],
@@ -213,7 +213,7 @@ test("everything that is the owner's is refused, and the chat list is empty", as
   assert.deepEqual((await fake.call("model/list", {})).result, { data: [] });
   for (const [method, params] of [
     ["turn/start", { threadId: "other-thread", input: [{ type: "text", text: "rm -rf" }] }],
-    ["thread/start", { cwd: "/Users/owner" }],
+    ["thread/start", { cwd: "/srv/owner" }],
     ["turn/interrupt", { threadId: "group-thread" }],
     ["thread/archive", { threadId: "group-thread" }],
     ["djl/terminal/write", { data: "ls\n" }],
@@ -533,7 +533,7 @@ test("the bridge in guest mode never runs its local handlers and lets only the g
     method: "item/agentMessage/delta",
     params: { threadId: "other-thread", delta: "secret" },
   });
-  codex.emit({ method: "thread/started", params: { thread: { id: "t9", cwd: "/Users/owner" } } });
+  codex.emit({ method: "thread/started", params: { thread: { id: "t9", cwd: "/srv/owner" } } });
   codex.emit({
     id: "srv-1",
     method: "item/commandExecution/requestApproval",
@@ -545,7 +545,7 @@ test("the bridge in guest mode never runs its local handlers and lets only the g
     method: "item/completed",
     params: {
       threadId: "group-thread",
-      item: { type: "commandExecution", command: "cat /Users/owner/.ssh/id_rsa" },
+      item: { type: "commandExecution", command: "cat /srv/owner/.ssh/id_rsa" },
     },
   });
   codex.emit({

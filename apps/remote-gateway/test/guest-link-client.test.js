@@ -197,7 +197,9 @@ test("a host whose identity key differs from the trusted one is never connected"
     }),
     // The host claims the trusted key but can only sign with its own.
     "host claims the trusted key": (trusted, other) => ({
-      deviceState: { ...trusted, macIdentityPrivateKey: other.macIdentityPrivateKey },
+      deviceState: { ...trusted, ...other },
+      advertisedKey: trusted.macIdentityPublicKey,
+      claimedKey: trusted.macIdentityPublicKey,
     }),
   };
   for (const [name, impostor] of Object.entries(impostors)) {
@@ -365,7 +367,14 @@ async function startRelay(t) {
           return;
         }
         host.transport.handleIncomingWireMessage(String(data), {
-          sendControlMessage: (message) => phone.send(JSON.stringify(message)),
+          sendControlMessage: (message) =>
+            phone.send(
+              JSON.stringify(
+                host.claimedKey && message.kind === "serverHello"
+                  ? { ...message, macIdentityPublicKey: host.claimedKey }
+                  : message,
+              ),
+            ),
           onApplicationMessage: (payloadText) => host.received.push(JSON.parse(payloadText)),
         });
       });
@@ -410,6 +419,7 @@ function startHost(
   {
     deviceState,
     advertisedKey,
+    claimedKey,
     code = CODE,
     pairingSecret = derivePairingCodeKeys(code).pairingSecret,
   },
@@ -418,6 +428,7 @@ function startHost(
     sessionId: randomUUID(),
     deviceState,
     advertisedKey,
+    claimedKey,
     displayName: "Owner's Mac",
     received: [],
     trustedUpdates: [],

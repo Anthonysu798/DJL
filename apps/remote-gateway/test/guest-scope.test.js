@@ -29,7 +29,7 @@ const group = (id, extra = {}) => ({
   id,
   threadId: id === "group-1" ? "thread-1" : "thread-2",
   name: id,
-  folder: `/Users/owner/${id}`,
+  folder: `/srv/owner/${id}`,
   brief: "private instructions",
   members: [{ id: `${id}-m1`, groupId: id }],
   guests: [
@@ -119,7 +119,7 @@ test("the group list shows one group, without the owner's folder, brief or other
       memberStates: { "group-1-m1": "working", "group-2-m1": "working" },
       drafts: { "group-2-m1": "secret draft" },
       rounds: { "group-1": { hops: 1 }, "group-2": { hops: 2 } },
-      activities: { "group-2-m1": { kind: "reading", detail: "/Users/owner/secret.txt" } },
+      activities: { "group-2-m1": { kind: "reading", detail: "/srv/owner/secret.txt" } },
     },
     reactions: [{ groupId: "group-2", targetId: "x" }],
     missions: [{ groupId: "group-1", id: "m" }],
@@ -171,7 +171,7 @@ test("events about other groups, and kinds this file does not know, are withheld
   const deleted = filterGuestGroupEvent(scope, {
     type: "group.deleted",
     groupId: "group-1",
-    folder: "/Users/owner/group-1",
+    folder: "/srv/owner/group-1",
   });
   assert.equal(deleted.folder, "(hidden)");
   const snapshot = filterGuestGroupEvent(scope, {
@@ -210,22 +210,16 @@ test("only the guest's chat leaves; other chats and every prompt stay inside", (
   );
   assert.equal(completed({ type: "userMessage", content: [] }), true);
   assert.equal(
-    completed({ type: "commandExecution", command: "cat /Users/owner/.ssh/id_rsa" }),
+    completed({ type: "commandExecution", command: "cat /srv/owner/.ssh/id_rsa" }),
     false,
   );
-  assert.equal(
-    completed({ type: "fileChange", changes: [{ path: "/Users/owner/app.ts" }] }),
-    false,
-  );
+  assert.equal(completed({ type: "fileChange", changes: [{ path: "/srv/owner/app.ts" }] }), false);
   assert.equal(completed({ type: "reasoning", summary: ["thinking"] }), false);
   assert.equal(completed(undefined), false);
   assert.equal(out({ method: "codex/event/user_message", params: {} }), false);
   // Thread events the group chat does not need stay inside even for the guest's own thread.
   assert.equal(out({ method: "turn/started", params: { threadId: "thread-1" } }), false);
-  assert.equal(
-    out({ method: "thread/started", params: { thread: { cwd: "/Users/owner" } } }),
-    false,
-  );
+  assert.equal(out({ method: "thread/started", params: { thread: { cwd: "/srv/owner" } } }), false);
   assert.equal(out({ method: "djl/terminal/output", params: { data: "ls" } }), false);
   // An approval prompt is a request to the device: it has both a method and an id.
   assert.equal(
@@ -300,15 +294,15 @@ test("what the agents did on the owner's computer never reaches a guest", () => 
     replyId: "r1",
     memberId: "group-1-m1",
     status: "ok",
-    files: ["/Users/owner/project/.env"],
+    files: ["/srv/owner/project/.env"],
     commands: ["cat ~/.ssh/id_rsa"],
   };
-  const activity = { kind: "reading", detail: "/Users/owner/secret.txt", from: null };
+  const activity = { kind: "reading", detail: "/srv/owner/secret.txt", from: null };
   const mission = {
     id: "mission-1",
     groupId: "group-1",
     goal: "Ship it",
-    stats: { files: ["/Users/owner/project/a.ts"], commands: 3, reviews: 1, replies: 2 },
+    stats: { files: ["/srv/owner/project/a.ts"], commands: 3, reviews: 1, replies: 2 },
   };
   const list = filterGuestGroupsList(scope, {
     groups: [group("group-1")],
@@ -335,5 +329,5 @@ test("what the agents did on the owner's computer never reaches a guest", () => 
   );
   assert.deepEqual(event({ type: "mission.upserted", mission }).mission.stats.files, []);
   // The owner's own phone still gets everything: only a guest's gateway filters.
-  assert.deepEqual(reply.files, ["/Users/owner/project/.env"]);
+  assert.deepEqual(reply.files, ["/srv/owner/project/.env"]);
 });
