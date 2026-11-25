@@ -490,6 +490,7 @@
   "pairingPairedMac": "페어링된 Mac",
   "pairingNotAPairingCode": "DJL 페어링 QR이나 붙여 넣을 수 있는 코드가 아니에요.",
   "pairingUpdateDesktop": "데스크톱의 DJL을 업데이트하세요. 이 페어링은 다른 프로토콜을 사용해요.",
+  "pairingProofMismatch": "페어링 코드 또는 QR 코드가 일치하지 않아요. 새로 생성한 뒤 다시 시도하세요.",
   "pairingInvalidIdentifier": "기기/세션 식별자가 올바르지 않아요.",
   "pairingInvalidIdentityKey": "데스크톱 ID 키가 올바르지 않아요.",
   "pairingCodeExpired": "페어링 코드가 만료됐어요. Mac에서 새 코드를 생성하세요.",

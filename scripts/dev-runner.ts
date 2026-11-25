@@ -157,7 +157,7 @@ export function createDevRunnerEnv({
       DJL_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
-      VITE_WS_URL: `ws://[::1]:${serverPort}`,
+      VITE_WS_URL: `ws://127.0.0.1:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
       DJL_HOME: resolvedBaseDir,
     };

@@ -68,6 +68,7 @@ import { ServerCommandService } from "./servers/Services/ServerCommandService";
 import { ServerService } from "./servers/Services/ServerService";
 import { GroupService } from "./groups/Services/GroupService";
 import { authErrorResponse, makeEffectAuthRequest } from "./auth/http";
+import { isLegacyTokenAuthorized } from "./http";
 import { ServerAuth } from "./auth/Services/ServerAuth";
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
@@ -2182,11 +2183,13 @@ export const websocketRpcRouteLayer = Layer.effectDiscard(
               ),
             );
           });
-        const legacyToken = url.searchParams.get("token");
-        const authenticatedSession =
-          !config.authToken || legacyToken === config.authToken
-            ? null
-            : yield* serverAuth.authenticateWebSocketUpgrade(makeEffectAuthRequest(request));
+        const authenticatedSession = isLegacyTokenAuthorized({
+          config,
+          url,
+          remoteAddress: request.remoteAddress,
+        })
+          ? null
+          : yield* serverAuth.authenticateWebSocketUpgrade(makeEffectAuthRequest(request));
 
         if (!authenticatedSession) {
           return yield* runConnected({

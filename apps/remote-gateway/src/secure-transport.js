@@ -8,6 +8,7 @@ const {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   createPrivateKey,
   createPublicKey,
   diffieHellman,
@@ -15,17 +16,23 @@ const {
   hkdfSync,
   randomBytes,
   sign,
+  timingSafeEqual,
   verify,
 } = require("crypto");
 const {
   DJL_CLIENT_AUTH_LABEL,
   DJL_MAX_REPLAY_BYTES,
   DJL_MAX_REPLAY_MESSAGES,
+  DJL_PAIRING_PROOF_MAC_LABEL,
+  DJL_PAIRING_PROOF_PHONE_LABEL,
   DJL_PAIRING_QR_VERSION,
+  DJL_PAIRING_SECRET_BYTES,
   DJL_PAIRING_TTL_MS,
   DJL_SECURE_HANDSHAKE_TAG,
   DJL_SECURE_PROTOCOL_VERSION,
   buildHandshakeTranscript,
+  buildPairingProofInput,
+  buildRelayMacRegistrationTranscript,
   secureNonce,
 } = require("@djl/remote-protocol");
 const { getTrustedPhonePublicKey, rememberTrustedPhone } = require("./secure-device-state");
@@ -47,6 +54,8 @@ function createBridgeSecureTransport({
   relayUrl,
   deviceState,
   displayName = "",
+  // Base64 secret shared only through the QR or the typed pairing code, never through the relay.
+  pairingSecret = randomBytes(DJL_PAIRING_SECRET_BYTES).toString("base64"),
   onTrustedPhoneUpdate = null,
   onSecureSessionReady = null,
   persistTrustedPhone = true,
@@ -56,6 +65,10 @@ function createBridgeSecureTransport({
   clearTimeoutFn = clearTimeout,
 }) {
   let currentDeviceState = deviceState;
+  const pairingSecretKey = Buffer.from(pairingSecret, "base64");
+  if (pairingSecretKey.length !== DJL_PAIRING_SECRET_BYTES) {
+    throw new Error("The DJL pairing secret must be 32 bytes.");
+  }
   const bridgeDisplayName = normalizeNonEmptyString(displayName);
   let pendingHandshake = null;
   let activeSession = null;
@@ -88,6 +101,7 @@ function createBridgeSecureTransport({
       macIdentityPublicKey: currentDeviceState.macIdentityPublicKey,
       expiresAt: currentPairingExpiresAt,
       displayName: bridgeDisplayName,
+      pairingSecret,
     };
   }
 
@@ -188,8 +202,9 @@ function createBridgeSecureTransport({
     return Boolean(activeSession?.isResumed);
   }
 
+  // A hello proves nothing: anyone holding the session id can send one. A live session keeps its
+  // keys and its outbound stream until handleClientAuth authenticates the replacement.
   function handleClientHello(message, sendControlMessage) {
-    drainPendingOutboundToBuffer();
     const protocolVersion = Number(message.protocolVersion);
     const incomingSessionId = normalizeNonEmptyString(message.sessionId);
     const handshakeMode = normalizeNonEmptyString(message.handshakeMode);
@@ -327,7 +342,6 @@ function createBridgeSecureTransport({
       transcriptBytes,
       expiresAtForTranscript,
     };
-    activeSession = null;
 
     sendControlMessage({
       kind: "serverHello",
@@ -344,6 +358,15 @@ function createBridgeSecureTransport({
       macSignature,
       clientNonce: clientNonceBase64,
       displayName: bridgeDisplayName,
+      ...(handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP
+        ? {
+            pairingProof: pairingProof(
+              pairingSecretKey,
+              transcriptBytes,
+              DJL_PAIRING_PROOF_MAC_LABEL,
+            ),
+          }
+        : {}),
     });
   }
 
@@ -398,6 +421,37 @@ function createBridgeSecureTransport({
       return;
     }
 
+    // A new phone must prove it holds the pairing secret from the QR or the typed code. The relay
+    // sees every other handshake field, so without this it could pair a device of its own.
+    if (pendingHandshake.handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP) {
+      const phonePairingProof = normalizeNonEmptyString(message.pairingProof);
+      if (!phonePairingProof) {
+        pendingHandshake = null;
+        sendControlMessage(
+          createSecureError({
+            code: "update_required",
+            message: "Update the DJL app on your phone to pair with this computer.",
+          }),
+        );
+        return;
+      }
+      const expectedProof = pairingProof(
+        pairingSecretKey,
+        pendingHandshake.transcriptBytes,
+        DJL_PAIRING_PROOF_PHONE_LABEL,
+      );
+      if (!constantTimeBase64Equal(phonePairingProof, expectedProof)) {
+        pendingHandshake = null;
+        sendControlMessage(
+          createSecureError({
+            code: "invalid_pairing_proof",
+            message: "The pairing code or QR code did not match. Generate a new one and try again.",
+          }),
+        );
+        return;
+      }
+    }
+
     const sharedSecret = diffieHellman({
       privateKey: createPrivateKey({
         key: {
@@ -426,6 +480,8 @@ function createBridgeSecureTransport({
       String(pendingHandshake.keyEpoch),
     ].join("|");
 
+    // The handshake is authenticated: only now does the previous session end.
+    drainPendingOutboundToBuffer();
     activeSession = {
       sessionId: pendingHandshake.sessionId,
       keyEpoch: pendingHandshake.keyEpoch,
@@ -950,6 +1006,19 @@ function signTranscript(privateKeyBase64, publicKeyBase64, transcriptBytes) {
   return signature.toString("base64");
 }
 
+// Signed on every relay connect so the relay can pin this computer's identity to its device id.
+function signRelayMacRegistration(deviceState, sessionId) {
+  return signTranscript(
+    deviceState.macIdentityPrivateKey,
+    deviceState.macIdentityPublicKey,
+    buildRelayMacRegistrationTranscript({
+      sessionId,
+      macDeviceId: deviceState.macDeviceId,
+      macIdentityPublicKey: base64ToBuffer(deviceState.macIdentityPublicKey),
+    }),
+  );
+}
+
 function verifyTranscript(publicKeyBase64, transcriptBytes, signatureBase64) {
   try {
     return verify(
@@ -968,6 +1037,18 @@ function verifyTranscript(publicKeyBase64, transcriptBytes, signatureBase64) {
   } catch {
     return false;
   }
+}
+
+function pairingProof(pairingSecretKey, transcriptBytes, label) {
+  return createHmac("sha256", pairingSecretKey)
+    .update(buildPairingProofInput(transcriptBytes, label))
+    .digest("base64");
+}
+
+function constantTimeBase64Equal(leftBase64, rightBase64) {
+  const left = Buffer.from(leftBase64, "base64");
+  const right = Buffer.from(rightBase64, "base64");
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 function buildTranscriptBytes(input) {
@@ -1047,4 +1128,5 @@ module.exports = {
   SECURE_PROTOCOL_VERSION,
   createBridgeSecureTransport,
   nonceForDirection,
+  signRelayMacRegistration,
 };

@@ -5,8 +5,22 @@ import { ApiError } from "./errors.ts";
 
 const MAX_JSON_BYTES = 256 * 1024;
 
-/** Parse a small JSON body or fail with a 400 ApiError. */
+/**
+ * A body is only read as JSON when it is declared as JSON. A browser sends
+ * `text/plain` and form posts cross-origin without a preflight; `application/json` it cannot.
+ */
+export const requireJsonContentType = Effect.gen(function* () {
+  const request = yield* HttpServerRequest.HttpServerRequest;
+  const type = (request.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+  if (type !== "application/json")
+    return yield* Effect.fail(
+      new ApiError(415, "unsupported_media_type", "Send the body as application/json."),
+    );
+});
+
+/** Parse a small JSON body or fail with a 400 ApiError (415 when it is not declared as JSON). */
 export const readJson = Effect.gen(function* () {
+  yield* requireJsonContentType;
   const request = yield* HttpServerRequest.HttpServerRequest;
   const length = Number(request.headers["content-length"] ?? "0");
   if (length > MAX_JSON_BYTES)

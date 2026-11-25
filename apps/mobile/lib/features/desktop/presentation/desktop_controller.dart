@@ -1436,6 +1436,9 @@ class DesktopController extends ChangeNotifier {
     TrustedDeviceEntry? switchTarget,
   }) async {
     if (busy && switchTarget == null) return;
+    // Only the first handshake gets the pairing secret; `active` outlives it.
+    final handshake = pair;
+    if (pair.pairingSecret != null) pair = Pairing(pair.data);
     if (switchTarget == null) _automaticConnectionPaused = false;
     _connectingRecovery = !bootstrap && switchTarget == null;
     _pairingSubmission = bootstrap;
@@ -1503,7 +1506,10 @@ class DesktopController extends ChangeNotifier {
       active = pair;
       _beginReasoningConnection(pair, generation);
       if (switchTarget == null) {
-        await transport.connect(pair, bootstrap: bootstrap);
+        await transport.connect(
+          bootstrap ? handshake : pair,
+          bootstrap: bootstrap,
+        );
       } else {
         await transport.connectSaved(pair, switchTarget);
       }

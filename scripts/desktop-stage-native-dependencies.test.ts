@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ensureDesktopStageExecutableHelpers,
+  omitDesktopSigningSecrets,
   resolveDesktopStageInstallArgs,
   verifyDesktopStageNativeDependencies,
 } from "./lib/desktop-stage-native-dependencies.ts";
@@ -80,6 +81,7 @@ describe("resolveDesktopStageInstallArgs", () => {
   it("installs Intel macOS optional dependencies when cross-building on Apple Silicon", () => {
     expect(resolveDesktopStageInstallArgs({ platform: "mac", arch: "x64" })).toEqual([
       "install",
+      "--frozen-lockfile",
       "--production",
       "--os",
       "darwin",
@@ -91,12 +93,38 @@ describe("resolveDesktopStageInstallArgs", () => {
   it("installs both architectures for a universal macOS artifact", () => {
     expect(resolveDesktopStageInstallArgs({ platform: "mac", arch: "universal" })).toEqual([
       "install",
+      "--frozen-lockfile",
       "--production",
       "--os",
       "darwin",
       "--cpu",
       "*",
     ]);
+  });
+});
+
+describe("omitDesktopSigningSecrets", () => {
+  it("keeps signing, notarization and release credentials away from dependency code", () => {
+    expect(
+      omitDesktopSigningSecrets({
+        PATH: "/usr/bin",
+        DJL_STATS_URL: "https://stats.example",
+        CSC_LINK: "certificate",
+        CSC_KEY_PASSWORD: "password",
+        WIN_CSC_LINK: "certificate",
+        APPLE_API_KEY: "/tmp/AuthKey.p8",
+        APPLE_API_KEY_ID: "key",
+        APPLE_API_ISSUER: "issuer",
+        AZURE_CLIENT_ID: "client",
+        AZURE_TENANT_ID: "tenant",
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: "oidc",
+        ACTIONS_ID_TOKEN_REQUEST_URL: "https://oidc.example",
+        ACTIONS_RUNTIME_TOKEN: "runtime",
+        OSS_ACCESS_KEY_SECRET: "oss",
+        GH_TOKEN: "token",
+        GITHUB_TOKEN: "token",
+      }),
+    ).toEqual({ PATH: "/usr/bin", DJL_STATS_URL: "https://stats.example" });
   });
 });
 

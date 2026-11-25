@@ -40,6 +40,7 @@ final class ContentViewModel {
         let lastAppliedBridgeOutboundSeq: Int
         let lastAppliedBridgeReplayEpoch: String?
         let shouldForceQRBootstrapOnNextHandshake: Bool
+        let pendingPairingSecret: Data?
         let trustedReconnectFailureCount: Int
         let secureConnectionState: CodexSecureConnectionState
         let secureMacFingerprint: String?
@@ -1181,6 +1182,7 @@ extension ContentViewModel {
             lastAppliedBridgeOutboundSeq: codex.lastAppliedBridgeOutboundSeq,
             lastAppliedBridgeReplayEpoch: codex.lastAppliedBridgeReplayEpoch,
             shouldForceQRBootstrapOnNextHandshake: codex.shouldForceQRBootstrapOnNextHandshake,
+            pendingPairingSecret: codex.pendingPairingSecret,
             trustedReconnectFailureCount: codex.trustedReconnectFailureCount,
             secureConnectionState: codex.secureConnectionState,
             secureMacFingerprint: codex.secureMacFingerprint
@@ -1196,6 +1198,7 @@ extension ContentViewModel {
         codex.lastAppliedBridgeOutboundSeq = snapshot.lastAppliedBridgeOutboundSeq
         codex.lastAppliedBridgeReplayEpoch = snapshot.lastAppliedBridgeReplayEpoch
         codex.shouldForceQRBootstrapOnNextHandshake = snapshot.shouldForceQRBootstrapOnNextHandshake
+        codex.pendingPairingSecret = snapshot.pendingPairingSecret
         codex.trustedReconnectFailureCount = snapshot.trustedReconnectFailureCount
         codex.secureConnectionState = snapshot.secureConnectionState
         codex.secureMacFingerprint = snapshot.secureMacFingerprint

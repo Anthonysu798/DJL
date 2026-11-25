@@ -10,6 +10,7 @@ const {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   createPrivateKey,
   createPublicKey,
   diffieHellman,
@@ -33,7 +34,7 @@ function createTestBridgeSecureTransport(options) {
   });
 }
 
-test("pairing QR contains public bootstrap metadata but no relay authentication secret", () => {
+test("pairing QR carries the pairing secret but no relay authentication secret", () => {
   const macIdentity = createOkpKeyPair("ed25519");
   const secureTransport = createTestBridgeSecureTransport({
     sessionId: "session-public-qr",
@@ -55,11 +56,142 @@ test("pairing QR contains public bootstrap metadata but no relay authentication 
     "expiresAt",
     "macDeviceId",
     "macIdentityPublicKey",
+    "pairingSecret",
     "relay",
     "sessionId",
     "v",
   ]);
+  assert.equal(Buffer.from(payload.pairingSecret, "base64").length, 32);
   assert.doesNotMatch(JSON.stringify(payload), /relaySessionSecret|must-never-enter/);
+});
+
+test("qr bootstrap proves the pairing secret to the phone in serverHello", () => {
+  const { secureTransport, handshake } = createBootstrapFixture("session-proof-mac");
+  const { serverHello, transcriptBytes } = finishHandshake(handshake);
+
+  assert.equal(
+    serverHello.pairingProof,
+    pairingProofFor(secureTransport, transcriptBytes, "pairing-proof-mac"),
+  );
+});
+
+test("qr bootstrap refuses a phone that sends no pairing proof and does not trust it", () => {
+  const { handshake, trustedPhoneUpdates } = createBootstrapFixture("session-proof-missing");
+  const { controlMessages } = finishHandshake({ ...handshake, pairingProof: null });
+
+  assert.equal(controlMessages.at(-1)?.kind, "secureError");
+  assert.equal(controlMessages.at(-1)?.code, "update_required");
+  assert.equal(trustedPhoneUpdates.length, 0);
+});
+
+test("qr bootstrap refuses a relay-forged phone that does not hold the pairing secret", () => {
+  const { handshake, trustedPhoneUpdates } = createBootstrapFixture("session-proof-forged");
+  // The relay sees the session id, both public keys and the whole transcript, but not the secret.
+  const forgedProof = createHmac("sha256", Buffer.alloc(32, 9)).update("forged").digest("base64");
+  const { controlMessages } = finishHandshake({ ...handshake, pairingProof: forgedProof });
+
+  assert.equal(controlMessages.at(-1)?.kind, "secureError");
+  assert.equal(controlMessages.at(-1)?.code, "invalid_pairing_proof");
+  assert.equal(trustedPhoneUpdates.length, 0);
+});
+
+test("a pairing proof for one handshake cannot be replayed into another", () => {
+  const { secureTransport, handshake } = createBootstrapFixture("session-proof-replay");
+  const first = finishHandshake(handshake);
+  const replayedProof = pairingProofFor(
+    secureTransport,
+    first.transcriptBytes,
+    "pairing-proof-phone",
+  );
+  const { controlMessages } = finishHandshake({
+    ...handshake,
+    phoneDeviceId: "phone-relay",
+    phoneIdentity: createOkpKeyPair("ed25519"),
+    phoneEphemeral: createOkpKeyPair("x25519"),
+    pairingProof: replayedProof,
+  });
+
+  assert.equal(controlMessages.at(-1)?.code, "invalid_pairing_proof");
+});
+
+test("an unauthenticated clientHello leaves the paired phone's session running", () => {
+  const sessionId = "session-stranger-hello";
+  const { secureTransport, handshake } = createBootstrapFixture(sessionId);
+  const wireMessages = [];
+  const sendWireMessage = (message) => {
+    wireMessages.push(message);
+    return true;
+  };
+  secureTransport.bindLiveSendWireMessage(sendWireMessage);
+  const { serverHello, transcriptBytes } = finishHandshake(handshake);
+  const macToPhoneKey = deriveMacToPhoneKey({
+    sessionId,
+    macDeviceId: "mac-proof",
+    phoneDeviceId: "phone-proof",
+    phoneEphemeral: handshake.phoneEphemeral,
+    serverHello,
+    transcriptBytes,
+  });
+  // Still waiting in the coalescing window when the stranger's hello arrives.
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({ method: "turn/started", params: { threadId: "thread-live" } }),
+    sendWireMessage,
+  );
+
+  // The session id is all a stranger needs to send a well-formed hello.
+  const controlMessages = [];
+  const handlers = {
+    sendControlMessage: (message) => controlMessages.push(message),
+    onApplicationMessage() {},
+  };
+  secureTransport.handleIncomingWireMessage(
+    JSON.stringify({
+      kind: "clientHello",
+      protocolVersion: SECURE_PROTOCOL_VERSION,
+      sessionId,
+      handshakeMode: HANDSHAKE_MODE_QR_BOOTSTRAP,
+      phoneDeviceId: "phone-stranger",
+      phoneIdentityPublicKey: createOkpKeyPair("ed25519").publicKey,
+      phoneEphemeralPublicKey: createOkpKeyPair("x25519").publicKey,
+      clientNonce: Buffer.alloc(32, 9).toString("base64"),
+    }),
+    handlers,
+  );
+  assert.equal(controlMessages.at(-1)?.kind, "serverHello");
+  assert.equal(secureTransport.isSecureChannelReady(), true);
+
+  secureTransport.handleIncomingWireMessage(
+    JSON.stringify({
+      kind: "clientAuth",
+      sessionId,
+      phoneDeviceId: "phone-stranger",
+      keyEpoch: controlMessages.at(-1).keyEpoch,
+      phoneSignature: Buffer.alloc(64, 9).toString("base64"),
+    }),
+    handlers,
+  );
+  assert.equal(controlMessages.at(-1)?.code, "invalid_phone_signature");
+  assert.equal(secureTransport.isSecureChannelReady(), true);
+
+  // The paired phone keeps receiving under its own keys, in order, with nothing skipped.
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({ id: "response-1", result: { ok: true } }),
+    sendWireMessage,
+  );
+  const delivered = wireMessages.map((message) =>
+    decryptEnvelope(JSON.parse(message), macToPhoneKey),
+  );
+  assert.deepEqual(
+    delivered.map((payload) => [payload.bridgeOutboundSeq, JSON.parse(payload.payloadText)]),
+    [
+      [1, { method: "turn/started", params: { threadId: "thread-live" } }],
+      [2, { id: "response-1", result: { ok: true } }],
+    ],
+  );
+  assert.deepEqual(
+    wireMessages.map((message) => JSON.parse(message).keyEpoch),
+    [serverHello.keyEpoch, serverHello.keyEpoch],
+  );
 });
 
 test("secure transport rejects plaintext JSON-RPC before the secure handshake", () => {
@@ -919,6 +1051,8 @@ function finishHandshake({
   handshakeMode,
   lastAppliedBridgeOutboundSeq,
   skipResumeState = false,
+  // undefined: prove the real pairing secret. null: send none. string: send it as given.
+  pairingProof = undefined,
 }) {
   const controlMessages = [];
   const applicationMessages = [];
@@ -988,6 +1122,13 @@ function finishHandshake({
       phoneDeviceId,
       keyEpoch: serverHello.keyEpoch,
       phoneSignature: phoneSignature.toString("base64"),
+      ...(handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP && pairingProof !== null
+        ? {
+            pairingProof:
+              pairingProof ??
+              pairingProofFor(secureTransport, transcriptBytes, "pairing-proof-phone"),
+          }
+        : {}),
     }),
     {
       sendControlMessage(message) {
@@ -999,6 +1140,9 @@ function finishHandshake({
     },
   );
 
+  if (pairingProof !== undefined) {
+    return { applicationMessages, controlMessages, serverHello, transcriptBytes };
+  }
   const secureReady = controlMessages.find((message) => message.kind === "secureReady");
   assert.ok(secureReady, "expected secureReady");
 
@@ -1023,6 +1167,46 @@ function finishHandshake({
   }
 
   return { applicationMessages, controlMessages, serverHello, transcriptBytes };
+}
+
+function pairingProofFor(secureTransport, transcriptBytes, label) {
+  const { pairingSecret } = secureTransport.createPairingPayload();
+  return createHmac("sha256", Buffer.from(pairingSecret, "base64"))
+    .update(Buffer.concat([transcriptBytes, encodeLengthPrefixedUTF8(label)]))
+    .digest("base64");
+}
+
+function createBootstrapFixture(sessionId) {
+  const macIdentity = createOkpKeyPair("ed25519");
+  const trustedPhoneUpdates = [];
+  const secureTransport = createTestBridgeSecureTransport({
+    sessionId,
+    relayUrl: "wss://relay.example/relay",
+    deviceState: {
+      macDeviceId: "mac-proof",
+      macIdentityPrivateKey: macIdentity.privateKey,
+      macIdentityPublicKey: macIdentity.publicKey,
+      trustedPhones: {},
+    },
+    onTrustedPhoneUpdate(_state, phone) {
+      trustedPhoneUpdates.push(phone);
+    },
+  });
+  return {
+    secureTransport,
+    trustedPhoneUpdates,
+    handshake: {
+      secureTransport,
+      sessionId,
+      macDeviceId: "mac-proof",
+      phoneDeviceId: "phone-proof",
+      macIdentity,
+      phoneIdentity: createOkpKeyPair("ed25519"),
+      phoneEphemeral: createOkpKeyPair("x25519"),
+      handshakeMode: HANDSHAKE_MODE_QR_BOOTSTRAP,
+      lastAppliedBridgeOutboundSeq: 0,
+    },
+  };
 }
 
 function createOkpKeyPair(type) {

@@ -69,6 +69,26 @@ export function creditPriceFromUsd(usd: number, marginFraction: number): Microcr
   return ceilDiv(priceMicroUsd * MICROCREDITS_PER_USD, 1_000_000n);
 }
 
+/**
+ * Token count for text the provider has not metered (a reservation, or a
+ * stream that ended before its usage arrived). Deliberately on the high side
+ * so it is never cheaper than the provider's own count: 3 ASCII characters
+ * per token (JSON and code run denser than prose), and 1.5 tokens per other
+ * UTF-16 unit, which covers CJK and emoji. Fractional; round up after summing.
+ */
+export function estimateTokens(text: string): number {
+  let other = 0;
+  for (let i = 0; i < text.length; i += 1) if (text.charCodeAt(i) > 0x7f) other += 1;
+  return (text.length - other) / 3 + other * 1.5;
+}
+
+/**
+ * The most characters one token can plausibly stand for. A request with more
+ * text than this per token of context cannot fit the model, however it is
+ * tokenized.
+ */
+export const MAX_CHARS_PER_TOKEN = 8;
+
 export function costOfUsage(price: ModelPrice, usage: Usage): Microcredits {
   return (
     BigInt(usage.inputTokens) * price.inputPerToken +

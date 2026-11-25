@@ -13,7 +13,7 @@
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import {
   admin,
   bearer,
@@ -28,6 +28,7 @@ import {
 
 import type { DjlDatabase } from "@djl/db";
 import { schema } from "@djl/db";
+import { and, eq, ne } from "drizzle-orm";
 import type { Redis } from "ioredis";
 
 import type { ApiEnv } from "../config/env.ts";
@@ -35,9 +36,30 @@ import { createRedisThrottle } from "../security/throttle.ts";
 import { ACCESS_TOKEN_AUDIENCE } from "./accessTokens.ts";
 import { revokeCommerceAuth } from "./commerceAuthGeneration.ts";
 import { hashPassword, verifyPassword } from "./password.ts";
+import { normalizePhoneNumber } from "./phone.ts";
 import type { SessionRevocations } from "./revocations.ts";
 
 const DAY = 60 * 60 * 24;
+
+/** Routes that mail a code to an address, and routes that check one. */
+const OTP_SEND_PATHS = new Set([
+  "/sign-up/email",
+  "/email-otp/send-verification-otp",
+  "/email-otp/request-password-reset",
+]);
+const OTP_CHECK_PATHS = new Set([
+  "/email-otp/verify-email",
+  "/sign-in/email-otp",
+  "/email-otp/reset-password",
+]);
+/** Per email address, whatever IP asks: a six-digit code must not be guessable by volume. */
+const OTP_EMAIL_LIMIT = { window: 60 * 60, max: 10 };
+/** Code sign-ins that must clear two-factor exactly as a password sign-in does. */
+const OTP_SIGN_IN_PATHS = new Set([
+  "/sign-in/email-otp",
+  "/email-otp/verify-email",
+  "/phone-number/verify",
+]);
 
 /** Client ids allowed to start the device flow. */
 export const DEVICE_CLIENT_IDS = new Set(["djl-desktop", "djl-ios", "djl-cli"]);
@@ -80,6 +102,15 @@ export function createAuth(input: {
 }) {
   const { env, db, notifier, redis, revocations, onEmailVerified } = input;
   const nativeAdmin = admin();
+  const otpThrottle = createRedisThrottle(redis, "auth:otp");
+  const twoFactorPlugin = twoFactor({
+    issuer: "DJL Cloud",
+    otpOptions: {
+      sendOTP: async ({ user, otp }) => {
+        await notifier.sendTwoFactorOtp({ email: user.email, otp });
+      },
+    },
+  });
   return betterAuth({
     appName: "DJL Cloud",
     baseURL: env.apiPublicUrl,
@@ -87,6 +118,13 @@ export function createAuth(input: {
     secret: env.betterAuthSecret,
     database: drizzleAdapter(db, { provider: "pg", schema }),
     trustedOrigins: [...env.trustedOrigins],
+    // Email-code routes no DJL client calls.
+    disabledPaths: [
+      "/email-otp/check-verification-otp",
+      "/forget-password/email-otp",
+      "/email-otp/request-email-change",
+      "/email-otp/change-email",
+    ],
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -101,6 +139,21 @@ export function createAuth(input: {
     emailVerification: {
       sendOnSignUp: false, // email OTP plugin handles verification codes
       autoSignInAfterVerification: true,
+      // Whoever proves the mailbox inherits no session or linked sign-in that an
+      // earlier, unproven registration left on the account.
+      beforeEmailVerification: async (user) => {
+        if (user.emailVerified) return;
+        const ended = await db
+          .delete(schema.session)
+          .where(eq(schema.session.userId, user.id))
+          .returning({ id: schema.session.id });
+        await revocations.revoke(ended.map((session) => session.id));
+        await db
+          .delete(schema.account)
+          .where(
+            and(eq(schema.account.userId, user.id), ne(schema.account.providerId, "credential")),
+          );
+      },
     },
     // Native apps post the provider's ID token to /sign-in/social ({ provider, idToken }).
     // Google accepts tokens minted for any listed client id (web first, then iOS); Apple
@@ -170,11 +223,80 @@ export function createAuth(input: {
         : {}),
     },
     hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        const body: unknown = ctx.body;
+        if (typeof body !== "object" || body === null) return;
+        if ("email" in body && typeof body.email === "string") {
+          const kind = OTP_SEND_PATHS.has(ctx.path)
+            ? "send"
+            : OTP_CHECK_PATHS.has(ctx.path)
+              ? "check"
+              : null;
+          if (
+            kind &&
+            !(await otpThrottle.consume(`${kind}:${body.email.toLowerCase()}`, OTP_EMAIL_LIMIT))
+              .allowed
+          )
+            throw new APIError("TOO_MANY_REQUESTS", {
+              message: "Too many codes for this email. Try again later.",
+            });
+        }
+        if ("phoneNumber" in body && typeof body.phoneNumber === "string") {
+          // A phone number reaches an account only by verifying it, in one spelling.
+          const phoneNumber =
+            ctx.path === "/sign-in/phone-number" || ctx.path.startsWith("/phone-number/")
+              ? normalizePhoneNumber(body.phoneNumber)
+              : null;
+          if (!phoneNumber) throw new APIError("BAD_REQUEST", { message: "Invalid phone number" });
+          return { context: { body: { ...body, phoneNumber } } };
+        }
+      }),
       after: createAuthMiddleware(async (ctx) => {
         // Ordinary sign-out and individual revocations remain realm-local.
         const result: unknown = ctx.context.returned;
         if (typeof result !== "object" || result === null) return;
-        if (ctx.path === "/revoke-sessions" || ctx.path === "/revoke-other-sessions") {
+        if (ctx.path === "/sign-up/email") {
+          // Better Auth answers a sign-up for a registered email with a made-up user
+          // and drops the password. If that registration was never verified, this
+          // sign-up replaces its password: the code now in the mailbox must not
+          // verify an account that still opens with an earlier stranger's password.
+          if (!("user" in result) || typeof result.user !== "object" || result.user === null)
+            return;
+          const { email, password, name } = ctx.body as Record<
+            "email" | "password" | "name",
+            string
+          >;
+          const existing = await db.query.user.findFirst({
+            where: eq(schema.user.email, email.toLowerCase()),
+          });
+          if (
+            !existing ||
+            ("id" in result.user && result.user.id === existing.id) ||
+            existing.emailVerified ||
+            existing.banned ||
+            existing.phoneNumber
+          )
+            return;
+          const hash = await ctx.context.password.hash(password);
+          await db.transaction(async (tx) => {
+            await tx
+              .delete(schema.account)
+              .where(
+                and(
+                  eq(schema.account.userId, existing.id),
+                  eq(schema.account.providerId, "credential"),
+                ),
+              );
+            await tx.insert(schema.account).values({
+              userId: existing.id,
+              providerId: "credential",
+              accountId: existing.id,
+              password: hash,
+              updatedAt: new Date(),
+            });
+            await tx.update(schema.user).set({ name }).where(eq(schema.user.id, existing.id));
+          });
+        } else if (ctx.path === "/revoke-sessions" || ctx.path === "/revoke-other-sessions") {
           const userId = ctx.context.session?.user.id;
           if (userId && "status" in result && result.status === true)
             await revokeCommerceAuth(db, userId);
@@ -231,6 +353,11 @@ export function createAuth(input: {
             invitationId: data.id,
           });
         },
+        // Only createPersonalOrganization marks an organization as personal.
+        organizationHooks: {
+          beforeCreateOrganization: refusePersonalMarker,
+          beforeUpdateOrganization: refusePersonalMarker,
+        },
       }),
       ...(env.smsEnabled
         ? [
@@ -256,19 +383,24 @@ export function createAuth(input: {
         otpLength: 6,
         expiresIn: 600,
         allowedAttempts: 5,
+        storeOTP: "hashed",
         sendVerificationOnSignUp: true,
         sendVerificationOTP: async ({ email, otp, type }) => {
           await notifier.sendEmailOtp({ email, otp, type });
         },
       }),
-      twoFactor({
-        issuer: "DJL Cloud",
-        otpOptions: {
-          sendOTP: async ({ user, otp }) => {
-            await notifier.sendTwoFactorOtp({ email: user.email, otp });
-          },
+      // The plugin challenges password sign-ins only; an emailed or texted code would
+      // otherwise sign a two-factor account straight in.
+      {
+        ...twoFactorPlugin,
+        hooks: {
+          after: twoFactorPlugin.hooks.after.map((hook) => ({
+            handler: hook.handler,
+            matcher: (ctx: Parameters<typeof hook.matcher>[0]) =>
+              hook.matcher(ctx) || OTP_SIGN_IN_PATHS.has(ctx.path ?? ""),
+          })),
         },
-      }),
+      },
       // The ceremony runs on the web app while the API serves it, so the relying
       // party is the registrable parent domain both hosts share.
       passkey({
@@ -305,6 +437,13 @@ export function createAuth(input: {
 export type DjlAuth = ReturnType<typeof createAuth>;
 
 export const PERSONAL_ORG_METADATA = JSON.stringify({ kind: "personal" });
+
+async function refusePersonalMarker(input: {
+  readonly organization: { readonly metadata?: Record<string, unknown> };
+}) {
+  if (input.organization.metadata?.["kind"] === "personal")
+    throw new APIError("BAD_REQUEST", { message: "This organization kind is reserved." });
+}
 
 export async function createPersonalOrganization(
   db: DjlDatabase,

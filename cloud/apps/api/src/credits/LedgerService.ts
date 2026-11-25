@@ -15,10 +15,13 @@
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 import {
   allocateDebit,
+  clawbackDue,
+  debtOf,
   expireBucket,
   foldBalances,
   reserve as domainReserve,
   settle as domainSettle,
+  splitGrant,
   totalAvailable,
   ZERO_BALANCES,
   type Balances,
@@ -29,7 +32,7 @@ import {
 } from "@djl/domain";
 import { schema, type DjlDatabase } from "@djl/db";
 
-import { holdWindows, settleHold, type Tx } from "../usage/windowStore.ts";
+import { extendHold, holdWindows, settleHold, type Tx } from "../usage/windowStore.ts";
 
 const { creditBalances, creditLedger } = schema;
 
@@ -94,7 +97,10 @@ export class LedgerService {
     return totalAvailable(await this.balances(orgId));
   }
 
-  /** Grant credits into a bucket (free, trial, plan, topup, admin). Positive amounts only. */
+  /**
+   * Grant credits into a bucket (free, trial, plan, topup, admin). Positive
+   * amounts only. A paid grant to an org in debt clears the debt first.
+   */
   async grant(input: {
     readonly orgId: string;
     readonly bucket: Bucket;
@@ -108,20 +114,31 @@ export class LedgerService {
     if (input.amount <= 0n) throw new RangeError("grant amount must be positive");
     return this.db.transaction(async (tx) => {
       const balances = await this.lockBalances(tx, input.orgId);
-      await this.insert(tx, [
-        {
-          orgId: input.orgId,
-          type: input.type,
-          bucket: input.bucket,
-          amount: input.amount,
-          reservationId: null,
-          idempotencyKey: input.idempotencyKey,
-          actor: input.actor,
-          reason: input.reason ?? null,
-          metadata: input.metadata ?? null,
-        },
-      ]);
-      return this.applyDelta(tx, input.orgId, balances, { [input.bucket]: input.amount });
+      const { repay, rest } = splitGrant(input.bucket, input.amount, balances);
+      const entry = {
+        orgId: input.orgId,
+        type: input.type,
+        bucket: input.bucket,
+        amount: rest,
+        reservationId: null,
+        idempotencyKey: input.idempotencyKey,
+        actor: input.actor,
+        reason: input.reason ?? null,
+        metadata: input.metadata ?? null,
+      };
+      // The grant's own key always lands on an entry, so a replayed grant is still a duplicate.
+      const repayment = {
+        ...entry,
+        bucket: "topup" as const,
+        amount: repay,
+        idempotencyKey: rest > 0n ? `${input.idempotencyKey}:debt` : input.idempotencyKey,
+        reason: "debt repayment",
+      };
+      await this.insert(tx, [...(rest > 0n ? [entry] : []), ...(repay > 0n ? [repayment] : [])]);
+      return this.applyDelta(tx, input.orgId, balances, {
+        [input.bucket]: rest,
+        ...(repay > 0n ? { topup: repay } : {}),
+      });
     });
   }
 
@@ -167,8 +184,12 @@ export class LedgerService {
   }
 
   /**
-   * Settle a reservation with the actual cost. Returns the uncovered amount
-   * (non-zero only when the stream was cut at zero balance).
+   * Settle a reservation with the actual cost. Returns the uncovered amount:
+   * what the balance could not pay, now owed as debt (a negative topup
+   * balance). Settling twice is a no-op, but a reservation that was only
+   * released (the stale reservation job ran while the request was still in
+   * flight) is still debited its actual cost. `userId` names whose usage
+   * windows to charge when the reservation's hold is already gone.
    */
   async settle(input: {
     readonly orgId: string;
@@ -177,6 +198,7 @@ export class LedgerService {
     readonly idempotencyKey: string;
     readonly actor: string;
     readonly freeEligible?: boolean;
+    readonly userId?: string;
   }): Promise<{ readonly balances: Balances; readonly uncovered: Microcredits }> {
     return this.db.transaction(async (tx) => {
       const balances = await this.lockBalances(tx, input.orgId);
@@ -190,8 +212,12 @@ export class LedgerService {
           ),
         );
       const reservationEntries = reservationRows.map(rowToEntry);
-      if (reservationEntries.some((e) => e.type === "settlement" || e.type === "release")) {
-        // Already settled or released: idempotent no-op.
+      const released = reservationEntries.some((e) => e.type === "release");
+      if (
+        reservationEntries.some((e) => e.type === "settlement") ||
+        (released && input.actual === 0n)
+      ) {
+        // Already settled, or released with nothing more to charge: idempotent no-op.
         return { balances, uncovered: 0n };
       }
       const { entries, uncovered } = domainSettle(input, reservationEntries, balances);
@@ -199,7 +225,7 @@ export class LedgerService {
         tx,
         entries.map((e) => ({ ...e, actor: input.actor })),
       );
-      await settleHold(tx, input.reservationId, input.actual, new Date());
+      await settleHold(tx, input.reservationId, input.actual, new Date(), input.userId);
       const delta = { ...ZERO_BALANCES };
       for (const e of entries) delta[e.bucket] += e.amount;
       return { balances: await this.applyDelta(tx, input.orgId, balances, delta), uncovered };
@@ -234,15 +260,29 @@ export class LedgerService {
     });
   }
 
-  /** Reservations older than `olderThanMs` with no settlement are released (crash recovery). */
+  /** Tell the stale reservation job a request is still running (see windowStore.extendHold). */
+  async heartbeat(reservationId: string): Promise<void> {
+    await extendHold(this.db, reservationId, new Date());
+  }
+
+  /**
+   * Reservations older than `olderThanMs` with no settlement are released
+   * (crash recovery), unless the request still holds a live usage window hold:
+   * a running stream keeps its hold alive with `heartbeat`.
+   */
   async releaseStaleReservations(olderThanMs: number, actor: string): Promise<number> {
-    const cutoff = new Date(Date.now() - olderThanMs);
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - olderThanMs);
     const stale = await this.db.execute<{ org_id: string; reservation_id: string }>(sql`
       SELECT DISTINCT org_id, reservation_id FROM credit_ledger r
       WHERE r.type = 'reservation' AND r.created_at < ${cutoff.toISOString()}::timestamptz
         AND NOT EXISTS (
           SELECT 1 FROM credit_ledger s
           WHERE s.reservation_id = r.reservation_id AND s.type IN ('settlement','release')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM usage_holds h
+          WHERE h.id = r.reservation_id AND h.expires_at > ${now.toISOString()}::timestamptz
         )`);
     let count = 0;
     for (const row of stale) {
@@ -255,6 +295,65 @@ export class LedgerService {
       count += 1;
     }
     return count;
+  }
+
+  /**
+   * Take back the credits of a top-up whose payment was refunded or disputed:
+   * `refunded` out of `charged` in total, in the payment's currency unit.
+   * Appends one negative `refund` entry on the topup bucket for what earlier
+   * refunds of the same payment have not already taken. The bucket may go
+   * negative; that is the org's debt (see `debtOf`). Returns null when no
+   * top-up was granted for the payment or nothing more is due.
+   */
+  async clawbackTopup(input: {
+    readonly paymentIntentId: string;
+    readonly refunded: number;
+    readonly charged: number;
+    readonly idempotencyKey: string;
+    readonly actor: string;
+    readonly reason: string;
+  }): Promise<{
+    readonly orgId: string;
+    readonly amount: Microcredits;
+    readonly debt: Microcredits;
+  } | null> {
+    return this.db.transaction(async (tx) => {
+      const ofPayment = sql`${creditLedger.metadata}->>'paymentIntent' = ${input.paymentIntentId}`;
+      const [topup] = await tx
+        .select()
+        .from(creditLedger)
+        .where(and(eq(creditLedger.type, "topup"), ofPayment));
+      if (!topup) return null;
+      const balances = await this.lockBalances(tx, topup.orgId);
+      const [taken] = await tx
+        .select({ total: sql<string>`coalesce(sum(${creditLedger.amount}), 0)::text` })
+        .from(creditLedger)
+        .where(
+          and(eq(creditLedger.orgId, topup.orgId), eq(creditLedger.type, "refund"), ofPayment),
+        );
+      const amount = clawbackDue({
+        granted: topup.amount,
+        alreadyTaken: -BigInt(taken?.total ?? "0"),
+        refunded: BigInt(input.refunded),
+        charged: BigInt(input.charged),
+      });
+      if (amount === 0n) return null;
+      await this.insert(tx, [
+        {
+          orgId: topup.orgId,
+          type: "refund",
+          bucket: "topup",
+          amount: -amount,
+          reservationId: null,
+          idempotencyKey: input.idempotencyKey,
+          actor: input.actor,
+          reason: input.reason,
+          metadata: { paymentIntent: input.paymentIntentId },
+        },
+      ]);
+      const after = await this.applyDelta(tx, topup.orgId, balances, { topup: -amount });
+      return { orgId: topup.orgId, amount, debt: debtOf(after) };
+    });
   }
 
   /** Recompute balances from the ledger and repair the materialized row. Returns drift. */

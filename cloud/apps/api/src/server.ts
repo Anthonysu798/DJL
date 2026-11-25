@@ -281,12 +281,17 @@ export async function startApi(
         secretKey: requireEnv("STRIPE_SECRET_KEY"),
         webhookSecret: requireEnv("STRIPE_WEBHOOK_SECRET"),
       });
-  const billing = new BillingService(db, stripe, {
-    webPublicUrl: env.webPublicUrl,
-    topupPriceId: env.mockExternals
-      ? (process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake")
-      : requireEnv("STRIPE_TOPUP_PRICE_ID"),
-  });
+  const billing = new BillingService(
+    db,
+    stripe,
+    {
+      webPublicUrl: env.webPublicUrl,
+      topupPriceId: env.mockExternals
+        ? (process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake")
+        : requireEnv("STRIPE_TOPUP_PRICE_ID"),
+    },
+    (alert) => void senders.alerts?.post(alert),
+  );
   const trial = new TrialService(db, ledger, senders.sms, {
     credits: 200,
     expiryDays: 14,

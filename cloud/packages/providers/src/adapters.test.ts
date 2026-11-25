@@ -115,6 +115,8 @@ describe("OpenAI-compatible adapter", () => {
         prompt: "make it blue",
         image: { bytes, mimeType: "image/png" },
         n: 1,
+        size: "1024x1024",
+        quality: "medium",
       },
       new AbortController().signal,
     );
@@ -122,6 +124,9 @@ describe("OpenAI-compatible adapter", () => {
     expect(seen!.url).toBe("https://api.test/v1/images/edits");
     expect(seen!.headers.get("content-type")).toBeNull(); // fetch sets the multipart boundary
     expect(seen!.form.get("prompt")).toBe("make it blue");
+    // The gateway pins both, so the provider never picks a dearer variant itself.
+    expect(seen!.form.get("size")).toBe("1024x1024");
+    expect(seen!.form.get("quality")).toBe("medium");
     const image = seen!.form.get("image") as File;
     expect(image.type).toBe("image/png");
     expect(image.name).toBe("image.png");

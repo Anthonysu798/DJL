@@ -490,6 +490,7 @@
   "pairingPairedMac": "ペアリング済みの Mac",
   "pairingNotAPairingCode": "これは DJL のペアリング用 QR コードや貼り付け用コードではありません。",
   "pairingUpdateDesktop": "パソコンの DJL を更新してください。このペアリングは別のプロトコルを使っています。",
+  "pairingProofMismatch": "ペアリングコードまたは QR コードが一致しませんでした。新しいコードを生成して、もう一度お試しください。",
   "pairingInvalidIdentifier": "デバイスまたはセッションの ID が無効です。",
   "pairingInvalidIdentityKey": "パソコンの識別キーが無効です。",
   "pairingCodeExpired": "このペアリングコードは有効期限が切れています。Mac で新しいコードを生成してください。",

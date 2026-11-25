@@ -2,8 +2,9 @@
 // Purpose: Defines the wire payloads, device trust records, and crypto helpers for DJL E2EE.
 // Layer: Service support
 // Exports: Pairing/session models plus transcript, nonce, and key utility helpers
-// Depends on: Foundation, CryptoKit
+// Depends on: Foundation, CryptoKit, CommonCrypto
 
+import CommonCrypto
 import CryptoKit
 import Foundation
 import Security
@@ -15,6 +16,14 @@ let codexSecureHandshakeLabel = "client-auth"
 let codexSecureClockSkewToleranceSeconds: TimeInterval = 60
 let codexTrustedSessionResolveTag = "djl-trusted-session-resolve-v1"
 let codexTrustedSessionResolveClockSkewToleranceSeconds: TimeInterval = 90
+let codexRelayPhoneConnectTag = "djl-relay-phone-connect-v1"
+nonisolated let codexPairingCodeAlphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+nonisolated let codexPairingCodeLength = 10
+nonisolated let codexPairingCodeKDFSalt = "djl-pairing-code-v1"
+nonisolated let codexPairingCodeKDFIterations: UInt32 = 100_000
+nonisolated let codexPairingSecretByteCount = 32
+let codexPairingProofMacLabel = "pairing-proof-mac"
+let codexPairingProofPhoneLabel = "pairing-proof-phone"
 
 enum CodexSecureHandshakeMode: String, Codable, Sendable {
     case qrBootstrap = "qr_bootstrap"
@@ -40,6 +49,8 @@ struct CodexPairingQRPayload: Codable, Sendable {
     let macIdentityPublicKey: String
     let expiresAt: Int64
     var displayName: String? = nil
+    // Base64, 32 bytes. Reaches the phone only through the QR or the typed code; never persist or log it.
+    var pairingSecret: String? = nil
 }
 
 struct CodexPhoneIdentityState: Codable, Sendable {
@@ -111,6 +122,7 @@ struct SecureServerHello: Codable, Sendable {
     let macSignature: String
     let clientNonce: String?
     var displayName: String? = nil
+    var pairingProof: String? = nil
 }
 
 struct SecureClientAuth: Codable, Sendable {
@@ -119,19 +131,22 @@ struct SecureClientAuth: Codable, Sendable {
     let phoneDeviceId: String
     let keyEpoch: Int
     let phoneSignature: String
+    let pairingProof: String?
 
     init(
         kind: String = "clientAuth",
         sessionId: String,
         phoneDeviceId: String,
         keyEpoch: Int,
-        phoneSignature: String
+        phoneSignature: String,
+        pairingProof: String? = nil
     ) {
         self.kind = kind
         self.sessionId = sessionId
         self.phoneDeviceId = phoneDeviceId
         self.keyEpoch = keyEpoch
         self.phoneSignature = phoneSignature
+        self.pairingProof = pairingProof
     }
 }
 
@@ -323,6 +338,40 @@ func codexTrustedSessionResolveTranscriptBytes(
     return data
 }
 
+func codexRelayPhoneConnectTranscriptBytes(
+    sessionId: String,
+    phoneDeviceId: String,
+    phoneIdentityPublicKey: String
+) -> Data {
+    var data = Data()
+    data.appendLengthPrefixedUTF8(codexRelayPhoneConnectTag)
+    data.appendLengthPrefixedUTF8(sessionId)
+    data.appendLengthPrefixedUTF8(phoneDeviceId)
+    data.appendLengthPrefixedData(Data(base64EncodedOrEmpty: phoneIdentityPublicKey))
+    return data
+}
+
+// Proves the phone identity to the relay on every WebSocket connect, bound to the relay session id.
+func codexRelayPhoneConnectHeaders(
+    sessionId: String,
+    phoneIdentityState: CodexPhoneIdentityState
+) throws -> [(name: String, value: String)] {
+    let transcriptBytes = codexRelayPhoneConnectTranscriptBytes(
+        sessionId: sessionId,
+        phoneDeviceId: phoneIdentityState.phoneDeviceId,
+        phoneIdentityPublicKey: phoneIdentityState.phoneIdentityPublicKey
+    )
+    let phonePrivateKey = try Curve25519.Signing.PrivateKey(
+        rawRepresentation: Data(base64EncodedOrEmpty: phoneIdentityState.phoneIdentityPrivateKey)
+    )
+    let signature = try phonePrivateKey.signature(for: transcriptBytes).base64EncodedString()
+    return [
+        (name: "x-phone-device-id", value: phoneIdentityState.phoneDeviceId),
+        (name: "x-phone-identity-public-key", value: phoneIdentityState.phoneIdentityPublicKey),
+        (name: "x-phone-signature", value: signature),
+    ]
+}
+
 // Builds the exact transcript bytes used by both signatures and HKDF salt.
 func codexSecureTranscriptBytes(
     sessionId: String,
@@ -362,6 +411,37 @@ func codexClientAuthTranscript(from transcriptBytes: Data) -> Data {
     var data = transcriptBytes
     data.appendLengthPrefixedUTF8(codexSecureHandshakeLabel)
     return data
+}
+
+// Splits a typed pairing code into the lookup code the relay stores and the secret it never sees.
+nonisolated func codexDerivePairingCodeKeys(from normalizedCode: String) -> (lookupCode: String, pairingSecret: Data)? {
+    let salt = Array(codexPairingCodeKDFSalt.utf8)
+    var keyMaterial = [UInt8](repeating: 0, count: 64)
+    let status = CCKeyDerivationPBKDF(
+        CCPBKDFAlgorithm(kCCPBKDF2),
+        normalizedCode,
+        normalizedCode.utf8.count,
+        salt,
+        salt.count,
+        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+        codexPairingCodeKDFIterations,
+        &keyMaterial,
+        keyMaterial.count
+    )
+    guard status == kCCSuccess else {
+        return nil
+    }
+    let lookupCode = String(
+        keyMaterial.prefix(codexPairingCodeLength).map { codexPairingCodeAlphabet[Int($0) % codexPairingCodeAlphabet.count] }
+    )
+    return (lookupCode, Data(keyMaterial.suffix(codexPairingSecretByteCount)))
+}
+
+// MACs the handshake transcript with the pairing secret. Comparing the result with == is constant time.
+func codexPairingProof(pairingSecret: Data, transcriptBytes: Data, label: String) -> HMAC<SHA256>.MAC {
+    var message = transcriptBytes
+    message.appendLengthPrefixedUTF8(label)
+    return HMAC<SHA256>.authenticationCode(for: message, using: SymmetricKey(data: pairingSecret))
 }
 
 // Derives the deterministic AES-GCM nonce from direction + counter.

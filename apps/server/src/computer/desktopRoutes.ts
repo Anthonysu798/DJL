@@ -46,7 +46,8 @@ export const desktopComputerRoutes = Layer.mergeAll(
           })
         )
           return false;
-        if (isLegacyTokenAuthorized({ config, url })) return true;
+        if (isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress }))
+          return true;
         const auth = yield* ServerAuth;
         const session = yield* auth.authenticateWebSocketUpgrade(makeEffectAuthRequest(request));
         return session.role === "owner";

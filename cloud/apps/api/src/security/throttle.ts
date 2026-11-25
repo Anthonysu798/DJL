@@ -49,9 +49,31 @@ export function createRedisThrottle(redis: Redis, prefix: string): Throttle {
   };
 }
 
+/** Count one attempt unless the key is already at its limit, atomically; returns 1 when counted. */
+const RESERVE_SCRIPT = `
+if tonumber(redis.call('GET', KEYS[1]) or '0') >= tonumber(ARGV[2]) then return 0 end
+redis.call('INCR', KEYS[1])
+if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return 1
+`;
+
+/** Give one counted attempt back, never below zero. */
+const RELEASE_SCRIPT = `
+if tonumber(redis.call('GET', KEYS[1]) or '0') > 1 then return redis.call('DECR', KEYS[1]) end
+return redis.call('DEL', KEYS[1])
+`;
+
 export interface Lockouts {
   readonly isLocked: (key: string) => Promise<boolean>;
   readonly noteFailure: (key: string) => Promise<void>;
+  /**
+   * Counts an attempt as a failure before it is checked, so parallel guesses
+   * cannot all pass the limit first. False when the key is locked. `max`
+   * overrides the configured limit for keys with their own cap.
+   */
+  readonly reserve: (key: string, max?: number) => Promise<boolean>;
+  /** Takes back a reserved attempt that turned out not to be a failure. */
+  readonly release: (key: string) => Promise<void>;
 }
 
 /** Locks a key after `maxFailures` failures inside `windowSeconds`; survives restarts. */
@@ -70,6 +92,19 @@ export function createRedisLockouts(
     },
     async noteFailure(key) {
       await incrementWindow(redis, hashed(options.prefix, key), options.windowSeconds);
+    },
+    async reserve(key, max = options.maxFailures) {
+      const counted = await redis.eval(
+        RESERVE_SCRIPT,
+        1,
+        hashed(options.prefix, key),
+        options.windowSeconds,
+        max,
+      );
+      return counted === 1;
+    },
+    async release(key) {
+      await redis.eval(RELEASE_SCRIPT, 1, hashed(options.prefix, key));
     },
   };
 }

@@ -8,18 +8,34 @@ import { createRelayFcmSender, fcmConfigured, normalizeInstallationId } from "./
 import {
   DEFAULT_MESSAGES_PER_WINDOW,
   MAX_RELAY_MESSAGE_BYTES,
+  classifyPhone,
+  constantTimeEqual,
   consumeMessageBudget,
   normalizePairingCode,
+  parseJsonFrame,
   parseRelayRoute,
+  phoneRecipients,
+  readBoundedJson,
   readRelayRole,
+  reclassifyPhone,
   relayMessageByteLength,
+  replacesPhone,
+  resolvePinnedIdentityKey,
+  resolveRegistrationUpdate,
   resolveRelayRegistration,
   type MessageBudgetState,
+  type PhoneClass,
+  type PhoneIdentity,
   type RelayRegistration,
   type RelayRole,
   validateRegistration,
 } from "./policy";
-import { type TrustedResolveRequest, verifyTrustedResolveRequest } from "./registryAuth";
+import {
+  type TrustedResolveRequest,
+  verifyMacRegistrationSignature,
+  verifyPhoneConnectHeaders,
+  verifyTrustedResolveRequest,
+} from "./registryAuth";
 import { serializeHostPresenceFrame } from "./presence";
 import { finalizeRelaySocketClose } from "./socketLifecycle";
 
@@ -41,6 +57,11 @@ interface SocketAttachment {
   readonly connectionId: string;
   readonly connectedAt: number;
   readonly messageBudget?: MessageBudgetState;
+  // Computer sockets: whether the connection proved the registered identity key.
+  readonly signed?: boolean;
+  // Phone sockets: how far the relay trusts the socket, and the identity it proved.
+  readonly phoneClass?: PhoneClass;
+  readonly phoneIdentity?: PhoneIdentity;
 }
 
 interface RegistryRecord {
@@ -48,6 +69,8 @@ interface RegistryRecord {
   readonly online: boolean;
   readonly updatedAt: number;
   readonly usedNonces: ReadonlyArray<string>;
+  // The first signed identity key seen for this computer; later registrations must match it.
+  readonly pinnedIdentityKey?: string;
 }
 
 interface PairingCodeRecord {
@@ -67,7 +90,6 @@ interface PushRegistration {
 
 const REGISTRY_NAME = "djl-relay-registry-v1";
 const HOST_SECRET_HEADER = "x-djl-session-secret";
-const MAX_JSON_BODY_BYTES = 16_384;
 const CLOSE_REPLACED = 4001;
 const CLOSE_SESSION_UNAVAILABLE = 4004;
 const CLOSE_REVOKED = 4005;
@@ -100,27 +122,10 @@ const copyRequest = <CfHostMetadata, Cf>(
     redirect: "manual",
   });
 
-const readBoundedJson = async <CfHostMetadata, Cf>(
-  request: Request<CfHostMetadata, Cf>,
-): Promise<Record<string, unknown> | null> => {
-  const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BODY_BYTES) return null;
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_JSON_BODY_BYTES) return null;
-  try {
-    const value = JSON.parse(text);
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-};
-
-const authorizeAdmin = (request: Request, env: Env): boolean => {
+const authorizeAdmin = async (request: Request, env: Env): Promise<boolean> => {
   const configured = env.RELAY_ADMIN_TOKEN?.trim();
-  const supplied = request.headers.get("authorization");
-  return Boolean(configured && supplied === `Bearer ${configured}`);
+  if (!configured) return false;
+  return constantTimeEqual(request.headers.get("authorization") ?? "", `Bearer ${configured}`);
 };
 
 export default {
@@ -169,7 +174,7 @@ export default {
     const revokeMatch = url.pathname.match(/^\/v1\/sessions\/([A-Za-z0-9_-]{16,128})\/revoke$/);
     const revokeSessionId = revokeMatch?.[1];
     if (request.method === "POST" && revokeSessionId) {
-      if (!authorizeAdmin(request, env)) {
+      if (!(await authorizeAdmin(request, env))) {
         return errorResponse(401, "unauthorized", "A relay administrator token is required.");
       }
       return env.SESSIONS.getByName(revokeSessionId).fetch("https://session/internal/revoke", {
@@ -218,6 +223,9 @@ export class DJLRelaySession extends DurableObject<Env> {
       return errorResponse(400, "invalid_connection", "The relay session or role is invalid.");
     }
 
+    let signed = false;
+    let phoneIdentity: PhoneIdentity | undefined;
+    let phoneClass: PhoneClass | undefined;
     if (role === "mac") {
       const hostSecret = request.headers.get(HOST_SECRET_HEADER)?.trim() ?? "";
       if (!(await this.authorizeHost(hostSecret))) {
@@ -235,13 +243,49 @@ export class DJLRelaySession extends DurableObject<Env> {
       if (!registration) {
         return errorResponse(400, "invalid_registration", "The DJL host registration is invalid.");
       }
-      const registered = await this.registerOnline(registration);
-      if (!registered) {
+      const signature = request.headers.get("x-mac-registration-signature");
+      signed = signature !== null;
+      if (
+        signature !== null &&
+        !(await verifyMacRegistrationSignature(route.sessionId, registration, signature))
+      ) {
+        return errorResponse(
+          401,
+          "invalid_registration_signature",
+          "The DJL host registration signature is invalid.",
+        );
+      }
+      const registryStatus = await this.registerOnline(registration, signed);
+      if (registryStatus === 403) {
+        return errorResponse(
+          403,
+          "mac_identity_mismatch",
+          "This computer is registered with a different identity key.",
+        );
+      }
+      if (registryStatus !== 200) {
         return errorResponse(503, "registry_unavailable", "The relay registry is unavailable.");
       }
+    } else {
+      const identity = await verifyPhoneConnectHeaders(request.headers, route.sessionId);
+      if (identity === null) {
+        return errorResponse(
+          401,
+          "invalid_phone_signature",
+          "The phone identity signature is invalid.",
+        );
+      }
+      phoneIdentity = identity;
+      phoneClass = classifyPhone(
+        identity,
+        await this.ctx.storage.get<RelayRegistration>("registration"),
+      );
     }
 
     for (const existing of this.ctx.getWebSockets(`role:${role}`)) {
+      const existingClass = (existing.deserializeAttachment() as SocketAttachment | null)
+        ?.phoneClass;
+      if (phoneClass && !replacesPhone(phoneClass, existingClass)) continue;
       existing.close(CLOSE_REPLACED, `Replaced by a newer ${role} connection`);
     }
 
@@ -252,6 +296,9 @@ export class DJLRelaySession extends DurableObject<Env> {
       role,
       connectionId: crypto.randomUUID(),
       connectedAt: Date.now(),
+      ...(role === "mac" ? { signed } : {}),
+      ...(phoneClass ? { phoneClass } : {}),
+      ...(phoneIdentity ? { phoneIdentity } : {}),
     };
     server.serializeAttachment(attachment);
     this.ctx.acceptWebSocket(server, [`role:${role}`]);
@@ -300,12 +347,16 @@ export class DJLRelaySession extends DurableObject<Env> {
       return;
     }
 
-    if (attachment.role === "mac" && typeof message === "string") {
-      const registration = await this.registrationFromMessage(message);
-      if (registration) {
-        await this.registerOnline(registration);
-        return;
-      }
+    const frame = attachment.role === "mac" ? parseJsonFrame(message) : null;
+    if (frame?.kind === "relayMacRegistration") {
+      // Consumed even when it is rejected: this plaintext frame must never reach a phone.
+      const registration = resolveRegistrationUpdate(
+        frame.registration,
+        await this.ctx.storage.get<RelayRegistration>("registration"),
+        Date.now(),
+      );
+      if (registration) await this.registerOnline(registration, attachment.signed === true);
+      return;
     }
 
     const peerRole: RelayRole = attachment.role === "mac" ? "iphone" : "mac";
@@ -316,9 +367,15 @@ export class DJLRelaySession extends DurableObject<Env> {
       }
       return;
     }
-    for (const peer of peers) {
-      if (peer.readyState === WebSocket.OPEN) peer.send(message);
-    }
+    const openPeers = peers
+      .filter((peer) => peer.readyState === WebSocket.OPEN)
+      .map((peer) => ({
+        peer,
+        phoneClass: (peer.deserializeAttachment() as SocketAttachment | null)?.phoneClass,
+      }));
+    const recipients =
+      attachment.role === "mac" ? phoneRecipients(openPeers, frame?.kind) : openPeers;
+    for (const { peer } of recipients) peer.send(message);
   }
 
   override async webSocketClose(
@@ -400,27 +457,31 @@ export class DJLRelaySession extends DurableObject<Env> {
     );
   }
 
-  private async registrationFromMessage(message: string): Promise<RelayRegistration | null> {
-    try {
-      const parsed = JSON.parse(message) as { kind?: unknown; registration?: unknown };
-      if (parsed.kind !== "relayMacRegistration") return null;
-      const existing = await this.ctx.storage.get<RelayRegistration>("registration");
-      return existing?.sessionId
-        ? validateRegistration(parsed.registration, Date.now(), existing.sessionId)
-        : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private async registerOnline(registration: RelayRegistration): Promise<boolean> {
-    await this.ctx.storage.put("registration", registration);
+  // Returns the registry's HTTP status. The session keeps only a registration the registry took.
+  private async registerOnline(registration: RelayRegistration, signed: boolean): Promise<number> {
     const response = await registryStub(this.env).fetch("https://registry/internal/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(registration),
+      body: JSON.stringify({ ...registration, signed }),
     });
-    return response.ok;
+    if (!response.ok) return response.status;
+    await this.ctx.storage.put("registration", registration);
+    // The computer names its newly paired phone before secureReady, so ciphertext follows it.
+    for (const phone of this.ctx.getWebSockets("role:iphone")) {
+      const attachment = phone.deserializeAttachment() as SocketAttachment | null;
+      if (!attachment) continue;
+      const phoneClass = reclassifyPhone(
+        attachment.phoneClass,
+        attachment.phoneIdentity,
+        registration,
+      );
+      if (phoneClass === null) {
+        phone.close(CLOSE_REPLACED, "Replaced by a newly paired phone");
+      } else if (phoneClass === "trusted" && attachment.phoneClass !== "trusted") {
+        phone.serializeAttachment({ ...attachment, phoneClass });
+      }
+    }
+    return response.status;
   }
 
   private async markRegistryOffline(): Promise<void> {
@@ -559,21 +620,47 @@ export class DJLRelayRegistry extends DurableObject<Env> {
     const macDeviceId = String(body?.macDeviceId ?? "");
     const key = `mac:${macDeviceId}`;
     const previous = await this.ctx.storage.get<RegistryRecord>(key);
+    // Past the pairing window the same session may still move its trusted phone.
     const registration = body
-      ? resolveRelayRegistration(body, previous?.registration, Date.now(), sessionId)
+      ? (validateRegistration(body, Date.now(), sessionId) ??
+        (previous?.registration.sessionId === sessionId
+          ? resolveRegistrationUpdate(body, previous.registration, Date.now())
+          : null))
       : null;
     if (!registration?.sessionId) {
       return errorResponse(400, "invalid_registration", "The host registration is invalid.");
     }
-
-    if (previous?.registration.pairingCode !== registration.pairingCode) {
-      await this.ctx.storage.delete(`code:${previous?.registration.pairingCode ?? ""}`);
+    const pinnedIdentityKey = resolvePinnedIdentityKey(
+      previous?.pinnedIdentityKey,
+      registration.macIdentityPublicKey,
+      body?.signed === true,
+    );
+    if (pinnedIdentityKey === false) {
+      return errorResponse(
+        403,
+        "mac_identity_mismatch",
+        "This computer is registered with a different identity key.",
+      );
     }
+
+    // Another computer may hold a code row; only its owner deletes or replaces it.
+    const codeOwner = async (code: string): Promise<string | undefined> =>
+      (await this.ctx.storage.get<PairingCodeRecord>(`code:${code}`))?.macDeviceId;
+    const previousCode = previous?.registration.pairingCode;
+    if (
+      previousCode &&
+      previousCode !== registration.pairingCode &&
+      (await codeOwner(previousCode)) === registration.macDeviceId
+    ) {
+      await this.ctx.storage.delete(`code:${previousCode}`);
+    }
+    const currentCodeOwner = await codeOwner(registration.pairingCode);
     const record: RegistryRecord = {
       registration,
       online: true,
       updatedAt: Date.now(),
       usedNonces: previous?.usedNonces ?? [],
+      ...(pinnedIdentityKey ? { pinnedIdentityKey } : {}),
     };
     const codeRecord: PairingCodeRecord = {
       macDeviceId: registration.macDeviceId,
@@ -582,7 +669,9 @@ export class DJLRelayRegistry extends DurableObject<Env> {
     };
     await this.ctx.storage.put({
       [key]: record,
-      [`code:${registration.pairingCode}`]: codeRecord,
+      ...(currentCodeOwner === undefined || currentCodeOwner === registration.macDeviceId
+        ? { [`code:${registration.pairingCode}`]: codeRecord }
+        : {}),
     });
     return jsonResponse({ ok: true });
   }

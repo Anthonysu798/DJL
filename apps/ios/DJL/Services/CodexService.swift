@@ -600,6 +600,8 @@ final class CodexService {
     var latestBridgePackageVersion: String?
     // Fresh QR scans must use bootstrap once, even if this Mac was already trusted before.
     var shouldForceQRBootstrapOnNextHandshake = false
+    // Pairing secret from the QR or typed code, held for the pending pairing only. Never persisted or logged.
+    @ObservationIgnored var pendingPairingSecret: Data?
     // Stops infinite trusted-reconnect loops by escalating back to QR after repeated handshake failures.
     var trustedReconnectFailureCount = 0
     var secureConnectionState: CodexSecureConnectionState = .notPaired

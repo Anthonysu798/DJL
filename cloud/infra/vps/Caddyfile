@@ -3,11 +3,26 @@
 }
 
 {$API_HOST} {
-    @remote path /relay/* /v1/pairing/code/resolve /v1/trusted/session/resolve /v1/push/session/* /v1/sessions/*/revoke
-    handle @remote {
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # The relay reads at most 16 KiB of JSON on these routes; refuse larger bodies at the edge.
+    @remote_json path /v1/pairing/code/resolve /v1/trusted/session/resolve /v1/push/session/* /v1/sessions/*/revoke
+    handle @remote_json {
+        request_body {
+            max_size 16KiB
+        }
+        reverse_proxy {$REMOTE_RELAY_UPSTREAM}
+    }
+    # WebSocket sessions. No body limit here: over HTTP/2 a WebSocket's frames travel as the
+    # request body, so a limit would cut long sessions. The relay caps each frame itself.
+    handle /relay/* {
         reverse_proxy {$REMOTE_RELAY_UPSTREAM}
     }
     handle {
+        # Above the largest request the API accepts (a 16 MiB image edit upload).
+        request_body {
+            max_size 20MiB
+        }
         reverse_proxy {$API_UPSTREAM} {
             flush_interval -1
             header_up -Fly-Client-IP
@@ -28,5 +43,13 @@
 }
 
 {$STORAGE_HOST} {
+    # Stored objects are user uploads. Whatever type an object claims, a browser must not sniff
+    # it into something executable or run its script with this origin's authority.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options nosniff
+        Content-Security-Policy sandbox
+        defer
+    }
     reverse_proxy {$STORAGE_UPSTREAM}
 }

@@ -4,11 +4,35 @@
 // Exports: SHORT_PAIRING_CODE_ALPHABET, SHORT_PAIRING_CODE_LENGTH, createShortPairingCode, printQR
 // Depends on: crypto, qrcode-terminal
 
-const { randomBytes } = require("crypto");
+const { pbkdf2Sync, randomBytes } = require("crypto");
 const qrcode = require("qrcode-terminal");
+const {
+  DJL_PAIRING_CODE_ALPHABET,
+  DJL_PAIRING_CODE_KDF_BYTES,
+  DJL_PAIRING_CODE_KDF_ITERATIONS,
+  DJL_PAIRING_CODE_KDF_SALT,
+  DJL_PAIRING_CODE_LENGTH,
+  splitPairingCodeKeyMaterial,
+} = require("@djl/remote-protocol");
 
-const SHORT_PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const SHORT_PAIRING_CODE_LENGTH = 10;
+const SHORT_PAIRING_CODE_ALPHABET = DJL_PAIRING_CODE_ALPHABET;
+const SHORT_PAIRING_CODE_LENGTH = DJL_PAIRING_CODE_LENGTH;
+
+// The typed code never reaches the relay. The relay stores only `lookupCode`; `pairingSecret`
+// (base64) authenticates the handshake and stays between this computer and the phone.
+function derivePairingCodeKeys(pairingCode) {
+  const { lookupCode, pairingSecret } = splitPairingCodeKeyMaterial(
+    pbkdf2Sync(
+      pairingCode,
+      DJL_PAIRING_CODE_KDF_SALT,
+      DJL_PAIRING_CODE_KDF_ITERATIONS,
+      DJL_PAIRING_CODE_KDF_BYTES,
+      "sha256",
+    ),
+  );
+  return { lookupCode, pairingSecret: Buffer.from(pairingSecret).toString("base64") };
+}
+
 // Generates a short-lived human-friendly pairing token for reconnect flows.
 function createShortPairingCode({
   length = SHORT_PAIRING_CODE_LENGTH,
@@ -76,6 +100,7 @@ function shouldPrintPairingJson({ env = process.env, explicitValue } = {}) {
 }
 
 module.exports = {
+  derivePairingCodeKeys,
   SHORT_PAIRING_CODE_ALPHABET,
   SHORT_PAIRING_CODE_LENGTH,
   createShortPairingCode,

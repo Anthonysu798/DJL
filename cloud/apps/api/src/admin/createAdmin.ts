@@ -43,7 +43,12 @@ if (!url || !secret) {
 const { db, close } = createDatabase(url, { max: 1 });
 try {
   // This script only creates a row; it never signs anyone in, so lockouts are unused.
-  const lockouts = { isLocked: async () => false, noteFailure: async () => {} };
+  const lockouts = {
+    isLocked: async () => false,
+    noteFailure: async () => {},
+    reserve: async () => true,
+    release: async () => {},
+  };
   const admin = await new AdminAuth(db, { appSecret: secret, ipSalt: secret, lockouts }).create({
     email,
     name,

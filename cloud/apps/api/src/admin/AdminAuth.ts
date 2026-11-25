@@ -69,6 +69,11 @@ export const ADMIN_SESSION_COOKIE = "djl_admin";
 const SESSION_TTL_MS = 8 * 3_600_000;
 /** Five failures per email+IP (or per IP for invites) inside 15 minutes lock that key. */
 export const ADMIN_LOCKOUT = { maxFailures: 5, windowSeconds: 15 * 60 } as const;
+/** Failures per account from every network together, so spreading guesses over IPs does not help. */
+export const ADMIN_ACCOUNT_LOCKOUT_MAX = 10;
+const accountKey = (email: string) => `account|${email}`;
+const lockedOut = () =>
+  new ApiError(429, "locked_out", "Too many failed attempts. Try again later.");
 
 async function sha256(input: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
@@ -402,35 +407,37 @@ export class AdminAuth {
     }
     const key = `${email}|${input.ip ?? ""}`;
     const badCredentials = new ApiError(401, "bad_credentials", "Email or password is wrong.");
-    if (await this.lockouts.isLocked(key))
-      await refuse(
-        "locked_out",
-        new ApiError(429, "locked_out", "Too many failed attempts. Try again later."),
-      );
-    if (!admin) {
-      await this.lockouts.noteFailure(key);
-      await refuse("unknown_email", badCredentials);
+    // The attempt is counted as a failure before anything is checked and given back only
+    // when it was not one, so a parallel burst cannot outrun either cap.
+    if (!(await this.lockouts.reserve(key))) await refuse("locked_out", lockedOut());
+    if (!(await this.lockouts.reserve(accountKey(email), ADMIN_ACCOUNT_LOCKOUT_MAX))) {
+      await this.lockouts.release(key);
+      await refuse("locked_out", lockedOut());
     }
+    const notAFailure = async () => {
+      await this.lockouts.release(key);
+      await this.lockouts.release(accountKey(email));
+    };
+    if (!admin) await refuse("unknown_email", badCredentials);
     const live = admin!;
     if (live.disabled) await refuse("disabled", badCredentials);
     if (!live.passwordHash) await refuse("not_active", badCredentials);
-    if (!(await verifyPassword({ hash: live.passwordHash!, password: input.password }))) {
-      await this.lockouts.noteFailure(key);
+    if (!(await verifyPassword({ hash: live.passwordHash!, password: input.password })))
       await refuse("bad_password", badCredentials);
-    }
     let mfaVerified = false;
     if (live.totpEnabled) {
-      if (!input.totp)
+      if (!input.totp) {
+        await notAFailure();
         await refuse(
           "totp_required",
           new ApiError(401, "totp_required", "Enter your authenticator code."),
         );
-      if (!(await this.checkTotp(live.id, input.totp!))) {
-        await this.lockouts.noteFailure(key);
-        await refuse("bad_totp", new ApiError(401, "bad_totp", "Authenticator code is wrong."));
       }
+      if (!(await this.checkTotp(live.id, input.totp!)))
+        await refuse("bad_totp", new ApiError(401, "bad_totp", "Authenticator code is wrong."));
       mfaVerified = true;
     }
+    await notAFailure();
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const [session] = await this.db
@@ -538,10 +545,26 @@ export class AdminAuth {
       .where(eq(schema.adminSessions.id, sessionId));
   }
 
+  /**
+   * Start enrolling an authenticator. Replacing one that is already enabled takes a
+   * session that passed the second factor and the current code, so a stolen password
+   * or a session opened before enrollment cannot swap the secret.
+   */
   async beginTotpEnrollment(
-    adminId: string,
-    email: string,
+    principal: AdminPrincipal,
+    currentCode?: string,
   ): Promise<{ readonly secret: string; readonly uri: string }> {
+    const { adminId, email } = principal;
+    const admin = await this.db.query.admins.findFirst({ where: eq(schema.admins.id, adminId) });
+    if (
+      admin?.totpEnabled &&
+      !(principal.mfaVerified && currentCode && (await this.guessTotp(principal, currentCode)))
+    )
+      throw new ApiError(
+        403,
+        "totp_already_enabled",
+        "Enter your current authenticator code to replace your authenticator.",
+      );
     const secret = new OTPAuth.Secret({ size: 20 });
     const totp = new OTPAuth.TOTP({
       issuer: "DJL Admin",
@@ -551,34 +574,67 @@ export class AdminAuth {
       period: 30,
       secret,
     });
-    await this.db
-      .update(schema.admins)
-      .set({
-        totpSecretEncrypted: await encryptSecret(secret.base32, this.appSecret),
-        totpEnabled: false,
-      })
-      .where(eq(schema.admins.id, adminId));
+    const totpSecretEncrypted = await encryptSecret(secret.base32, this.appSecret);
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.admins)
+        .set({ totpSecretEncrypted, totpEnabled: false })
+        .where(eq(schema.admins.id, adminId));
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: adminId,
+        action: "admin.totp.enrollment_started",
+        targetType: "admin",
+        targetId: adminId,
+        before: { totpEnabled: admin?.totpEnabled ?? false },
+      });
+    });
     return { secret: secret.base32, uri: totp.toString() };
   }
 
-  async confirmTotpEnrollment(adminId: string, sessionId: string, code: string): Promise<boolean> {
-    if (!(await this.checkTotp(adminId, code))) return false;
-    await this.db
-      .update(schema.admins)
-      .set({ totpEnabled: true })
-      .where(eq(schema.admins.id, adminId));
-    await this.db
-      .update(schema.adminSessions)
-      .set({ mfaVerifiedAt: new Date() })
-      .where(eq(schema.adminSessions.id, sessionId));
-    await writeAudit(this.db, {
-      actorType: "admin",
-      actorId: adminId,
-      action: "admin.totp.enabled",
-      targetType: "admin",
-      targetId: adminId,
+  /** Enables the authenticator, verifies this session, and ends every other session of the admin. */
+  async confirmTotpEnrollment(principal: AdminPrincipal, code: string): Promise<boolean> {
+    const { adminId, sessionId } = principal;
+    if (!(await this.guessTotp(principal, code))) return false;
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.admins)
+        .set({ totpEnabled: true })
+        .where(eq(schema.admins.id, adminId));
+      await tx
+        .update(schema.adminSessions)
+        .set({ mfaVerifiedAt: now })
+        .where(eq(schema.adminSessions.id, sessionId));
+      // Sessions opened with the password alone must not outlive the second factor.
+      await tx
+        .update(schema.adminSessions)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(schema.adminSessions.adminId, adminId),
+            isNull(schema.adminSessions.revokedAt),
+            ne(schema.adminSessions.id, sessionId),
+          ),
+        );
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: adminId,
+        action: "admin.totp.enabled",
+        targetType: "admin",
+        targetId: adminId,
+      });
     });
     return true;
+  }
+
+  /** A code check outside sign-in, counted against the account before it is verified. */
+  private async guessTotp(principal: AdminPrincipal, code: string): Promise<boolean> {
+    const key = accountKey(principal.email);
+    if (!(await this.lockouts.reserve(key, ADMIN_ACCOUNT_LOCKOUT_MAX))) throw lockedOut();
+    const ok = await this.checkTotp(principal.adminId, code);
+    if (ok) await this.lockouts.release(key);
+    return ok;
   }
 
   private async checkTotp(adminId: string, code: string): Promise<boolean> {

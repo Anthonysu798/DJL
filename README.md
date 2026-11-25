@@ -75,16 +75,14 @@ public repository is documented in [docs/open-source-launch.md](docs/open-source
 ## Privacy and security
 
 Projects, task history, and credentials stay on your computer unless a selected provider needs
-prompt or tool context to perform a task. The optional remote relay forwards encrypted frames and
-routing metadata, not plaintext task content. Read the
-[remote architecture](docs/remote/architecture.md), [threat model](docs/security/threat-model.md),
-and [security policy](SECURITY.md).
+prompt or tool context to perform a task. DJL has no analytics or usage tracking. The remote relay
+forwards end-to-end encrypted frames and routing metadata, not plaintext task content, and pairing
+uses a secret the relay never sees, so the relay cannot add a device of its own.
 
-On its first launch a release build sends one anonymous message to a counter we run: a random
-install ID generated on your machine, the app version, operating system, CPU architecture, and
-update channel. Cloudflare records the country of the request. Nothing else is sent afterwards,
-and the message contains no project data, hostname, username, or account information. Builds made
-without a configured counter URL send nothing.
+[PRIVACY.md](PRIVACY.md) lists every connection the app makes, what each one sends, and how to turn
+it off. That includes the one-time anonymous install count, update checks, and the relay connection
+that Remote opens at start. Read the [remote architecture](docs/remote/architecture.md),
+[threat model](docs/security/threat-model.md), and [security policy](SECURITY.md) for the design.
 
 Do not report vulnerabilities in a public issue. Use
 [GitHub private vulnerability reporting](https://github.com/Anthonysu798/DJL/security/advisories/new).

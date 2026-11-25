@@ -112,7 +112,7 @@ const {
   rememberLastSeenPhoneAppVersion,
   resolveBridgeRelaySession,
 } = require("./secure-device-state");
-const { createBridgeSecureTransport } = require("./secure-transport");
+const { createBridgeSecureTransport, signRelayMacRegistration } = require("./secure-transport");
 const { createRolloutLiveMirrorController } = require("./rollout-live-mirror");
 const {
   isContextualUserText,
@@ -135,7 +135,11 @@ const {
   buildIOSAppCompatibilitySnapshot,
   normalizeVersionString,
 } = require("./ios-app-compatibility");
-const { createShortPairingCode, SHORT_PAIRING_CODE_LENGTH } = require("./qr");
+const {
+  createShortPairingCode,
+  derivePairingCodeKeys,
+  SHORT_PAIRING_CODE_LENGTH,
+} = require("./qr");
 const {
   JSONL_OLDER_HANDOFF_CURSOR,
   parseSessionJsonlTurns,
@@ -889,11 +893,14 @@ function startBridge({
     startedAt: 0,
   };
   let activePhoneSummary = null;
+  const pairingCode = createShortPairingCode({ length: SHORT_PAIRING_CODE_LENGTH });
+  const pairingCodeKeys = derivePairingCodeKeys(pairingCode);
   const secureTransport = createBridgeSecureTransport({
     sessionId,
     relayUrl: relayBaseUrl,
     deviceState,
     displayName: os.hostname(),
+    pairingSecret: pairingCodeKeys.pairingSecret,
     // Electron Dev enables this explicitly from main.ts. Do not turn secure
     // transport tracing on for every packaged Electron session.
     diagnostics: process.env.DJL_ELECTRON_BRIDGE_DIAGNOSTICS === "1",
@@ -1250,7 +1257,8 @@ function startBridge({
   const pairingPayload = secureTransport.createPairingPayload();
   const pairingSession = {
     pairingPayload,
-    pairingCode: createShortPairingCode({ length: SHORT_PAIRING_CODE_LENGTH }),
+    pairingCode,
+    pairingLookupCode: pairingCodeKeys.lookupCode,
   };
   onPairingSession?.(pairingSession);
   if (printPairingQr) {
@@ -2433,6 +2441,10 @@ function buildMacRegistrationHeaders(deviceState, pairingSession) {
     headers["x-trusted-phone-device-id"] = registration.trustedPhoneDeviceId;
     headers["x-trusted-phone-public-key"] = registration.trustedPhonePublicKey;
   }
+  const sessionId = normalizeNonEmptyString(pairingSession?.pairingPayload?.sessionId);
+  if (sessionId && deviceState?.macIdentityPrivateKey) {
+    headers["x-mac-registration-signature"] = signRelayMacRegistration(deviceState, sessionId);
+  }
   return headers;
 }
 
@@ -2444,7 +2456,8 @@ function buildMacRegistration(deviceState, pairingSession) {
     displayName: normalizeNonEmptyString(os.hostname()),
     trustedPhoneDeviceId: normalizeNonEmptyString(trustedPhoneEntry?.[0]),
     trustedPhonePublicKey: normalizeNonEmptyString(trustedPhoneEntry?.[1]),
-    pairingCode: normalizeNonEmptyString(pairingSession?.pairingCode),
+    // The relay only ever learns the lookup code derived from the typed pairing code.
+    pairingCode: normalizeNonEmptyString(pairingSession?.pairingLookupCode),
     pairingVersion: Number.isInteger(pairingSession?.pairingPayload?.v)
       ? pairingSession.pairingPayload.v
       : 0,

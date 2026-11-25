@@ -1677,6 +1677,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '데스크톱의 DJL을 업데이트하세요. 이 페어링은 다른 프로토콜을 사용해요.';
 
   @override
+  String get pairingProofMismatch =>
+      '페어링 코드 또는 QR 코드가 일치하지 않아요. 새로 생성한 뒤 다시 시도하세요.';
+
+  @override
   String get pairingInvalidIdentifier => '기기/세션 식별자가 올바르지 않아요.';
 
   @override

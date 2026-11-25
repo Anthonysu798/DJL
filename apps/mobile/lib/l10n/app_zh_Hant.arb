@@ -490,6 +490,7 @@
   "pairingPairedMac": "已配對的 Mac",
   "pairingNotAPairingCode": "這不是 DJL 的配對 QR 碼或配對碼。",
   "pairingUpdateDesktop": "請更新電腦上的 DJL：這次配對使用了不同的通訊協定。",
+  "pairingProofMismatch": "配對碼或 QR 碼不相符，請重新產生後再試一次。",
   "pairingInvalidIdentifier": "裝置或工作階段識別碼無效。",
   "pairingInvalidIdentityKey": "電腦身分金鑰無效。",
   "pairingCodeExpired": "這組配對碼已過期，請在 Mac 上產生新的配對碼。",

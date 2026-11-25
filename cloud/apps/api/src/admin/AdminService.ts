@@ -269,7 +269,7 @@ export class AdminService {
     await this.deps.db.transaction(async (tx) => {
       await tx
         .update(schema.user)
-        .set({ banned: true, banReason: "self_delete", banExpires: new Date() })
+        .set({ banned: true, banReason: "self_delete", banExpires: null, deletedAt: new Date() })
         .where(eq(schema.user.id, userId));
       await tx.delete(schema.session).where(eq(schema.session.userId, userId));
       await writeAudit(tx, {

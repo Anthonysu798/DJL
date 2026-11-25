@@ -1,6 +1,6 @@
 // Deterministic public test keys only. Uses the production TypeScript transcript and Node crypto.
-import {buildHandshakeTranscript, secureNonce} from '../../../packages/remote-protocol/src/index';
-import {createPrivateKey,createPublicKey,diffieHellman,sign,createHash,hkdfSync,createCipheriv} from 'node:crypto';
+import {buildHandshakeTranscript, buildPairingProofInput, buildRelayMacRegistrationTranscript, buildRelayPhoneConnectTranscript, secureNonce, splitPairingCodeKeyMaterial, DJL_PAIRING_CODE_KDF_BYTES, DJL_PAIRING_CODE_KDF_ITERATIONS, DJL_PAIRING_CODE_KDF_SALT, DJL_PAIRING_PROOF_MAC_LABEL, DJL_PAIRING_PROOF_PHONE_LABEL} from '../../../packages/remote-protocol/src/index';
+import {createPrivateKey,createPublicKey,diffieHellman,sign,createHash,createHmac,hkdfSync,pbkdf2Sync,createCipheriv} from 'node:crypto';
 const b64=(v:Uint8Array)=>Buffer.from(v).toString('base64');
 function key(kind:'ed25519'|'x25519',seed:number){
  const raw=Buffer.alloc(32,seed);
@@ -21,5 +21,12 @@ const label=Buffer.from('client-auth');const length=Buffer.alloc(4);length.write
 const payload={bridgeOutboundSeq:1,payloadText:JSON.stringify({id:'rpc-1',result:{ok:true}})};
 const cipher=createCipheriv('aes-256-gcm',derive('macToPhone'),secureNonce('mac',0));
 const ciphertext=Buffer.concat([cipher.update(JSON.stringify(payload)),cipher.final()]);
-const result={input:Object.fromEntries(Object.entries(input).map(([k,v])=>[k,v instanceof Uint8Array?b64(v):v])),transcript:b64(transcript),macSignature:b64(sign(null,transcript,mac.privateKey)),phoneSignature:b64(sign(null,Buffer.concat([transcript,length,label]),phone.privateKey)),phoneSeed:phone.raw,phoneEphemeralSeed:phoneEph.raw,sharedSecret:b64(shared),phoneToMacKey:b64(derive('phoneToMac')),macToPhoneKey:b64(derive('macToPhone')),envelope:{kind:'encryptedEnvelope',v:2,sessionId:'fixture-session',keyEpoch:7,sender:'mac',counter:0,ciphertext:b64(ciphertext),tag:b64(cipher.getAuthTag())},payload};
+const pairingCode='ABCDEFGHJK';
+const pairingKeys=splitPairingCodeKeyMaterial(pbkdf2Sync(pairingCode,DJL_PAIRING_CODE_KDF_SALT,DJL_PAIRING_CODE_KDF_ITERATIONS,DJL_PAIRING_CODE_KDF_BYTES,'sha256'));
+const proof=(proofLabel:typeof DJL_PAIRING_PROOF_MAC_LABEL|typeof DJL_PAIRING_PROOF_PHONE_LABEL)=>createHmac('sha256',pairingKeys.pairingSecret).update(buildPairingProofInput(transcript,proofLabel)).digest('base64');
+const pairing={code:pairingCode,lookupCode:pairingKeys.lookupCode,pairingSecret:b64(pairingKeys.pairingSecret),macPairingProof:proof(DJL_PAIRING_PROOF_MAC_LABEL),phonePairingProof:proof(DJL_PAIRING_PROOF_PHONE_LABEL)};
+const macRegistrationTranscript=buildRelayMacRegistrationTranscript({sessionId:input.sessionId,macDeviceId:input.macDeviceId,macIdentityPublicKey:input.macIdentityPublicKey});
+const phoneConnectTranscript=buildRelayPhoneConnectTranscript({sessionId:input.sessionId,phoneDeviceId:input.phoneDeviceId,phoneIdentityPublicKey:input.phoneIdentityPublicKey});
+const relayAuth={macRegistrationTranscript:b64(macRegistrationTranscript),macRegistrationSignature:b64(sign(null,macRegistrationTranscript,mac.privateKey)),phoneConnectTranscript:b64(phoneConnectTranscript),phoneConnectSignature:b64(sign(null,phoneConnectTranscript,phone.privateKey))};
+const result={pairing,relayAuth,input:Object.fromEntries(Object.entries(input).map(([k,v])=>[k,v instanceof Uint8Array?b64(v):v])),transcript:b64(transcript),macSignature:b64(sign(null,transcript,mac.privateKey)),phoneSignature:b64(sign(null,Buffer.concat([transcript,length,label]),phone.privateKey)),phoneSeed:phone.raw,phoneEphemeralSeed:phoneEph.raw,sharedSecret:b64(shared),phoneToMacKey:b64(derive('phoneToMac')),macToPhoneKey:b64(derive('macToPhone')),envelope:{kind:'encryptedEnvelope',v:2,sessionId:'fixture-session',keyEpoch:7,sender:'mac',counter:0,ciphertext:b64(ciphertext),tag:b64(cipher.getAuthTag())},payload};
 await Bun.write(new URL('../test/fixtures/remote-v2.json',import.meta.url),JSON.stringify(result,null,2)+'\n');

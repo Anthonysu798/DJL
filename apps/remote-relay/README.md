@@ -6,21 +6,40 @@ encrypted frames and never queues transcript content.
 
 ## Security boundaries
 
-- A session accepts one host and one phone; a newer connection replaces the old
-  connection for that role.
+- A session accepts one host; a newer host connection replaces the old one.
 - The host authenticates with high-entropy session and notification secrets. Only
   SHA-256 hashes of those secrets are stored by the session Durable Object.
+- The host signs its registration (session ID, device ID, identity key) with its
+  identity key. The registry pins the first signed key for a device ID and then
+  refuses any registration for that ID that is unsigned or uses another key
+  (`mac_identity_mismatch`). Hosts that have not updated register unsigned and stay
+  unpinned. A pairing-code row is replaced or deleted only by the host that owns it.
+- A phone signs each connect (session ID, device ID, identity key). A phone that
+  proves it is the registration's trusted phone replaces every other phone socket.
+  Any other phone socket (a phone that is pairing, an older app that sends no
+  identity, or anyone holding the session ID) cannot disconnect the trusted phone
+  and, while it is connected, receives only `serverHello`, `secureReady`,
+  `secureError` and host presence; encrypted envelopes go to the trusted socket
+  alone. When the host registers a newly paired phone, that phone's socket takes
+  over and the previous trusted socket is closed.
+- `relayMacRegistration` frames from the host are consumed by the relay and never
+  forwarded to a phone.
 - Trusted reconnect requests are signed by the paired phone and reject expired or
   replayed nonces.
-- Frames are capped at 1 MiB and each socket has a bounded message rate.
+- Frames are capped at 1 MiB and each socket has a bounded message rate. JSON
+  request bodies are read as a stream and cut off at 16 KiB whatever length they
+  declare.
 - APNs notifications contain only a generic alert plus thread/turn routing IDs and
   completion status. Prompts, responses, previews, and transcript messages are
   excluded.
-- Session revocation closes both sockets and makes the registry entry unavailable.
+- Session revocation closes every socket and makes the registry entry unavailable.
+  The administrator token is compared in constant time.
 
 Cloudflare can observe connection metadata, device identifiers, public keys,
 pairing expiry, encrypted frame sizes, and generic notification routing metadata.
-It cannot decrypt application frames.
+It cannot decrypt application frames. It also cannot pair a device of its own: the
+pairing code it stores is a lookup code derived from the code the user types, and
+first pairing requires proof of a secret that only the QR and the typed code carry.
 
 ## Local development
 

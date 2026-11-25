@@ -7,7 +7,6 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { NativeHarnessesLive } from "../harnesses/native/layer";
 import { ServerConfig } from "../config";
 import { ServerSettingsLive } from "../serverSettings";
-import { AnalyticsService } from "../telemetry/Services/AnalyticsService";
 import { ProviderUnsupportedError } from "./Errors";
 import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
 import { makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
@@ -32,7 +31,6 @@ export function makeServerProviderLayer(): Layer.Layer<
   | ServerConfig
   | FileSystem.FileSystem
   | Path.Path
-  | AnalyticsService
   | LocalModelsService
   | ChildProcessSpawner.ChildProcessSpawner
   | GroupDriverBridge

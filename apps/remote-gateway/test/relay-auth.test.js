@@ -5,6 +5,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { buildMacConnectionHeaders, requestManagedDesktopUpdate } = require("../src/bridge");
+const fixture = require("../../mobile/test/fixtures/remote-v2.json");
 
 test("Mac relay headers include stable host and ephemeral notification secrets", () => {
   const headers = buildMacConnectionHeaders(
@@ -17,7 +18,8 @@ test("Mac relay headers include stable host and ephemeral notification secrets",
       },
     },
     {
-      pairingCode: "ABCDEFGH23",
+      pairingCode: "TYPEDCDE23",
+      pairingLookupCode: "ABCDEFGH23",
       pairingPayload: {
         v: 2,
         expiresAt: 1_900_000_000_000,
@@ -35,7 +37,28 @@ test("Mac relay headers include stable host and ephemeral notification secrets",
   assert.equal(headers["x-mac-device-id"], "mac-device-id");
   assert.equal(headers["x-trusted-phone-device-id"], "phone-device-id");
   assert.equal(headers["x-trusted-phone-public-key"], "phone-public-key");
+  // The relay gets the derived lookup code, never the code the user types.
   assert.equal(headers["x-pairing-code"], "ABCDEFGH23");
+  assert.doesNotMatch(JSON.stringify(headers), /TYPEDCDE23/);
+});
+
+test("Mac relay headers sign the registration so the relay can pin the computer identity", () => {
+  const { sessionId, macDeviceId, macIdentityPublicKey } = fixture.input;
+  const headers = buildMacConnectionHeaders(
+    {
+      macDeviceId,
+      macIdentityPublicKey,
+      // The fixture generator derives the Mac identity from this all-ones test seed.
+      macIdentityPrivateKey: Buffer.alloc(32, 1).toString("base64"),
+      relaySessionSecret: "stable-relay-session-secret-that-is-long-enough",
+    },
+    { pairingLookupCode: "ABCDEFGH23", pairingPayload: { v: 2, sessionId, expiresAt: 1 } },
+    "ephemeral-notification-secret-that-is-long-enough",
+  );
+
+  assert.equal(headers["x-mac-device-id"], macDeviceId);
+  assert.equal(headers["x-mac-identity-public-key"], macIdentityPublicKey);
+  assert.equal(headers["x-mac-registration-signature"], fixture.relayAuth.macRegistrationSignature);
 });
 
 test("Mac relay headers reject missing secrets before opening a socket", () => {

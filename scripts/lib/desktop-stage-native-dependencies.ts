@@ -12,7 +12,18 @@ export interface DesktopStageTarget {
 export function resolveDesktopStageInstallArgs(target: DesktopStageTarget): ReadonlyArray<string> {
   const os = resolveTargetOs(target.platform);
   const cpu = target.arch === "universal" ? "*" : target.arch;
-  return ["install", "--production", "--os", os, "--cpu", cpu];
+  return ["install", "--frozen-lockfile", "--production", "--os", os, "--cpu", cpu];
+}
+
+const SIGNING_SECRET_ENV =
+  /^(?:(?:WIN_)?CSC_|APPLE_|AZURE_|ACTIONS_ID_TOKEN_REQUEST_|OSS_ACCESS_KEY_)|^(?:GH_TOKEN|GITHUB_TOKEN|ACTIONS_RUNTIME_TOKEN)$/;
+
+/**
+ * Environment for build steps that run dependency code but sign nothing: installs and bundling
+ * never see the signing certificate, notarization key, cloud signing identity or release tokens.
+ */
+export function omitDesktopSigningSecrets(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(env).filter(([name]) => !SIGNING_SECRET_ENV.test(name)));
 }
 
 export function ensureDesktopStageExecutableHelpers(

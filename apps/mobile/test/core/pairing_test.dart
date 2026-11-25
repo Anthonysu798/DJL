@@ -9,6 +9,7 @@ void main() {
     'sessionId': 'session',
     'macDeviceId': 'mac',
     'macIdentityPublicKey': base64Encode(List.filled(32, 1)),
+    'pairingSecret': base64Encode(List.filled(32, 5)),
     'expiresAt': DateTime.now()
         .add(const Duration(minutes: 2))
         .millisecondsSinceEpoch,
@@ -32,6 +33,28 @@ void main() {
       }
     },
   );
+  test('QR without a valid pairing secret asks for a desktop update', () {
+    final pair = Pairing.parse(jsonEncode(payload()));
+    expect(pair.pairingSecret, List.filled(32, 5));
+    expect(pair.data.containsKey('pairingSecret'), isFalse);
+    for (final qr in [
+      payload()..remove('pairingSecret'),
+      {...payload(), 'pairingSecret': 7},
+      {...payload(), 'pairingSecret': 'bad'},
+      {...payload(), 'pairingSecret': base64Encode(List.filled(31, 5))},
+    ]) {
+      expect(
+        () => Pairing.parse(jsonEncode(qr)),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Update DJL on your desktop: this pairing uses a different protocol.',
+          ),
+        ),
+      );
+    }
+  });
   test('relay resolution preserves proxy prefix and falls back to root', () {
     expect(
       resolveCandidates(

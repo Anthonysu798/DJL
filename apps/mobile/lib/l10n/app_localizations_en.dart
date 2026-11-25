@@ -1754,6 +1754,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Update DJL on your desktop: this pairing uses a different protocol.';
 
   @override
+  String get pairingProofMismatch =>
+      'The pairing code or QR code did not match. Generate a new one and try again.';
+
+  @override
   String get pairingInvalidIdentifier => 'Invalid device/session identifier.';
 
   @override

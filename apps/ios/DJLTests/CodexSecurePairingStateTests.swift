@@ -2,8 +2,9 @@
 // Purpose: Verifies fresh QR scans force bootstrap mode and secure pairing failures stay actionable in UI state.
 // Layer: Unit Test
 // Exports: CodexSecurePairingStateTests
-// Depends on: Foundation, XCTest, DJL
+// Depends on: CryptoKit, Foundation, XCTest, DJL
 
+import CryptoKit
 import Foundation
 import Security
 import XCTest
@@ -72,6 +73,147 @@ final class CodexSecurePairingStateTests: XCTestCase {
         XCTAssertEqual(service.secureMacFingerprint, codexSecureFingerprint(for: freshQRPublicKey))
     }
 
+    // Vectors from apps/mobile/test/fixtures/remote-v2.json ("transcript" and "pairing").
+    func testPairingProofsMatchSharedFixtureVectors() throws {
+        let transcriptBytes = try XCTUnwrap(Data(base64Encoded: Self.fixtureTranscript))
+        let pairingSecret = try XCTUnwrap(Data(base64Encoded: Self.fixturePairingSecret))
+
+        let macProof = codexPairingProof(
+            pairingSecret: pairingSecret,
+            transcriptBytes: transcriptBytes,
+            label: codexPairingProofMacLabel
+        )
+        let phoneProof = codexPairingProof(
+            pairingSecret: pairingSecret,
+            transcriptBytes: transcriptBytes,
+            label: codexPairingProofPhoneLabel
+        )
+
+        XCTAssertEqual(Data(macProof).base64EncodedString(), "d8OmuHZ5gMb5eLjXS3j1eaPJazlXufk9MssY+v7FWJw=")
+        XCTAssertEqual(Data(phoneProof).base64EncodedString(), "kqruPBxVODSgXrtRnLRj3OemPY8huvRe7d5pihBGMHE=")
+        XCTAssertTrue(macProof == Data(base64EncodedOrEmpty: "d8OmuHZ5gMb5eLjXS3j1eaPJazlXufk9MssY+v7FWJw="))
+        XCTAssertFalse(macProof == Data(base64EncodedOrEmpty: "kqruPBxVODSgXrtRnLRj3OemPY8huvRe7d5pihBGMHE="))
+        XCTAssertFalse(macProof == Data())
+    }
+
+    // Same inputs as apps/mobile/test/fixtures/remote-v2.json ("relayAuth").
+    func testRelayPhoneConnectHeadersSignTheSessionWithThePhoneIdentity() throws {
+        let phonePrivateKey = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(repeating: 2, count: 32))
+        let phoneIdentityPublicKey = phonePrivateKey.publicKey.rawRepresentation.base64EncodedString()
+        let transcriptBytes = codexRelayPhoneConnectTranscriptBytes(
+            sessionId: "fixture-session",
+            phoneDeviceId: "fixture-phone",
+            phoneIdentityPublicKey: phoneIdentityPublicKey
+        )
+
+        XCTAssertEqual(transcriptBytes.base64EncodedString(), Self.fixturePhoneConnectTranscript)
+        // CryptoKit signatures are randomized, so the shared vector is verified instead of reproduced.
+        XCTAssertTrue(phonePrivateKey.publicKey.isValidSignature(
+            Data(base64EncodedOrEmpty: Self.fixturePhoneConnectSignature),
+            for: transcriptBytes
+        ))
+
+        let headers = try codexRelayPhoneConnectHeaders(
+            sessionId: "fixture-session",
+            phoneIdentityState: CodexPhoneIdentityState(
+                phoneDeviceId: "fixture-phone",
+                phoneIdentityPrivateKey: phonePrivateKey.rawRepresentation.base64EncodedString(),
+                phoneIdentityPublicKey: phoneIdentityPublicKey
+            )
+        )
+
+        XCTAssertEqual(
+            headers.map(\.name),
+            ["x-phone-device-id", "x-phone-identity-public-key", "x-phone-signature"]
+        )
+        XCTAssertEqual(headers[0].value, "fixture-phone")
+        XCTAssertEqual(headers[1].value, "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=")
+        XCTAssertTrue(phonePrivateKey.publicKey.isValidSignature(
+            Data(base64EncodedOrEmpty: headers[2].value),
+            for: transcriptBytes
+        ))
+        XCTAssertFalse(phonePrivateKey.publicKey.isValidSignature(
+            Data(base64EncodedOrEmpty: headers[2].value),
+            for: codexRelayPhoneConnectTranscriptBytes(
+                sessionId: "other-session",
+                phoneDeviceId: "fixture-phone",
+                phoneIdentityPublicKey: phoneIdentityPublicKey
+            )
+        ))
+    }
+
+    func testPairingSecretStaysInMemoryAndIsDroppedWithThePairing() throws {
+        let service = makeService()
+        let payload = CodexPairingQRPayload(
+            v: codexPairingQRVersion,
+            relay: "ws://relay.local/relay",
+            sessionId: "session-\(UUID().uuidString)",
+            macDeviceId: "mac-\(UUID().uuidString)",
+            macIdentityPublicKey: Data(repeating: 5, count: 32).base64EncodedString(),
+            expiresAt: Int64(Date().addingTimeInterval(60).timeIntervalSince1970 * 1000),
+            pairingSecret: Self.fixturePairingSecret
+        )
+
+        service.rememberRelayPairing(payload)
+
+        XCTAssertEqual(service.pendingPairingSecret?.base64EncodedString(), Self.fixturePairingSecret)
+        for key in [
+            CodexSecureKeys.relaySessionId,
+            CodexSecureKeys.relayUrl,
+            CodexSecureKeys.relayMacDeviceId,
+            CodexSecureKeys.relayMacIdentityPublicKey,
+            CodexSecureKeys.relayProtocolVersion,
+        ] {
+            XCTAssertNotEqual(SecureStore.readString(for: key), Self.fixturePairingSecret)
+        }
+        let registryData = try JSONEncoder().encode(service.trustedMacRegistry)
+        XCTAssertFalse(String(decoding: registryData, as: UTF8.self).contains(Self.fixturePairingSecret))
+
+        service.clearSavedRelaySession()
+
+        XCTAssertNil(service.pendingPairingSecret)
+    }
+
+    func testClientAuthOmitsPairingProofForTrustedReconnect() throws {
+        let trustedReconnectAuth = SecureClientAuth(
+            sessionId: "session",
+            phoneDeviceId: "phone",
+            keyEpoch: 1,
+            phoneSignature: "signature"
+        )
+        let bootstrapAuth = SecureClientAuth(
+            sessionId: "session",
+            phoneDeviceId: "phone",
+            keyEpoch: 1,
+            phoneSignature: "signature",
+            pairingProof: "proof"
+        )
+
+        let trustedReconnectJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(trustedReconnectAuth)) as? [String: Any]
+        )
+        let bootstrapJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(bootstrapAuth)) as? [String: Any]
+        )
+
+        XCTAssertNil(trustedReconnectJSON["pairingProof"])
+        XCTAssertEqual(bootstrapJSON["pairingProof"] as? String, "proof")
+    }
+
+    func testInvalidPairingProofFromComputerRequiresFreshPairing() {
+        let service = makeService()
+
+        service.processIncomingWireText(
+            #"{"kind":"secureError","code":"invalid_pairing_proof","message":"The pairing code or QR code did not match. Generate a new one and try again."}"#
+        )
+
+        XCTAssertEqual(service.secureConnectionState, .rePairRequired)
+        XCTAssertEqual(
+            service.lastErrorMessage,
+            "The pairing code or QR code did not match. Generate a new one and try again."
+        )
+    }
+
     func testResetSecureTransportStatePreservesRePairRequiredState() {
         let service = makeService()
         service.relaySessionId = "session-\(UUID().uuidString)"
@@ -131,6 +273,11 @@ final class CodexSecurePairingStateTests: XCTestCase {
         XCTAssertEqual(service.secureMacFingerprint, codexSecureFingerprint(for: publicKey))
         XCTAssertNil(service.normalizedRelaySessionId)
     }
+
+    private static let fixturePairingSecret = "TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA="
+    private static let fixturePhoneConnectTranscript = "AAAAGmRqbC1yZWxheS1waG9uZS1jb25uZWN0LXYxAAAAD2ZpeHR1cmUtc2Vzc2lvbgAAAA1maXh0dXJlLXBob25lAAAAIIE5dw6ofRdfVqNUZsNMfszLjYqRtO43ol32D1uPybOU"
+    private static let fixturePhoneConnectSignature = "cHHtC0kjvcZXGXa2NQRCtzoMj7vmKCS+Jnq/rGuNdvdwGvIzqUsA7kGc9HmaUJzJpzA/RyzhwDpt7ks4/PZIAA=="
+    private static let fixtureTranscript = "AAAAC2RqbC1lMmVlLXYxAAAAD2ZpeHR1cmUtc2Vzc2lvbgAAAAEyAAAADHFyX2Jvb3RzdHJhcAAAAAE3AAAAC2ZpeHR1cmUtbWFjAAAADWZpeHR1cmUtcGhvbmUAAAAgiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1wAAAAggTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5QAAAAgXf7dO2vUf2+ijuFdlp1bsOpTd01Ii9r53xxuASSz7yIAAAAgrAGyIJ6GNU+4UyN7XeD0+rE8f8v0M6YcAZNpYX/s8QsAAAAgBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAAAAgBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYAAAANMTc5MzE2MTIwMDAwMA=="
 
     private func keychainAccessibility(for key: String) -> String? {
         let query: [String: Any] = [

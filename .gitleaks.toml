@@ -143,3 +143,17 @@ regexes = [
   '''RSA_ECB_OAEPwithSHA_256andMGF1Padding''',
   '''secret=synthetic-secret-123''',
 ]
+
+# Derived from the fixture pairing code ABCDEFGHJK by the documented PBKDF2 parameters.
+[[allowlists]]
+description = "Deterministic pairing-secret test vector"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^apps/ios/DJLTests/QRScannerPairingValidatorTests\.swift$''',
+  '''^apps/ios/DJLTests/CodexSecurePairingStateTests\.swift$''',
+  '''^apps/mobile/test/fixtures/remote-v2\.json$''',
+  '''^apps/remote-gateway/test/qr\.test\.js$''',
+]
+regexes = ['''TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA=''']

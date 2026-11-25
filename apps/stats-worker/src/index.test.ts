@@ -46,14 +46,39 @@ const NOW = new Date("2026-09-02T15:04:05.000Z");
 const INSTALL_ID = "6f1c2c0e-2b3a-4c4d-9e8f-0a1b2c3d4e5f";
 const VISITOR_ID = "f4d1b4dc-3ff4-4fcf-89b8-658884d0be87";
 
-function env(db: FakeD1, token?: string): Env {
-  return { DB: db as unknown as D1Database, ...(token ? { STATS_READ_TOKEN: token } : {}) };
+// Counts like the Workers rate limiting binding: `limit` events per key, then refusal.
+class FakeRateLimit {
+  private readonly counts = new Map<string, number>();
+
+  constructor(private readonly ceiling = Number.POSITIVE_INFINITY) {}
+
+  async limit({ key }: { key: string }): Promise<{ success: boolean }> {
+    const count = (this.counts.get(key) ?? 0) + 1;
+    this.counts.set(key, count);
+    return { success: count <= this.ceiling };
+  }
 }
 
-function post(path: string, body: unknown, cf?: { country: string }): Request {
+function env(
+  db: FakeD1,
+  token?: string,
+  limiters: { install?: FakeRateLimit; landing?: FakeRateLimit } = {},
+): Env {
+  return {
+    DB: db as unknown as D1Database,
+    INSTALL_LIMITER: limiters.install ?? new FakeRateLimit(),
+    LANDING_LIMITER: limiters.landing ?? new FakeRateLimit(),
+    ...(token ? { STATS_READ_TOKEN: token } : {}),
+  };
+}
+
+function post(path: string, body: unknown, cf?: { country: string }, address?: string): Request {
   const request = new Request(`https://stats.djl.test${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(address ? { "cf-connecting-ip": address } : {}),
+    },
     body: JSON.stringify(body),
   });
   return cf ? Object.assign(request, { cf }) : request;
@@ -197,6 +222,75 @@ describe("POST /v1/installs", () => {
       null,
       null,
     ]);
+  });
+});
+
+describe("ingest limits", () => {
+  const install = {
+    installId: INSTALL_ID,
+    version: "0.5.6",
+    platform: "darwin",
+    arch: "arm64",
+  };
+  const visit = { visitorId: VISITOR_ID, path: "/guide" };
+
+  it("refuses events from one address past its ceiling without touching D1", async () => {
+    const db = new FakeD1();
+    const limited = env(db, undefined, { install: new FakeRateLimit(2) });
+    const send = (address: string) =>
+      handleRequest(post("/v1/installs", install, undefined, address), limited, NOW);
+
+    expect((await send("203.0.113.7")).status).toBe(204);
+    expect((await send("203.0.113.7")).status).toBe(204);
+    const refused = await send("203.0.113.7");
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual({ error: "rate_limited" });
+    expect(db.executed).toHaveLength(2);
+
+    // Another desktop, and the landing site's own routes, are unaffected.
+    expect((await send("198.51.100.4")).status).toBe(204);
+    expect(
+      (await handleRequest(post("/v1/visits", visit, undefined, "203.0.113.7"), limited, NOW))
+        .status,
+    ).toBe(204);
+  });
+
+  it("gives the landing site's visit and download reports one shared ceiling", async () => {
+    const db = new FakeD1();
+    const limited = env(db, undefined, { landing: new FakeRateLimit(1) });
+    const download = { platform: "mac", arch: "arm64", source: "oss" };
+
+    expect(
+      (await handleRequest(post("/v1/visits", visit, undefined, "192.0.2.1"), limited, NOW)).status,
+    ).toBe(204);
+    expect(
+      (await handleRequest(post("/v1/downloads", download, undefined, "192.0.2.1"), limited, NOW))
+        .status,
+    ).toBe(429);
+    expect(
+      (await handleRequest(post("/v1/installs", install, undefined, "192.0.2.1"), limited, NOW))
+        .status,
+    ).toBe(204);
+  });
+
+  it("stops reading a body that has no declared length once it passes the cap", async () => {
+    const db = new FakeD1();
+    let pulled = 0;
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(new Uint8Array(1024).fill(0x20));
+      },
+    });
+    const request = new Request("https://stats.djl.test/v1/visits", {
+      method: "POST",
+      body: endless,
+      duplex: "half",
+    } as RequestInit);
+
+    expect((await handleRequest(request, env(db), NOW)).status).toBe(400);
+    expect(pulled).toBeLessThan(16);
+    expect(db.executed).toHaveLength(0);
   });
 });
 

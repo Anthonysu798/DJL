@@ -40,9 +40,7 @@ import { ProviderSessionReaperLive } from "./provider/Layers/ProviderSessionReap
 import { Server } from "./effectServer";
 import { ServerLoggerLive } from "./serverLogger";
 import { ServerSettingsService } from "./serverSettings";
-import { formatHostForUrl, isWildcardHost } from "./startupAccess";
-import { AnalyticsServiceLayerLive } from "./telemetry/Layers/AnalyticsService";
-import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
+import { formatHostForUrl, isLoopbackHost, isWildcardHost } from "./startupAccess";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { startThreadRetentionJob } from "./threadRetention";
 import { resolveWorkReleaseStage } from "./work/workCapabilities";
@@ -261,10 +259,8 @@ const ServerConfigLive = (input: CliInput) =>
         env.logWebSocketEvents ?? false,
       );
       const staticDir = devUrl ? undefined : yield* cliConfig.resolveStaticDir;
-      const host =
-        Option.getOrUndefined(input.host) ??
-        env.host ??
-        (mode === "desktop" ? "127.0.0.1" : undefined);
+      // Loopback unless the user asks for more: an unset host makes Node listen on every interface.
+      const host = Option.getOrUndefined(input.host) ?? env.host ?? "127.0.0.1";
 
       const qaWorkspaceRoot =
         process.env.DJL_COMPUTER_QA_PROFILE === "1"
@@ -334,34 +330,12 @@ const LayerLive = (input: CliInput) => {
     Layer.provideMerge(providerSessionReaperLayer),
     Layer.provideMerge(SqlitePersistence.layerConfig),
     Layer.provideMerge(ServerLoggerLive),
-    Layer.provideMerge(AnalyticsServiceLayerLive),
     // One bridge shared by GroupService (runtime layer) and the group harness (provider layer).
     Layer.provideMerge(GroupDriverBridgeLive),
     Layer.provideMerge(PluginsLive.pipe(Layer.provide(ServerSecretStoreLive))),
     Layer.provideMerge(ServerConfigLive(input)),
   );
 };
-
-export const recordStartupHeartbeat = Effect.gen(function* () {
-  const analytics = yield* AnalyticsService;
-  const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
-
-  const { threadCount, projectCount } = yield* projectionSnapshotQuery.getCounts().pipe(
-    Effect.catch((cause) =>
-      Effect.logWarning("failed to gather startup projection counts for telemetry", { cause }).pipe(
-        Effect.as({
-          threadCount: 0,
-          projectCount: 0,
-        }),
-      ),
-    ),
-  );
-
-  yield* analytics.record("server.boot.heartbeat", {
-    threadCount,
-    projectCount,
-  });
-});
 
 const makeServerProgram = (input: CliInput) =>
   Effect.gen(function* () {
@@ -390,7 +364,6 @@ const makeServerProgram = (input: CliInput) =>
     // Start the retention loop after the server is live so startup can serve
     // existing history first, then hide inactive threads from the app in the background.
     yield* startThreadRetentionJob(orchestrationEngine, projectionSnapshotQuery);
-    yield* Effect.forkChild(recordStartupHeartbeat);
     // Optional Claude OAuth keepalive. Disabled by default because it touches
     // Claude Code auth data in the background; users can opt in with
     // DJL_CLAUDE_KEEPALIVE=1.
@@ -412,7 +385,7 @@ const makeServerProgram = (input: CliInput) =>
 
     const localUrl = `http://localhost:${config.port}`;
     const bindUrl =
-      config.host && !isWildcardHost(config.host)
+      config.host && !isWildcardHost(config.host) && !isLoopbackHost(config.host)
         ? `http://${formatHostForUrl(config.host)}:${config.port}`
         : localUrl;
     const { authToken, devUrl, ...safeConfig } = config;

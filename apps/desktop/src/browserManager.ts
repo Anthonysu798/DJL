@@ -45,7 +45,9 @@ import {
   classifyBrowserWindowOpen,
   deriveChromeUserAgent,
   isBlankBrowserTabUrl,
+  isBrowserPermissionAllowed,
   normalizeBrowserUrlInput as normalizeUrlInput,
+  resolveBrowserExternalUrl,
   resolveCopyableBrowserTabUrl,
 } from "@djl/shared/browserSession";
 import { BrowserAnnotationRuntime } from "./browserAnnotationRuntime";
@@ -382,6 +384,19 @@ export class DesktopBrowserManager {
         });
         callback({ requestHeaders });
       });
+
+      // Without handlers Electron approves every permission request from every site.
+      partitionSession.setPermissionRequestHandler((_contents, permission, callback, details) =>
+        callback(
+          isBrowserPermissionAllowed(
+            permission,
+            "externalURL" in details ? details.externalURL : undefined,
+          ),
+        ),
+      );
+      partitionSession.setPermissionCheckHandler((_contents, permission) =>
+        isBrowserPermissionAllowed(permission),
+      );
     } catch {
       // If the session can't be configured yet, leave it for the per-webContents fallback.
       this.sessionConfigured = false;
@@ -454,13 +469,14 @@ export class DesktopBrowserManager {
     });
 
     // Auth providers can chain popups (provider -> consent). Keep nested windows inside the
-    // shared session too, and send genuine external (non-web) URLs to the OS browser.
+    // shared session too. Of the non-web URLs, only mail links are handed to the OS.
     webContents.setWindowOpenHandler((details) => {
       const { url } = details;
       const isWebUrl =
         url.startsWith("http://") || url.startsWith("https://") || url === ABOUT_BLANK_URL;
       if (!isWebUrl) {
-        void shell.openExternal(url);
+        const externalUrl = resolveBrowserExternalUrl(url);
+        if (externalUrl) void shell.openExternal(externalUrl);
         return { action: "deny" };
       }
 
@@ -1656,7 +1672,8 @@ export class DesktopBrowserManager {
       const isWebUrl =
         url.startsWith("http://") || url.startsWith("https://") || url === ABOUT_BLANK_URL;
       if (!isWebUrl) {
-        void shell.openExternal(url);
+        const externalUrl = resolveBrowserExternalUrl(url);
+        if (externalUrl) void shell.openExternal(externalUrl);
         return { action: "deny" };
       }
 

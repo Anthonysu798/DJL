@@ -776,6 +776,47 @@ describe("GatewayService completeStep", () => {
     expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - 57_000n);
   });
 
+  it("forwards only priced fields to the provider, dropping client routing overrides", async () => {
+    const p = await principalFor("gw-step-allowlist");
+    await fund(p);
+    const sent: unknown[] = [];
+    const recording = {
+      ...fake,
+      chatStream: (req: Parameters<typeof fake.chatStream>[0], signal: AbortSignal) => {
+        sent.push(req);
+        return fake.chatStream(req, signal);
+      },
+    };
+    const gw = makeGateway({
+      providers: {
+        openai: recording,
+        anthropic: { ...recording, id: "anthropic" },
+        openrouter: { ...recording, id: "openrouter" },
+      },
+    });
+    const step = await gw.completeStep(facts(p), {
+      model: "fake-cheap",
+      messages: [{ role: "user", content: "hi" }],
+      temperature: 0.2,
+      models: ["anthropic/claude-opus-4.5"],
+      plugins: [{ id: "web", max_results: 10 }],
+      provider: { order: ["anthropic"] },
+      n: 128,
+      service_tier: "priority",
+    } as never);
+    await collect(step.chunks);
+    await step.result;
+    expect(sent).toEqual([
+      {
+        model: "fake-cheap",
+        messages: [{ role: "user", content: "hi" }],
+        temperature: 0.2,
+        max_tokens: 1000,
+        user: p.orgId.slice(0, 16),
+      },
+    ]);
+  });
+
   it("cuts the stream at the step's budget cap", async () => {
     const p = await principalFor("gw-step-cap");
     await fund(p);
@@ -1007,5 +1048,436 @@ describe("GatewayService usage windows", () => {
     expect(await ledger.available(p.orgId)).toBe(
       creditsToMicro(100) - BigInt(result.usage!.settled),
     );
+  });
+});
+
+type FakeChunk = ReturnType<typeof fake.chatStream> extends AsyncIterable<infer C> ? C : never;
+const text = (content: string): FakeChunk => ({ id: "s", delta: { content }, finish_reason: null });
+const role: FakeChunk = { id: "s", delta: { role: "assistant" }, finish_reason: null };
+const stop: FakeChunk = { id: "s", delta: {}, finish_reason: "stop" };
+const usageChunk = (input_tokens: number, output_tokens: number): FakeChunk => ({
+  id: "s",
+  delta: {},
+  finish_reason: null,
+  usage: { input_tokens, output_tokens, cached_input_tokens: 0 },
+});
+
+/** A provider that plays chunks back; "stall" hangs there until the gateway aborts the call. */
+function scriptedProvider(
+  script: readonly (FakeChunk | "stall")[],
+  seen: { aborted?: boolean } = {},
+): typeof fake {
+  return {
+    ...fake,
+    async *chatStream(_request, signal) {
+      for (const step of script) {
+        if (step !== "stall") {
+          yield step;
+          continue;
+        }
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) resolve();
+          else signal.addEventListener("abort", () => resolve(), { once: true });
+        });
+        seen.aborted = true;
+        return;
+      }
+    },
+  };
+}
+const makeGatewayWith = (provider: typeof fake, overrides: Partial<GatewayDeps> = {}) =>
+  makeGateway({ providers: { openai: provider }, ...overrides });
+const scripted = (script: readonly (FakeChunk | "stall")[], seen?: { aborted?: boolean }) =>
+  makeGatewayWith(scriptedProvider(script, seen));
+
+const requestRow = (id: string) =>
+  conn.db.query.usageRequests.findFirst({ where: eq(schema.usageRequests.id, id) });
+const windowSpend = async (userId: string) =>
+  (
+    await conn.db.query.usageBuckets.findMany({ where: eq(schema.usageBuckets.userId, userId) })
+  ).reduce((sum, bucket) => sum + bucket.spentMicro, 0n);
+
+const bigTool = (chars: number) => [
+  { type: "function" as const, function: { name: "lookup", description: "x".repeat(chars) } },
+];
+
+describe("GatewayService billing integrity", () => {
+  const hi = [{ role: "user" as const, content: "hi" }];
+
+  it("reserves for tools as well as messages", async () => {
+    const p = await principalFor("gw-int-estimate");
+    await fund(p, creditsToMicro(1000));
+    const reservedFor = async (extra: object) => {
+      const step = await gateway.completeStep(facts(p), {
+        model: "fake-chat",
+        messages: hi,
+        max_tokens: 10,
+        ...extra,
+      });
+      await collect(step.chunks);
+      await step.result;
+      return (await requestRow(step.requestId))!.reservedMicro;
+    };
+    const plain = await reservedFor({});
+    // 60,000 characters of tool definition are at least 20,000 tokens at 1,000 microcredits each.
+    expect((await reservedFor({ tools: bigTool(60_000) })) - plain).toBeGreaterThanOrEqual(
+      20_000_000n,
+    );
+  });
+
+  it("refuses a request no context window of that model could hold, before reserving", async () => {
+    const modelId = `ctx-${crypto.randomUUID()}`;
+    await conn.db.insert(schema.modelCatalog).values({
+      modelId,
+      provider: "openrouter",
+      upstreamModelId: "ctx-upstream",
+      displayName: "Small context",
+      capabilities: ["text.chat"],
+      inputMicroPerToken: 10n,
+      outputMicroPerToken: 100n,
+      contextWindow: 1000,
+      maxOutputTokens: 100,
+    });
+    try {
+      const p = await principalFor("gw-int-context");
+      await fund(p);
+      await expect(
+        gateway.completeStep(facts(p), {
+          model: modelId,
+          messages: [{ role: "user", content: "x".repeat(9000) }],
+        }),
+      ).rejects.toMatchObject({ status: 413, code: "payload_too_large" });
+      expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100));
+      expect(gateway.status().inFlight).toBe(0);
+      // A request that fits is served as usual.
+      const step = await gateway.completeStep(facts(p), { model: modelId, messages: hi });
+      await collect(step.chunks);
+      expect((await step.result).error).toBeNull();
+    } finally {
+      await conn.db.delete(schema.modelCatalog).where(eq(schema.modelCatalog.modelId, modelId));
+    }
+  });
+
+  it("charges an abort before the provider's usage for everything sent and streamed", async () => {
+    const p = await principalFor("gw-int-abort");
+    await fund(p, creditsToMicro(1000));
+    const seen: { aborted?: boolean } = {};
+    const gw = scripted(
+      [role, ...Array.from({ length: 10 }, () => text("x".repeat(30))), "stall"],
+      seen,
+    );
+    const controller = new AbortController();
+    const step = await gw.completeStep(
+      facts(p),
+      { model: "fake-chat", messages: hi, max_tokens: 200, tools: bigTool(30_000) },
+      { signal: controller.signal },
+    );
+    let chunks = 0;
+    for await (const _chunk of step.chunks) if (++chunks === 11) controller.abort();
+    const { usage, error } = await step.result;
+    expect(error).toBeNull();
+    expect(seen.aborted).toBe(true);
+    // Input covers the 30,000 characters of tools; output is the 300 streamed characters at 3 per token.
+    expect(usage!.inputTokens).toBeGreaterThanOrEqual(10_000);
+    expect(usage!.outputTokens).toBe(100);
+    expect(BigInt(usage!.settled)).toBe(BigInt(usage!.inputTokens) * 1_000n + 100n * 10_000n);
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(1000) - BigInt(usage!.settled));
+  });
+
+  it.each(["break", "abort"] as const)(
+    "takes the provider's usage when the caller leaves right after the finish chunk (%s)",
+    async (how) => {
+      const p = await principalFor(`gw-int-usage-${how}`);
+      await fund(p);
+      const provider: typeof fake = {
+        ...fake,
+        async *chatStream() {
+          yield role;
+          yield text("hello");
+          yield stop;
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          yield usageChunk(500, 300);
+        },
+      };
+      const controller = new AbortController();
+      const step = await makeGatewayWith(provider).completeStep(
+        facts(p),
+        { model: "fake-chat", messages: hi, max_tokens: 400 },
+        { signal: controller.signal },
+      );
+      for await (const chunk of step.chunks) {
+        if (!chunk.choices[0].finish_reason) continue;
+        if (how === "break") break;
+        controller.abort();
+      }
+      const { usage } = await step.result;
+      // 500 input and 300 output tokens as metered, not the estimate of "hi" and "hello".
+      expect(usage).toMatchObject({ inputTokens: 500, outputTokens: 300, settled: "3500000" });
+      expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - 3_500_000n);
+    },
+  );
+
+  it("stops waiting for the usage after a short grace and charges the estimate", async () => {
+    const p = await principalFor("gw-int-grace");
+    await fund(p);
+    const seen: { aborted?: boolean } = {};
+    const step = await scripted([role, text("x".repeat(30)), stop, "stall"], seen).completeStep(
+      facts(p),
+      { model: "fake-chat", messages: hi, max_tokens: 100 },
+    );
+    const startedAt = Date.now();
+    for await (const chunk of step.chunks) if (chunk.choices[0].finish_reason) break;
+    const { usage } = await step.result;
+    expect(Date.now() - startedAt).toBeLessThan(4_000);
+    expect(seen.aborted).toBe(true);
+    expect(usage!.outputTokens).toBe(10);
+    expect(BigInt(usage!.settled)).toBeGreaterThan(100_000n);
+  }, 10_000);
+
+  it("records what the balance cannot cover as debt, alerts, and admits no paid request until it is cleared", async () => {
+    const p = await principalFor("gw-int-debt");
+    await fund(p, creditsToMicro(1));
+    // The provider meters 5,000 input tokens (5 credits) against a 1-credit balance, mid-stream.
+    const metered: FakeChunk = { ...text("b"), usage: usageChunk(5000, 10).usage! };
+    const gw = scripted([role, text("a"), metered, text("c"), text("d"), stop]);
+    alerts.length = 0;
+    const step = await gw.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: hi,
+      max_tokens: 10,
+    });
+    // The running check uses the metered input, so the stream stops there.
+    expect(await collect(step.chunks)).toBe("a");
+    const { usage, error } = await step.result;
+    expect(error?.code).toBe("insufficient_credits");
+    expect(usage).toMatchObject({ cutOff: true, settled: "5100000", remaining: "0" });
+    // The whole metered cost is on the ledger: the folded balance is negative by the shortfall.
+    const balances = await ledger.balances(p.orgId);
+    expect(balances.topup).toBe(creditsToMicro(1) - 5_100_000n);
+    const entries = await conn.db.query.creditLedger.findMany({
+      where: eq(schema.creditLedger.reservationId, step.requestId),
+    });
+    expect(
+      entries.filter((e) => e.type === "settlement").reduce((sum, e) => sum - e.amount, 0n),
+    ).toBe(5_100_000n);
+    expect(alerts).toContain("Usage exceeded the balance");
+    // The usage windows record the actual cost, not the smaller amount held at the start.
+    expect(await windowSpend(p.userId)).toBe(5_100_000n);
+    const { before, after } = await ledger.refold(p.orgId);
+    expect(before).toEqual(after);
+
+    await expect(
+      gateway.completeStep(facts(p), { model: "fake-chat", messages: hi, max_tokens: 10 }),
+    ).rejects.toMatchObject({ status: 402, code: "insufficient_credits" });
+    // A top-up pays the debt first: 10 credits against 4.1 owed leaves 5.9.
+    await ledger.grant({
+      orgId: p.orgId,
+      bucket: "topup",
+      type: "topup",
+      amount: creditsToMicro(10),
+      idempotencyKey: `g2:${p.orgId}`,
+      actor: "test",
+    });
+    expect(await ledger.available(p.orgId)).toBe(5_900_000n);
+    const paid = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: hi,
+      max_tokens: 10,
+    });
+    await collect(paid.chunks);
+    expect((await paid.result).error).toBeNull();
+  });
+
+  it("a stream cut at zero is charged to zero, never into debt", async () => {
+    const p = await principalFor("gw-int-cut-zero");
+    await fund(p, 300_000n);
+    alerts.length = 0;
+    const step = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: [{ role: "user", content: "long:50" }],
+      max_tokens: 20,
+    });
+    await collect(step.chunks);
+    const { usage } = await step.result;
+    expect(usage).toMatchObject({ cutOff: true, settled: "300000", remaining: "0" });
+    expect(await ledger.balances(p.orgId)).toMatchObject({ topup: 0n });
+    expect(alerts).not.toContain("Usage exceeded the balance");
+  });
+
+  it("still debits a stream whose reservation the stale job released while it was running, once", async () => {
+    const p = await principalFor("gw-int-late");
+    await fund(p);
+    const step = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: [{ role: "user", content: "long:5" }],
+      max_tokens: 100,
+    });
+    const chunks = step.chunks[Symbol.asyncIterator]();
+    await chunks.next();
+    // What the stale reservation job does to a reservation it takes for abandoned.
+    await ledger.release({
+      orgId: p.orgId,
+      reservationId: step.requestId,
+      idempotencyKey: `stale:${step.requestId}`,
+      actor: "system:worker",
+    });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100));
+    while (!(await chunks.next()).done);
+    const { usage } = await step.result;
+    // fake usage: 5 input tokens and 50 output tokens
+    expect(usage?.settled).toBe("505000");
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - 505_000n);
+    expect(await windowSpend(p.userId)).toBe(505_000n);
+    const replay = await ledger.settle({
+      orgId: p.orgId,
+      reservationId: step.requestId,
+      actual: 505_000n,
+      idempotencyKey: `req:${step.requestId}`,
+      actor: "system:gateway",
+      userId: p.userId,
+    });
+    expect(replay.balances.topup).toBe(creditsToMicro(100) - 505_000n);
+    expect(await windowSpend(p.userId)).toBe(505_000n);
+    const { before, after } = await ledger.refold(p.orgId);
+    expect(before).toEqual(after);
+  });
+
+  it("keeps a running stream's reservation alive and stops when the stream settles", async () => {
+    const p = await principalFor("gw-int-beat");
+    await fund(p);
+    const heartbeat = vi.spyOn(ledger, "heartbeat");
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const step = await gateway.completeStep(facts(p), {
+        model: "fake-chat",
+        messages: [{ role: "user", content: "long:5" }],
+        max_tokens: 100,
+      });
+      const chunks = step.chunks[Symbol.asyncIterator]();
+      await chunks.next();
+      vi.advanceTimersByTime(3 * 60_000);
+      expect(heartbeat.mock.calls).toEqual([[step.requestId], [step.requestId], [step.requestId]]);
+      while (!(await chunks.next()).done);
+      await step.result;
+      vi.advanceTimersByTime(3 * 60_000);
+      expect(heartbeat).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+      heartbeat.mockRestore();
+    }
+  });
+
+  it.each(["reading", "stalled"] as const)(
+    "cuts and settles a stream at the maximum stream length (caller %s)",
+    async (caller) => {
+      const p = await principalFor(`gw-int-max-${caller}`);
+      await fund(p);
+      const seen: { aborted?: boolean } = {};
+      const gw = makeGatewayWith(scriptedProvider([role, text("x".repeat(30)), "stall"], seen), {
+        config: { region: "test", catalogTtlMs: 0, refusalFlagThreshold: 2, maxStreamMs: 100 },
+      });
+      const step = await gw.completeStep(facts(p), {
+        model: "fake-chat",
+        messages: hi,
+        max_tokens: 100,
+      });
+      const chunks = step.chunks[Symbol.asyncIterator]();
+      await chunks.next();
+      await chunks.next();
+      // A caller that keeps reading is ended; one that has stopped reading is settled all the same.
+      if (caller === "reading") {
+        expect((await chunks.next()).done).toBe(true);
+        expect(seen.aborted).toBe(true);
+      }
+      const { usage, error } = await step.result;
+      expect(error?.code).toBe("stream_timeout");
+      expect(usage?.cutOff).toBe(true);
+      expect(usage?.outputTokens).toBe(10);
+      expect(gw.status().inFlight).toBe(0);
+      expect((await requestRow(step.requestId))?.status).toBe("cut_off");
+      expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - BigInt(usage!.settled));
+      await chunks.return?.(undefined);
+    },
+  );
+
+  it("holds the concurrency slot for as long as a stream may run", async () => {
+    const p = await principalFor("gw-int-slot");
+    await fund(p);
+    const memory = createMemoryRateLimiter();
+    const ttls: number[] = [];
+    const limiter = {
+      ...memory,
+      acquire: (key: string, limit: number, ttlSeconds: number) => {
+        ttls.push(ttlSeconds);
+        return memory.acquire(key, limit, ttlSeconds);
+      },
+    };
+    for (const maxStreamMs of [undefined, 45 * 60_000]) {
+      const gw = makeGateway({
+        limiter,
+        config: {
+          region: "test",
+          catalogTtlMs: 0,
+          refusalFlagThreshold: 2,
+          ...(maxStreamMs ? { maxStreamMs } : {}),
+        },
+      });
+      const step = await gw.completeStep(facts(p), { model: "fake-chat", messages: hi });
+      await collect(step.chunks);
+      await step.result;
+    }
+    // The default 30 minutes and the configured 45, each plus a minute's grace.
+    expect(ttls).toEqual([31 * 60, 46 * 60]);
+  });
+
+  it("generates only the image variants the flat price covers", async () => {
+    const p = await principalFor("gw-int-image");
+    await fund(p, creditsToMicro(100));
+    const sent: unknown[] = [];
+    const gw = makeGateway({
+      providers: {
+        openai: {
+          ...fake,
+          generateImage: (req, signal) => (sent.push(req), fake.generateImage(req, signal)),
+          editImage: (req, signal) => (sent.push(req), fake.editImage(req, signal)),
+        },
+      },
+    });
+    const image = { model: "fake-image", prompt: "a cat" };
+    for (const variant of [
+      { size: "4096x4096" },
+      { size: "auto" },
+      { quality: "high" },
+      { quality: "hd" },
+      { quality: "auto" },
+      { size: 1024 },
+    ])
+      await expect(
+        gw.generateImage(facts(p), { ...image, ...variant } as never),
+      ).rejects.toMatchObject({
+        status: 400,
+        code: "bad_request",
+      });
+    expect(sent).toEqual([]);
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100));
+
+    // The variant is always sent explicitly, so the provider never picks a dearer default.
+    await gw.generateImage(facts(p), image);
+    await gw.generateImage(facts(p), { ...image, size: "1536x1024", quality: "low" });
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    await gw.editImage(facts(p), { ...image, image: { bytes: png, mimeType: "image/png" } });
+    expect(sent).toMatchObject([
+      { size: "1024x1024", quality: "medium", n: 1 },
+      { size: "1536x1024", quality: "low", n: 1 },
+      { size: "1024x1024", quality: "medium", n: 1 },
+    ]);
+    // The count is a whole number from 1 to 4, whatever the client sends.
+    const many = await gw.generateImage(facts(p), { ...image, n: 100 });
+    expect(many.data).toHaveLength(4);
+    for (const n of [2.5, Number.NaN]) {
+      const one = await gw.generateImage(facts(p), { ...image, n });
+      expect(one.data).toHaveLength(1);
+    }
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100 - 5 * 9));
   });
 });

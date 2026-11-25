@@ -251,3 +251,39 @@ describe("JSON body byte limit and existing error contract", () => {
     }
   });
 });
+
+describe("JSON content type", () => {
+  it.each(["text/plain", "application/x-www-form-urlencoded", "multipart/form-data", undefined])(
+    "refuses a body sent as %s without parsing it",
+    async (contentType) => {
+      const f = fixture();
+      try {
+        const request = new Request("http://127.0.0.1/json", {
+          method: "POST",
+          body: JSON.stringify({ forged: true }),
+          ...(contentType ? { headers: { "content-type": contentType } } : {}),
+        });
+        if (!contentType) request.headers.delete("content-type");
+        const response = await f.handler(request);
+        expect(response.status).toBe(415);
+        expect(await response.json()).toMatchObject({ error: { code: "unsupported_media_type" } });
+        expect(f.received).not.toHaveBeenCalled();
+      } finally {
+        await f.dispose();
+      }
+    },
+  );
+
+  it("accepts application/json with a charset parameter", async () => {
+    const f = fixture();
+    try {
+      const response = await f.handler(
+        post(JSON.stringify({ ok: 1 }), { "content-type": "Application/JSON; charset=utf-8" }),
+      );
+      expect(response.status).toBe(200);
+      expect(f.received).toHaveBeenCalledWith({ ok: 1 });
+    } finally {
+      await f.dispose();
+    }
+  });
+});

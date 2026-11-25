@@ -62,3 +62,52 @@ describe("VPS private configuration", () => {
     );
   });
 });
+
+describe("VPS edge proxy", () => {
+  const caddyfile = readFileSync(new URL("Caddyfile", import.meta.url), "utf8");
+  // The text between a `<prefix> {` line and its matching closing brace.
+  const block = (source: string, prefix: string) => {
+    const start = source.indexOf(`${prefix} {\n`);
+    expect(start, prefix).toBeGreaterThanOrEqual(0);
+    let depth = 0;
+    for (let index = start + prefix.length; index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1;
+      if (source[index] === "}" && (depth -= 1) === 0) return source.slice(start, index + 1);
+    }
+    throw new Error(`Unclosed block: ${prefix}`);
+  };
+  const api = block(caddyfile, "{$API_HOST}");
+  const storage = block(caddyfile, "{$STORAGE_HOST}");
+
+  it("caps relay JSON bodies at the relay's own limit without limiting WebSocket sessions", () => {
+    expect(api).toContain(
+      "@remote_json path /v1/pairing/code/resolve /v1/trusted/session/resolve /v1/push/session/* /v1/sessions/*/revoke",
+    );
+    const json = block(api, "handle @remote_json");
+    expect(json).toMatch(/request_body \{\s+max_size 16KiB\s+\}/);
+    expect(json).toContain("reverse_proxy {$REMOTE_RELAY_UPSTREAM}");
+    // Over HTTP/2 a WebSocket's frames are the request body, so the session route has no cap.
+    const sessions = block(api, "handle /relay/*");
+    expect(sessions).toContain("reverse_proxy {$REMOTE_RELAY_UPSTREAM}");
+    expect(sessions).not.toContain("request_body");
+  });
+
+  it("caps every other API request body", () => {
+    const fallback = block(api, "    handle");
+    expect(fallback).toMatch(/request_body \{\s+max_size 20MiB\s+\}/);
+    expect(fallback).toContain("reverse_proxy {$API_UPSTREAM}");
+  });
+
+  it("forces HTTPS on the API and storage hosts and keeps stored objects inert", () => {
+    const hsts = 'Strict-Transport-Security "max-age=31536000; includeSubDomains"';
+    expect(api).toContain(hsts);
+    const headers = block(storage, "    header");
+    expect(headers).toContain(hsts);
+    expect(headers).toContain("X-Content-Type-Options nosniff");
+    expect(headers).toContain("Content-Security-Policy sandbox");
+    // Applied after the upstream answers, so a stored object's own headers cannot replace them.
+    expect(headers).toContain("defer");
+    // Uploads are sized by their presigned URL, not by the proxy.
+    expect(storage).not.toContain("request_body");
+  });
+});

@@ -33,6 +33,8 @@ export const user = pgTable("user", {
   commerceAuthGeneration: integer("commerce_auth_generation").default(0).notNull(),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
+  /** Set when the account is deleted; the worker purges it 30 days later. */
+  deletedAt: timestamp("deleted_at"),
   /** Language for emails and texts ("en" | "zh-Hans"); null means English. */
   locale: text("locale"),
 });

@@ -327,7 +327,11 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: Anthony Su
+          # The one place the Windows update publisher is configured (kept identical in desktop-ci.yml
+          # and desktop-release.yml). A bare name is matched against the certificate CN only; set the
+          # signing certificate's full subject distinguished name to make installed apps require the
+          # whole subject. The package build fails if its own installer does not satisfy this value.
+          AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: CN=Anthony Su, O=Anthony Su, L=North York, S=on, C=CA
           AZURE_TRUSTED_SIGNING_ENDPOINT: https://eus.codesigning.azure.net/
           AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME: djl-windows-release-prod
           AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: djl-release-signing-prod

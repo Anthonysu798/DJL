@@ -82,7 +82,7 @@ final class QRScannerPairingValidatorTests: XCTestCase {
     func testManualQRCodePayloadPreservesCaseSensitiveRelayText() {
         let result = validatePairingQRCode(
             """
-            {"v":\(codexPairingQRVersion),"relay":"wss://Relay.Example/CaseSensitivePath","sessionId":"session-123","macDeviceId":"mac-123","macIdentityPublicKey":"pub-key","expiresAt":1900000000000}
+            {"v":\(codexPairingQRVersion),"relay":"wss://Relay.Example/CaseSensitivePath","sessionId":"session-123","macDeviceId":"mac-123","macIdentityPublicKey":"pub-key","expiresAt":1900000000000,"pairingSecret":"TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA="}
             """,
             now: Date(timeIntervalSince1970: 1_800_000_000)
         )
@@ -120,12 +120,50 @@ final class QRScannerPairingValidatorTests: XCTestCase {
         XCTAssertEqual(message, "This pairing code has expired. Generate a new one from the Mac bridge.")
     }
 
+    func testPayloadWithoutPairingSecretRequiresBridgeUpdate() {
+        for pairingSecret in [nil, "", "not-base64", Data(repeating: 1, count: 16).base64EncodedString()] {
+            let result = validatePairingQRCode(
+                pairingQRCode(
+                    v: codexPairingQRVersion,
+                    expiresAt: 1_900_000_000_000,
+                    pairingSecret: pairingSecret
+                ),
+                now: Date(timeIntervalSince1970: 1_800_000_000)
+            )
+
+            guard case .bridgeUpdateRequired(let prompt) = result else {
+                return XCTFail("Expected a bridge update prompt for pairing secret \(pairingSecret ?? "nil").")
+            }
+
+            XCTAssertEqual(prompt.target, .mac)
+            XCTAssertTrue(prompt.message.contains("Update DJL on your computer"))
+        }
+    }
+
+    func testValidPayloadCarriesPairingSecret() {
+        let result = validatePairingQRCode(
+            pairingQRCode(
+                v: codexPairingQRVersion,
+                expiresAt: 1_900_000_000_000
+            ),
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected a valid payload.")
+        }
+
+        XCTAssertEqual(payload.pairingSecret, "TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA=")
+    }
+
     private func pairingQRCode(
         v: Int,
-        expiresAt: Int64
+        expiresAt: Int64,
+        pairingSecret: String? = "TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA="
     ) -> String {
-        """
-        {"v":\(v),"relay":"wss://relay.example","sessionId":"session-123","macDeviceId":"mac-123","macIdentityPublicKey":"pub-key","expiresAt":\(expiresAt)}
+        let pairingSecretField = pairingSecret.map { ",\"pairingSecret\":\"\($0)\"" } ?? ""
+        return """
+        {"v":\(v),"relay":"wss://relay.example","sessionId":"session-123","macDeviceId":"mac-123","macIdentityPublicKey":"pub-key","expiresAt":\(expiresAt)\(pairingSecretField)}
         """
     }
 }

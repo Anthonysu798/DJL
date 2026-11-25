@@ -896,6 +896,7 @@
   "pairingPairedMac": "Paired Mac",
   "pairingNotAPairingCode": "This is not a DJL pairing QR or pasteable code.",
   "pairingUpdateDesktop": "Update DJL on your desktop: this pairing uses a different protocol.",
+  "pairingProofMismatch": "The pairing code or QR code did not match. Generate a new one and try again.",
   "pairingInvalidIdentifier": "Invalid device/session identifier.",
   "pairingInvalidIdentityKey": "Invalid desktop identity key.",
   "pairingCodeExpired": "This pairing code has expired. Generate a new code on your Mac.",
