@@ -173,6 +173,12 @@ jobs:
           bun run ci:desktop:release-tests
           bun run --cwd scripts test -- desktop-media.test.ts
 
+      # Package builds run this script with Node's type stripping, which needs explicit `.ts`
+      # imports and rejects parameter properties in everything it loads. Package smoke runs only
+      # on main, so load it here to catch that on pull requests.
+      - name: Load the desktop package build script with Node
+        run: node scripts/build-desktop-artifact.ts --help > /dev/null
+
       - name: Audit public source, credentials, licenses, and branding
         run: |
           bun run public-source:check

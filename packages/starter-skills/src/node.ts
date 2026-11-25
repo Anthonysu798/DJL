@@ -46,4 +46,4 @@ export function hasSkillFile(root: string, id: string): boolean {
   return existsSync(path.join(root, id, "SKILL.md"));
 }
 
-export * from "./github";
+export * from "./github.ts";
