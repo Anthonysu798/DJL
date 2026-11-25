@@ -182,6 +182,27 @@ export function classifyBrowserWindowOpen(intent: BrowserWindowOpenIntent): Brow
   return "tab";
 }
 
+// The in-app browser loads untrusted pages, so a page may hand the OS nothing but a mail link.
+// Any other scheme (file:, smb:, an installed app's protocol handler) would launch local software
+// with arguments the page chose.
+export function resolveBrowserExternalUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "mailto:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Permissions a page in the in-app browser may have. Electron grants everything when a session
+// has no handler, which would let any site record the microphone once DJL itself has access.
+export function isBrowserPermissionAllowed(permission: string, externalUrl?: string): boolean {
+  if (permission === "openExternal") {
+    return externalUrl !== undefined && resolveBrowserExternalUrl(externalUrl) !== null;
+  }
+  return permission === "clipboard-sanitized-write" || permission === "fullscreen";
+}
+
 const ELECTRON_UA_TOKEN_PATTERN = /\sElectron\/\S+/gi;
 
 function escapeRegExp(value: string): string {

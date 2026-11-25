@@ -3,7 +3,7 @@
  * user search and detail, credit grant with audit, reset limits, kill switch,
  * catalog edit, stats, and role enforcement for a support admin.
  */
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { Redis } from "ioredis";
 import * as OTPAuth from "otpauth";
@@ -708,5 +708,182 @@ describe("team management", () => {
       "admin.admin.delete",
     ])
       expect(actions).toContain(a);
+  });
+});
+
+describe("admin request forgery and second-factor hardening", () => {
+  const adminOrigin = "http://localhost:3001";
+  const freshAdmin = async (label: string) => {
+    const email = `${label}-${crypto.randomUUID().slice(0, 6)}@slcor.test`;
+    const row = await api.adminAuth.create({ email, name: label, role: "admin", password });
+    return { email, id: row.id };
+  };
+  const code = (email: string) =>
+    new OTPAuth.TOTP({
+      secret: OTPAuth.Secret.fromBase32(totpSecrets.get(email)!),
+      digits: 6,
+      period: 30,
+    }).generate();
+  const adminsNamed = (email: string) =>
+    api.db
+      .select({ id: schema.admins.id })
+      .from(schema.admins)
+      .where(eq(schema.admins.email, email));
+
+  it("refuses a forged cookie-only POST from a sibling origin and creates nothing", async () => {
+    const { email } = await freshAdmin("forge");
+    const token = await loginWithTotp(email);
+    const victim = `forged-${crypto.randomUUID().slice(0, 6)}@slcor.test`;
+    const forge = (headers: Record<string, string>, path = "/admin/v1/admins") =>
+      fetch(`${base}${path}`, {
+        method: "POST",
+        headers: {
+          "fly-client-ip": "203.0.113.10",
+          cookie: `djl_admin=${encodeURIComponent(token)}`,
+          ...headers,
+        },
+        body: JSON.stringify({ email: victim, name: "Forged", role: "admin", reason: "forged" }),
+      });
+    // What a page on any other DJL subdomain can send without a preflight.
+    for (const headers of [
+      { "content-type": "text/plain", origin: "https://files.slcor.test" },
+      { "content-type": "text/plain", origin: "http://localhost:3000" },
+      { "content-type": "text/plain" },
+      { "content-type": "application/json", origin: "https://files.slcor.test" },
+    ]) {
+      const refused = await forge(headers);
+      expect(refused.status).toBe(403);
+      expect((await refused.json()).error.code).toBe("csrf_origin");
+    }
+    // The router ignores case, repeated slashes, and percent-encoding; so does the guard.
+    for (const path of ["/ADMIN/v1/admins", "//admin/v1/admins", "/%61dmin/V1/admins/"]) {
+      const refused = await forge(
+        { "content-type": "application/json", origin: "https://files.slcor.test" },
+        path,
+      );
+      expect(refused.status).toBe(403);
+    }
+    // Even from the admin origin, a body that is not declared as JSON is never parsed.
+    const plain = await forge({ "content-type": "text/plain", origin: adminOrigin });
+    expect(plain.status).toBe(415);
+    const bearerPlain = await forge({
+      "content-type": "text/plain",
+      authorization: `Bearer ${token}`,
+    });
+    expect(bearerPlain.status).toBe(415);
+    expect(await adminsNamed(victim)).toHaveLength(0);
+    // The admin console itself still works on the cookie alone.
+    const own = await forge({ "content-type": "application/json", origin: adminOrigin });
+    expect(own.status).toBe(200);
+    expect(await adminsNamed(victim)).toHaveLength(1);
+  });
+
+  it("offers credentialed CORS on the admin API to the admin origin only", async () => {
+    const preflight = (origin: string) =>
+      fetch(`${base}/admin/v1/admins`, {
+        method: "OPTIONS",
+        headers: { origin, "access-control-request-method": "POST" },
+      });
+    expect(
+      (await preflight("http://localhost:3000")).headers.get("access-control-allow-origin"),
+    ).toBe(null);
+    expect((await preflight(adminOrigin)).headers.get("access-control-allow-origin")).toBe(
+      adminOrigin,
+    );
+  });
+
+  it("ends sessions opened before enrollment when the authenticator is confirmed", async () => {
+    const { email, id } = await freshAdmin("pre-mfa");
+    const login = () => admin("/admin/v1/auth/login", { json: { email, password } });
+    const stolen = (await login()).body.token as string;
+    const own = (await login()).body.token as string;
+    const enroll = await admin("/admin/v1/auth/totp/enroll", { token: own, json: {} });
+    expect(enroll.status).toBe(200);
+    totpSecrets.set(email, enroll.body.secret as string);
+    expect((await admin("/admin/v1/me", { token: stolen })).status).toBe(200);
+    const confirm = await admin("/admin/v1/auth/totp/confirm", {
+      token: own,
+      json: { code: code(email) },
+    });
+    expect(confirm.status).toBe(200);
+    expect((await admin("/admin/v1/me", { token: stolen })).status).toBe(401);
+    expect((await admin("/admin/v1/me", { token: own })).body.admin.mfaVerified).toBe(true);
+    const actions = (
+      await api.db
+        .select({ action: schema.auditEvents.action })
+        .from(schema.auditEvents)
+        .where(and(eq(schema.auditEvents.actorId, id), eq(schema.auditEvents.targetId, id)))
+    ).map((e) => e.action);
+    expect(actions).toContain("admin.totp.enrollment_started");
+    expect(actions).toContain("admin.totp.enabled");
+  });
+
+  it("replaces an enabled authenticator only for a verified session with the current code", async () => {
+    const { email, id } = await freshAdmin("re-enroll");
+    const token = await loginWithTotp(email);
+    const secretNow = async () =>
+      (await api.db.query.admins.findFirst({ where: eq(schema.admins.id, id) }))!;
+    const before = await secretNow();
+    const wrongCode = new OTPAuth.TOTP({
+      secret: OTPAuth.Secret.fromBase32(totpSecrets.get(email)!),
+      digits: 6,
+      period: 30,
+    }).generate({ timestamp: Date.now() - 3_600_000 });
+    for (const json of [{}, { code: wrongCode }, { code: 123456 }]) {
+      const refused = await admin("/admin/v1/auth/totp/enroll", { token, json });
+      expect(refused.status).toBe(403);
+      expect(refused.body.error.code).toBe("totp_already_enabled");
+    }
+    // A session that never passed the second factor cannot swap it even with a valid code.
+    const setVerified = (mfaVerifiedAt: Date | null) =>
+      api.db
+        .update(schema.adminSessions)
+        .set({ mfaVerifiedAt })
+        .where(eq(schema.adminSessions.adminId, id));
+    await setVerified(null);
+    const unverified = await admin("/admin/v1/auth/totp/enroll", {
+      token,
+      json: { code: code(email) },
+    });
+    expect(unverified.status).toBe(403);
+    const after = await secretNow();
+    expect(after.totpEnabled).toBe(true);
+    expect(after.totpSecretEncrypted).toBe(before.totpSecretEncrypted);
+
+    await setVerified(new Date());
+    const replaced = await admin("/admin/v1/auth/totp/enroll", {
+      token,
+      json: { code: code(email) },
+    });
+    expect(replaced.status).toBe(200);
+    expect((await secretNow()).totpSecretEncrypted).not.toBe(before.totpSecretEncrypted);
+    const started = await api.db
+      .select({ before: schema.auditEvents.before })
+      .from(schema.auditEvents)
+      .where(
+        and(
+          eq(schema.auditEvents.actorId, id),
+          eq(schema.auditEvents.action, "admin.totp.enrollment_started"),
+        ),
+      );
+    expect(started.map((e) => e.before)).toEqual([{ totpEnabled: false }, { totpEnabled: true }]);
+  });
+
+  it("locks second-factor confirmation after repeated wrong codes", async () => {
+    const { email } = await freshAdmin("confirm-lock");
+    const token = (await admin("/admin/v1/auth/login", { json: { email, password } })).body
+      .token as string;
+    const enroll = await admin("/admin/v1/auth/totp/enroll", { token, json: {} });
+    totpSecrets.set(email, enroll.body.secret as string);
+    const guesses = await Promise.all(
+      Array.from({ length: 25 }, () =>
+        admin("/admin/v1/auth/totp/confirm", { token, json: { code: "000000" } }),
+      ),
+    );
+    expect(guesses.filter((g) => g.status === 400)).toHaveLength(10);
+    expect(guesses.filter((g) => g.status === 429)).toHaveLength(15);
+    // Locked means locked: the right code is refused too until the window passes.
+    const late = await admin("/admin/v1/auth/totp/confirm", { token, json: { code: code(email) } });
+    expect(late.status).toBe(429);
   });
 });

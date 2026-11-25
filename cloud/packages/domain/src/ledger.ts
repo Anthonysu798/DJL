@@ -56,9 +56,22 @@ export function totalAvailable(b: Balances): Microcredits {
   return b.free + b.trial + b.plan + b.topup;
 }
 
-/** What a request may spend: the free allowance counts only for free-eligible models. */
+/**
+ * What the org owes: usage that outran its balance, or credits it had already
+ * spent from a top-up that was later refunded or disputed. Debt is a negative
+ * topup balance, so the next top-up pays it off before anything else.
+ */
+export function debtOf(b: Balances): Microcredits {
+  return b.topup < 0n ? -b.topup : 0n;
+}
+
+/**
+ * What a request may spend: the free allowance counts only for free-eligible
+ * models, and an org in debt has no paid credits until the debt is cleared.
+ */
 export function spendable(b: Balances, freeEligible: boolean): Microcredits {
-  return freeEligible ? totalAvailable(b) : b.trial + b.plan + b.topup;
+  const paid = debtOf(b) > 0n ? 0n : b.trial + b.plan + b.topup;
+  return freeEligible ? b.free + paid : paid;
 }
 
 /** Fold entries into per-bucket balances. Reservations count as spent until released. */
@@ -100,7 +113,8 @@ export type ReserveDecision =
 
 /**
  * Build reservation entries for an estimated cost. Fails closed when the
- * combined balance cannot cover the estimate: no partial reservations.
+ * combined balance cannot cover the estimate: no partial reservations. An org
+ * in debt can reserve only from its free allowance.
  */
 export function reserve(
   input: {
@@ -112,7 +126,8 @@ export function reserve(
   },
   balances: Balances,
 ): ReserveDecision {
-  const { debits, uncovered } = allocateDebit(balances, input.estimate, input.freeEligible);
+  const usable = debtOf(balances) > 0n ? { ...ZERO_BALANCES, free: balances.free } : balances;
+  const { debits, uncovered } = allocateDebit(usable, input.estimate, input.freeEligible);
   if (uncovered > 0n) return { ok: false, reason: "insufficient_credits", shortfall: uncovered };
   const entries: Omit<LedgerEntry, "id" | "createdAt">[] = [];
   for (const bucket of BUCKET_SPEND_ORDER) {
@@ -132,11 +147,14 @@ export function reserve(
 /**
  * Settle a reservation against actual cost.
  *
- * Emits `release` entries that return the reserved amounts, then `settlement`
- * entries that debit the actual cost using the balances as they were before
- * the reservation. If actual exceeds what can be covered (the stream ran to
- * zero), the uncovered part is reported so the caller can cut the stream and
- * still record exactly what was consumed.
+ * Emits `release` entries that return whatever is still reserved, then
+ * `settlement` entries that debit the actual cost using the balances as they
+ * were before the reservation. `reservationEntries` are all of the
+ * reservation's entries so far: one that was already released (the stale
+ * reservation job ran while the request was still in flight) is not released
+ * again, but its actual cost is still debited. If actual exceeds what can be
+ * covered, the uncovered part is debited from the topup bucket, which goes
+ * negative (see `debtOf`), and is reported so the caller can raise it.
  */
 export function settle(
   input: {
@@ -155,7 +173,9 @@ export function settle(
   if (input.actual < 0n) throw new RangeError("actual must be non-negative");
   const reserved = foldBalances(
     reservationEntries.filter(
-      (e) => e.type === "reservation" && e.reservationId === input.reservationId,
+      (e) =>
+        (e.type === "reservation" || e.type === "release") &&
+        e.reservationId === input.reservationId,
     ),
   );
   const entries: Omit<LedgerEntry, "id" | "createdAt">[] = [];
@@ -176,13 +196,14 @@ export function settle(
   }
   // 2. debit actual against restored balances
   const { debits, uncovered } = allocateDebit(restored, input.actual, input.freeEligible);
+  const owed = { ...debits, topup: debits.topup + uncovered };
   for (const bucket of BUCKET_SPEND_ORDER) {
-    if (debits[bucket] === 0n) continue;
+    if (owed[bucket] === 0n) continue;
     entries.push({
       orgId: input.orgId,
       type: "settlement",
       bucket,
-      amount: -debits[bucket],
+      amount: -owed[bucket],
       reservationId: input.reservationId,
       idempotencyKey: `${input.idempotencyKey}:settle:${bucket}`,
     });
@@ -217,6 +238,40 @@ export function expireBucket(
     reservationId: null,
     idempotencyKey: input.idempotencyKey,
   };
+}
+
+/**
+ * How a grant lands when the org is in debt: paid credits clear the debt
+ * first (`repay`, credited to the topup bucket where the debt is) and only
+ * the `rest` reaches the bucket the grant was meant for. The free allowance
+ * never pays debt, and a top-up nets against it by being in the same bucket.
+ */
+export function splitGrant(
+  bucket: Bucket,
+  amount: Microcredits,
+  balances: Balances,
+): { readonly repay: Microcredits; readonly rest: Microcredits } {
+  const owed = bucket === "free" || bucket === "topup" ? 0n : debtOf(balances);
+  const repay = owed < amount ? owed : amount;
+  return { repay, rest: amount - repay };
+}
+
+/**
+ * Credits to take back now from a top-up of `granted` whose payment has been
+ * refunded `refunded` out of `charged` in total (any one currency unit).
+ * `alreadyTaken` is what earlier refunds of the same payment took, so partial
+ * refunds add up to the refunded share and never to more than was granted.
+ */
+export function clawbackDue(input: {
+  readonly granted: Microcredits;
+  readonly alreadyTaken: Microcredits;
+  readonly refunded: bigint;
+  readonly charged: bigint;
+}): Microcredits {
+  const { granted, alreadyTaken, refunded, charged } = input;
+  if (refunded <= 0n) return 0n;
+  const target = charged <= 0n || refunded >= charged ? granted : (granted * refunded) / charged;
+  return target > alreadyTaken ? target - alreadyTaken : 0n;
 }
 
 /**

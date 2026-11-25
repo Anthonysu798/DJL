@@ -1791,6 +1791,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Mettez à jour DJL sur votre ordinateur : ce jumelage utilise un autre protocole.';
 
   @override
+  String get pairingProofMismatch =>
+      'Le code de jumelage ou le code QR ne correspond pas. Générez-en un nouveau et réessayez.';
+
+  @override
   String get pairingInvalidIdentifier =>
       'Identifiant d’appareil ou de session non valide.';
 

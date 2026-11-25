@@ -14,7 +14,9 @@ import {
 } from "./lib/desktop-multipost-resources.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
@@ -23,7 +25,13 @@ import serverPackageJson from "../apps/server/package.json" with { type: "json" 
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
 import { DESKTOP_STAGE_DEPENDENCY_OVERRIDES } from "./lib/desktop-stage-dependency-overrides.ts";
 import {
+  DESKTOP_STAGE_OVERRIDE_LOCK_PATH,
+  deriveDesktopStageLock,
+  parseBunLock,
+} from "./lib/desktop-stage-lockfile.ts";
+import {
   ensureDesktopStageExecutableHelpers,
+  omitDesktopSigningSecrets,
   resolveDesktopStageInstallArgs,
   verifyDesktopStageNativeDependencies,
 } from "./lib/desktop-stage-native-dependencies.ts";
@@ -35,6 +43,7 @@ import { resolveDesktopPublishConfig } from "./lib/desktop-publish-config.ts";
 import { validateDesktopStatsUrl } from "./lib/desktop-stats-url.ts";
 import {
   assertPackagedDesktopUpdateConfig,
+  assertPackagedWindowsUpdatePublisher,
   findPackagedDesktopUpdateConfigs,
 } from "./lib/desktop-update-config.ts";
 import {
@@ -744,11 +753,15 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   };
   const bundledClientEntry = path.join(distDirs.serverDist, "client/index.html");
 
+  // Signing credentials reach only the packaging and notarization steps that use them.
+  const unsignedStepEnv = omitDesktopSigningSecrets(process.env);
+
   if (!options.skipBuild) {
     yield* Effect.log("[desktop-artifact] Building desktop/server/web artifacts...");
     yield* runCommand(
       ChildProcess.make({
         cwd: repoRoot,
+        env: unsignedStepEnv,
         ...commandOutputOptions(options.verbose),
         // Windows needs shell mode to resolve .cmd shims (e.g. bun.cmd).
         shell: process.platform === "win32",
@@ -915,6 +928,37 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const stagePackageJsonString = yield* encodeJsonString(stagePackageJson);
   yield* fs.writeFileString(path.join(stageAppDir, "package.json"), `${stagePackageJsonString}\n`);
 
+  // The stage installs the graph bun.lock already resolved; nothing is re-resolved at build time.
+  const stageLock = yield* Effect.try({
+    try: () =>
+      deriveDesktopStageLock({
+        workspaceLock: parseBunLock(readFileSync(path.join(repoRoot, "bun.lock"), "utf8")),
+        overrideLock: parseBunLock(
+          readFileSync(path.join(repoRoot, DESKTOP_STAGE_OVERRIDE_LOCK_PATH), "utf8"),
+        ),
+        stage: stagePackageJson,
+        dependencyOwners: {
+          ...Object.fromEntries(
+            Object.keys(serverDependencies).map((name) => [name, serverPackageJson.name]),
+          ),
+          ...Object.fromEntries(
+            Object.keys(desktopPackageJson.dependencies).map((name) => [
+              name,
+              desktopPackageJson.name,
+            ]),
+          ),
+        },
+        pinnedOverrides: DESKTOP_STAGE_DEPENDENCY_OVERRIDES,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not lock staged production dependencies to bun.lock.",
+        cause,
+      }),
+  });
+  const stageLockString = yield* encodeJsonString(stageLock);
+  yield* fs.writeFileString(path.join(stageAppDir, "bun.lock"), `${stageLockString}\n`);
+
   const stageInstallArgs = resolveDesktopStageInstallArgs({
     platform: options.platform,
     arch: options.arch,
@@ -925,6 +969,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* runCommand(
     ChildProcess.make("bun", stageInstallArgs, {
       cwd: stageAppDir,
+      env: unsignedStepEnv,
       ...commandOutputOptions(options.verbose),
       // Windows needs shell mode to resolve .cmd shims (e.g. bun.cmd).
       shell: process.platform === "win32",
@@ -993,14 +1038,18 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* Effect.log(
     `[desktop-artifact] Building ${options.platform}/${options.target} (arch=${options.arch}, version=${appVersion})...`,
   );
+  // The packager is the exact version bun.lock pins, never one downloaded at build time.
+  const electronBuilderCli = createRequire(import.meta.url).resolve("electron-builder/cli.js");
   yield* runCommand(
-    ChildProcess.make({
-      cwd: stageAppDir,
-      env: buildEnv,
-      ...commandOutputOptions(options.verbose),
-      // Windows needs shell mode to resolve package-manager commands.
-      shell: process.platform === "win32",
-    })`bun x electron-builder ${platformConfig.cliFlag} --${options.arch} --publish never`,
+    ChildProcess.make(
+      process.execPath,
+      [electronBuilderCli, platformConfig.cliFlag, `--${options.arch}`, "--publish", "never"],
+      {
+        cwd: stageAppDir,
+        env: buildEnv,
+        ...commandOutputOptions(options.verbose),
+      },
+    ),
   );
 
   const stageDistDir = path.join(stageAppDir, "dist");
@@ -1136,6 +1185,46 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       catch: (cause) =>
         new BuildScriptError({
           message: "Packaged desktop updater configuration verification failed.",
+          cause,
+        }),
+    });
+  }
+
+  if (options.platform === "win" && options.signed && desktopBuildConfig.publish) {
+    const publisherName = (
+      desktopBuildConfig.win as { azureSignOptions?: { publisherName?: string } } | undefined
+    )?.azureSignOptions?.publisherName;
+    yield* Effect.tryPromise({
+      try: async () => {
+        const updateConfigs = findPackagedDesktopUpdateConfigs(stageDistDir);
+        if (updateConfigs.length !== 1 || !updateConfigs[0] || !publisherName) {
+          throw new Error(
+            `Expected one packaged app-update.yml and a configured publisher, found ${updateConfigs.length} and "${publisherName ?? ""}".`,
+          );
+        }
+        assertPackagedWindowsUpdatePublisher(readFileSync(updateConfigs[0], "utf8"), publisherName);
+        // The installed app decides whether to accept the next update with this same check, so a
+        // publisher the installer's own signature does not satisfy must never ship.
+        if (process.platform === "win32" && options.target === "nsis") {
+          const installer = path.join(stageDistDir, `DJL-${appVersion}-${options.arch}.exe`);
+          // Loaded by path: the desktop sources are outside this TypeScript project.
+          const { verifyWindowsUpdateCodeSignature } = (await import(
+            pathToFileURL(path.join(repoRoot, "apps/desktop/src/electronUpdaterSecurity.ts")).href
+          )) as {
+            verifyWindowsUpdateCodeSignature: (
+              publisherNames: string[],
+              file: string,
+            ) => Promise<string | null>;
+          };
+          const mismatch = await verifyWindowsUpdateCodeSignature([publisherName], installer);
+          if (mismatch !== null) {
+            throw new Error(`The packaged updater would reject this installer: ${mismatch}`);
+          }
+        }
+      },
+      catch: (cause) =>
+        new BuildScriptError({
+          message: "Packaged Windows update publisher verification failed.",
           cause,
         }),
     });

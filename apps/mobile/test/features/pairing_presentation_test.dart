@@ -693,12 +693,15 @@ void main() {
       await tester.pump();
       expect(desktop.busy, isTrue);
       expect(desktop.state, 'resolving');
+      // Deriving the lookup code yields to the event loop between rounds.
+      await tester.pump(const Duration(milliseconds: 200));
       expect(requests, hasLength(1));
       expect(
         requests.single.url.toString(),
         'https://custom.test/base/v1/pairing/code/resolve',
       );
-      expect(jsonDecode(requests.single.body), {'code': 'ABCDEF2345'});
+      // The relay sees the derived lookup code, never the typed one.
+      expect(jsonDecode(requests.single.body), {'code': '5MAZYXDMWC'});
       await tester.tap(find.text('Cancel'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -870,7 +873,10 @@ void main() {
       await more(tester, 'Secure pairing details');
       await tester.enterText(
         find.byKey(const Key('pairing_payload')),
-        jsonEncode(savedPair().data),
+        jsonEncode({
+          ...savedPair().data,
+          'pairingSecret': base64Encode(List.filled(32, 5)),
+        }),
       );
       await tester.tap(find.text('Pair securely'));
       await tester.pump();

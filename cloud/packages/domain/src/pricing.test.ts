@@ -5,6 +5,7 @@ import {
   creditPriceFromUsd,
   creditPricePerUnitFromUsdPerMillion,
   estimateReservation,
+  estimateTokens,
   type ModelPrice,
 } from "./pricing.ts";
 import { formatCredits, MICROCREDITS_PER_CREDIT } from "./units.ts";
@@ -58,5 +59,17 @@ describe("pricing", () => {
     expect(est).toBe(500n * 1000n + 2500n * 4000n);
     expect(est).toBeGreaterThan(cost);
     expect(est / MICROCREDITS_PER_CREDIT).toBe(10n);
+  });
+
+  it("estimates tokens on the high side for English, JSON, and CJK", () => {
+    // ~4.5 characters per token in English prose; the estimate assumes 3.
+    expect(estimateTokens("The quick brown fox jumps over the lazy dog.")).toBeCloseTo(44 / 3);
+    // CJK runs about one token per character or more; the estimate assumes 1.5.
+    expect(estimateTokens("你好世界")).toBe(6);
+    expect(estimateTokens("a你")).toBeCloseTo(1 / 3 + 1.5);
+    expect(estimateTokens("")).toBe(0);
+    // Never below the 4-characters-per-token rule it replaced.
+    for (const text of ['{"type":"function","name":"lookup"}', "日本語のテキスト", "😀 emoji"])
+      expect(estimateTokens(text)).toBeGreaterThan(text.length / 4);
   });
 });

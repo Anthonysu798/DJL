@@ -4,10 +4,13 @@
  * attachments. Opt-in per device; storage is bounded by the plan quota; the
  * `sync` kill switch stops writes but never reads.
  */
-import { and, asc, eq, gt, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
+import { and, asc, eq, gt, lt, ne, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 
 import type { Principal } from "../auth/guard.ts";
+import { isSupportedType } from "../files/fileTypes.ts";
 import { ApiError } from "../http/errors.ts";
 import type { BlobStore } from "./BlobStore.ts";
 
@@ -30,6 +33,12 @@ const MAX_EVENTS_PER_PUSH = 500;
 const MAX_EVENT_BYTES = 512 * 1024;
 const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
 const PULL_LIMIT = 500;
+/** A presigned PUT lasts ten minutes; a pending upload this old was abandoned. */
+const PENDING_UPLOAD_TTL_MS = 60 * 60_000;
+
+/** The file upload types plus opaque binary. Never HTML, SVG, XML, or script. */
+const isAttachmentType = (mimeType: string) =>
+  mimeType === "application/octet-stream" || isSupportedType(mimeType);
 
 export class SyncService {
   constructor(
@@ -53,14 +62,17 @@ export class SyncService {
     return device;
   }
 
-  private async quota(orgId: string): Promise<{ readonly used: bigint; readonly limit: bigint }> {
-    const usage = await this.db.query.syncUsage.findFirst({
+  private async quota(
+    orgId: string,
+    db: Pick<DjlDatabase, "query"> = this.db,
+  ): Promise<{ readonly used: bigint; readonly limit: bigint }> {
+    const usage = await db.query.syncUsage.findFirst({
       where: eq(schema.syncUsage.orgId, orgId),
     });
-    const sub = await this.db.query.subscriptions.findFirst({
+    const sub = await db.query.subscriptions.findFirst({
       where: and(eq(schema.subscriptions.orgId, orgId), eq(schema.subscriptions.status, "active")),
     });
-    const plan = await this.db.query.plans.findFirst({
+    const plan = await db.query.plans.findFirst({
       where: eq(schema.plans.id, sub?.planId ?? "trial"),
     });
     return {
@@ -337,41 +349,73 @@ export class SyncService {
       input.sizeBytes > MAX_ATTACHMENT_BYTES
     )
       throw new ApiError(413, "attachment_too_large", "Attachments are limited to 50 MB.");
-    const existing = await this.db.query.attachments.findFirst({
-      where: and(
-        eq(schema.attachments.orgId, principal.orgId),
-        eq(schema.attachments.contentHash, input.contentHash),
-      ),
-    });
-    if (existing?.status === "ready")
-      return { alreadyPresent: true as const, contentHash: input.contentHash };
-    const q = await this.quota(principal.orgId);
-    if (q.used + BigInt(input.sizeBytes) > q.limit)
-      throw new ApiError(402, "sync_quota_exceeded", "Sync storage quota reached.");
-    const bucketKey = `orgs/${principal.orgId}/attachments/${input.contentHash}`;
-    await this.db
-      .insert(schema.attachments)
-      .values({
-        orgId: principal.orgId,
-        contentHash: input.contentHash,
+    if (!isAttachmentType(input.mimeType))
+      throw new ApiError(400, "unsupported_type", "This attachment type is not supported.");
+    const { orgId } = principal;
+    const pendingElsewhere = and(
+      eq(schema.attachments.orgId, orgId),
+      eq(schema.attachments.status, "pending"),
+      ne(schema.attachments.contentHash, input.contentHash),
+    );
+    // Clients only ever get a PUT for this key; verified bytes move to another on completion.
+    const bucketKey = `orgs/${orgId}/attachments/${input.contentHash}`;
+    let abandoned: readonly { readonly bucketKey: string }[] = [];
+    const alreadyPresent = await this.db.transaction(async (tx) => {
+      // One upload starts at a time per org, so parallel starts cannot each fit under the quota.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sync-attachments:${orgId}`}))`);
+      const existing = await tx.query.attachments.findFirst({
+        where: and(
+          eq(schema.attachments.orgId, orgId),
+          eq(schema.attachments.contentHash, input.contentHash),
+        ),
+      });
+      if (existing?.status === "ready") return true;
+      abandoned = await tx
+        .delete(schema.attachments)
+        .where(
+          and(
+            pendingElsewhere,
+            lt(schema.attachments.createdAt, new Date(Date.now() - PENDING_UPLOAD_TTL_MS)),
+          ),
+        )
+        .returning({ bucketKey: schema.attachments.bucketKey });
+      // Uploads that were started but not completed hold their bytes against the quota.
+      const [pending] = await tx
+        .select({ bytes: sql<string>`coalesce(sum(${schema.attachments.sizeBytes}), 0)` })
+        .from(schema.attachments)
+        .where(pendingElsewhere);
+      const q = await this.quota(orgId, tx);
+      if (q.used + BigInt(pending!.bytes) + BigInt(input.sizeBytes) > q.limit)
+        throw new ApiError(402, "sync_quota_exceeded", "Sync storage quota reached.");
+      const declared = {
         bucketKey,
         mimeType: input.mimeType,
         sizeBytes: input.sizeBytes,
         uploadedBy: principal.userId,
-        status: "pending",
-      })
-      .onConflictDoNothing({ target: [schema.attachments.orgId, schema.attachments.contentHash] });
+      };
+      await tx
+        .insert(schema.attachments)
+        .values({ orgId, contentHash: input.contentHash, status: "pending", ...declared })
+        .onConflictDoUpdate({
+          target: [schema.attachments.orgId, schema.attachments.contentHash],
+          // The latest declaration wins, so a wrong size filed by someone else cannot block the hash.
+          set: { ...declared, createdAt: new Date() },
+          setWhere: eq(schema.attachments.status, "pending"),
+        });
+      return false;
+    });
+    await Promise.allSettled(abandoned.map((row) => this.blobs.remove(row.bucketKey)));
+    if (alreadyPresent) return { alreadyPresent: true as const, contentHash: input.contentHash };
     const upload = await this.blobs.presignUpload(bucketKey, input.mimeType, input.sizeBytes);
     return { alreadyPresent: false as const, contentHash: input.contentHash, upload };
   }
 
   async completeAttachmentUpload(principal: Principal, contentHash: string) {
-    const row = await this.db.query.attachments.findFirst({
-      where: and(
-        eq(schema.attachments.orgId, principal.orgId),
-        eq(schema.attachments.contentHash, contentHash),
-      ),
-    });
+    const mine = and(
+      eq(schema.attachments.orgId, principal.orgId),
+      eq(schema.attachments.contentHash, contentHash),
+    );
+    const row = await this.db.query.attachments.findFirst({ where: mine });
     if (!row) throw new ApiError(404, "not_found", "Start the upload first.");
     if (row.status === "ready") return { status: "ready" as const };
     const head = await this.blobs.head(row.bucketKey);
@@ -381,16 +425,30 @@ export class SyncService {
         "upload_incomplete",
         "The object is missing or its size does not match.",
       );
+    // The hash names the content for the whole org: bytes that do not match it are thrown away.
+    const bytes = await this.blobs.read(row.bucketKey, row.sizeBytes);
+    if (!bytes || createHash("sha256").update(bytes).digest("hex") !== contentHash) {
+      await this.blobs.remove(row.bucketKey);
+      await this.db
+        .delete(schema.attachments)
+        .where(and(mine, eq(schema.attachments.status, "pending")));
+      throw new ApiError(
+        400,
+        "upload_mismatch",
+        "The uploaded bytes do not match the declared hash.",
+      );
+    }
+    // The upload URL stays valid for minutes and could replace the object after this check,
+    // so the verified bytes are stored under a key no client is ever given a PUT for.
+    const bucketKey = `orgs/${principal.orgId}/verified-attachments/${contentHash}`;
+    await this.blobs.write(bucketKey, bytes, "application/octet-stream");
     await this.db.transaction(async (tx) => {
-      await tx
+      const claimed = await tx
         .update(schema.attachments)
-        .set({ status: "ready" })
-        .where(
-          and(
-            eq(schema.attachments.orgId, principal.orgId),
-            eq(schema.attachments.contentHash, contentHash),
-          ),
-        );
+        .set({ status: "ready", bucketKey })
+        .where(and(mine, eq(schema.attachments.status, "pending")))
+        .returning({ sizeBytes: schema.attachments.sizeBytes });
+      if (claimed.length === 0) return; // a concurrent completion already counted it
       await tx
         .insert(schema.syncUsage)
         .values({ orgId: principal.orgId, attachmentBytes: BigInt(row.sizeBytes) })
@@ -402,6 +460,7 @@ export class SyncService {
           },
         });
     });
+    await this.blobs.remove(row.bucketKey);
     return { status: "ready" as const };
   }
 
@@ -415,7 +474,8 @@ export class SyncService {
     });
     if (!row) throw new ApiError(404, "not_found", "Attachment not found.");
     return {
-      ...(await this.blobs.presignDownload(row.bucketKey)),
+      // Served as a download with an inert type: the storage host must never render user bytes.
+      ...(await this.blobs.presignDownload(row.bucketKey, 600, true)),
       mimeType: row.mimeType,
       sizeBytes: row.sizeBytes,
     };

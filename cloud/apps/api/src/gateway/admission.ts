@@ -75,14 +75,17 @@ const TOP_PRIORITY_WEIGHT = 16;
 /**
  * Per-user and per-IP request rates, the org's concurrent-stream slot, and the
  * instance's in-flight caps (from Settings). `load` is the instance counter
- * the gateway reports in its status.
+ * the gateway reports in its status. A slot the gateway never releases (a
+ * crash) frees itself after `slotTtlSeconds`, which must outlast the longest
+ * stream the gateway allows or a long stream would stop counting.
  */
 export function rateLimitPolicy(deps: {
   readonly limiter: RateLimiter;
   readonly settings: Settings;
   readonly load: { inFlight: number };
+  readonly slotTtlSeconds: number;
 }): AdmissionPolicy {
-  const { limiter, settings, load } = deps;
+  const { limiter, settings, load, slotTtlSeconds } = deps;
   return {
     name: "rate",
     admit: async ({ facts, limits }) => {
@@ -110,7 +113,7 @@ export function rateLimitPolicy(deps: {
       const hold = await limiter.acquire(
         `org:${facts.principal.orgId}`,
         limits.concurrentStreams,
-        600,
+        slotTtlSeconds,
       );
       if (!hold.acquired)
         throw new ApiError(

@@ -46,6 +46,43 @@ List<int> clientAuthTranscript(List<int> transcript) => [
   ...transcript,
   ..._text('client-auth'),
 ];
+const pairingProofMacLabel = 'pairing-proof-mac';
+const pairingProofPhoneLabel = 'pairing-proof-phone';
+
+/// Proof that the sender holds the pairing secret, which the relay never sees.
+Future<String> pairingProof(
+  List<int> pairingSecret,
+  List<int> transcript,
+  String label,
+) async => base64Encode(
+  (await Hmac.sha256().calculateMac([
+    ...transcript,
+    ..._text(label),
+  ], secretKey: SecretKey(pairingSecret))).bytes,
+);
+
+/// Splits a typed pairing code into the code the relay looks up and the
+/// pairing secret, so the relay never learns the typed code.
+Future<({String lookupCode, List<int> pairingSecret})> derivePairingCodeKeys(
+  String code,
+) async {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  final bytes =
+      await (await Pbkdf2(
+            macAlgorithm: Hmac.sha256(),
+            iterations: 100000,
+            bits: 512,
+          ).deriveKey(
+            secretKey: SecretKey(utf8.encode(code)),
+            nonce: utf8.encode('djl-pairing-code-v1'),
+          ))
+          .extractBytes();
+  return (
+    lookupCode: [for (var i = 0; i < 10; i++) alphabet[bytes[i] % 32]].join(),
+    pairingSecret: bytes.sublist(32),
+  );
+}
+
 List<int> trustedResolveTranscript(Map<String, dynamic> input) => [
   ..._text('djl-trusted-session-resolve-v1'),
   ..._text(input['macDeviceId'] as Object),
@@ -53,6 +90,18 @@ List<int> trustedResolveTranscript(Map<String, dynamic> input) => [
   ...lengthPrefixed(base64Decode(input['phoneIdentityPublicKey'] as String)),
   ..._text(input['nonce'] as Object),
   ..._text(input['timestamp'] as Object),
+];
+
+/// What the phone signs on every relay connect so the relay knows who it is.
+List<int> relayPhoneConnectTranscript(
+  String sessionId,
+  String phoneDeviceId,
+  String phoneIdentityPublicKey,
+) => [
+  ..._text('djl-relay-phone-connect-v1'),
+  ..._text(sessionId),
+  ..._text(phoneDeviceId),
+  ...lengthPrefixed(base64Decode(phoneIdentityPublicKey)),
 ];
 Future<bool> verifyMacHello(
   Map<String, dynamic> input,

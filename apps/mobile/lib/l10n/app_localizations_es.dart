@@ -1778,6 +1778,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Actualiza DJL en tu computadora: esta vinculación usa otro protocolo.';
 
   @override
+  String get pairingProofMismatch =>
+      'El código de vinculación o el código QR no coincidió. Genera uno nuevo e inténtalo otra vez.';
+
+  @override
   String get pairingInvalidIdentifier =>
       'Identificador de dispositivo o sesión no válido.';
 

@@ -129,6 +129,30 @@ describe("electronUpdaterSecurity", () => {
     expect(result).toContain("Someone Else");
   });
 
+  it("rejects a certificate whose subject only contains the configured distinguished name", async () => {
+    const result = await verifyWindowsUpdateCodeSignature(
+      ["CN=DJL, O=Acme Tools"],
+      "C:\\Temp\\DjlSetup.exe",
+      { info: vi.fn(), warn: vi.fn() },
+      {
+        env: { SystemRoot: "C:\\Windows" },
+        execFile: vi.fn((_file, _args, _options, callback) => {
+          callback(
+            null,
+            JSON.stringify({
+              Status: 0,
+              Path: "C:\\Temp\\DjlSetup.exe",
+              SignerCertificate: { Subject: "CN=DJL, O=Acme Tools, L=Elsewhere, C=US" },
+            }),
+            "",
+          );
+        }),
+      },
+    );
+
+    expect(result).toContain("publisherNames: CN=DJL, O=Acme Tools");
+  });
+
   it("patches electron-updater BaseUpdater spawnSyncLog only on Windows", () => {
     // oxlint-disable-next-line typescript/no-extraneous-class -- The test patches a constructor prototype, matching electron-updater.
     class FakeBaseUpdater {}

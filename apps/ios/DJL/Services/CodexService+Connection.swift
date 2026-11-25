@@ -257,6 +257,7 @@ extension CodexService {
         lastAppliedBridgeOutboundSeq = 0
         lastAppliedBridgeReplayEpoch = nil
         shouldForceQRBootstrapOnNextHandshake = false
+        pendingPairingSecret = nil
         trustedReconnectFailureCount = 0
         if let trustedMac = currentTrustedMacRecord {
             secureConnectionState = .liveSessionUnresolved
@@ -284,6 +285,7 @@ extension CodexService {
         lastAppliedBridgeOutboundSeq = 0
         lastAppliedBridgeReplayEpoch = nil
         shouldForceQRBootstrapOnNextHandshake = false
+        pendingPairingSecret = nil
         trustedReconnectFailureCount = 0
         secureConnectionState = .liveSessionUnresolved
         secureMacFingerprint = codexSecureFingerprint(for: trustedMac.macIdentityPublicKey)

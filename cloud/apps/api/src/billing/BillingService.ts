@@ -6,10 +6,14 @@
  * processing; a successfully processed event is a no-op on replay. Every ledger write carries an
  * idempotency key derived from the Stripe object id so a retried webhook can
  * never double-grant.
+ *
+ * A refunded or disputed top-up payment takes its credits back. Credits that
+ * were already spent leave the org in debt (a negative topup balance), which
+ * blocks paid usage until a later top-up clears it.
  */
 import { and, eq } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import { TOPUP_MIN_USD_CENTS, usdCentsToMicro, type PlanId } from "@djl/domain";
+import { formatCredits, TOPUP_MIN_USD_CENTS, usdCentsToMicro, type PlanId } from "@djl/domain";
 import type Stripe from "stripe";
 
 import { writeAudit } from "../audit/AuditLog.ts";
@@ -32,11 +36,18 @@ function toStatus(status: string): SubscriptionStatus {
   return (SUBSCRIPTION_STATUSES.has(status) ? status : "incomplete") as SubscriptionStatus;
 }
 
+type Clawback = NonNullable<Awaited<ReturnType<LedgerService["clawbackTopup"]>>>;
+
 export class BillingService {
   constructor(
     private readonly db: DjlDatabase,
     private readonly stripe: StripeGateway,
     private readonly config: BillingConfig,
+    private readonly onAlert?: (input: {
+      readonly severity: "warn" | "p0";
+      readonly title: string;
+      readonly body: string;
+    }) => void,
   ) {}
 
   async ensureCustomer(orgId: string, email: string, name: string): Promise<string> {
@@ -325,8 +336,77 @@ export class BillingService {
           .onConflictDoNothing({ target: schema.invoices.id });
         return "processed";
       }
+      case "charge.refunded": {
+        const charge = event.data.object;
+        const paymentIntent =
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id;
+        if (
+          !paymentIntent ||
+          !Number.isSafeInteger(charge.amount) ||
+          !Number.isSafeInteger(charge.amount_refunded)
+        )
+          return "ignored";
+        const taken = await ledger.clawbackTopup({
+          paymentIntentId: paymentIntent,
+          refunded: charge.amount_refunded,
+          charged: charge.amount,
+          // One entry per refunded total of the charge, so partial refunds add up and replays do not.
+          idempotencyKey: `stripe:refund:${charge.id}:${charge.amount_refunded}`,
+          actor: `stripe:${event.id}`,
+          reason: "payment refunded",
+        });
+        if (!taken) return "ignored";
+        await this.auditClawback(db, event.id, taken, "payment refunded");
+        return "processed";
+      }
+      case "charge.dispute.created":
+      case "charge.dispute.funds_withdrawn": {
+        const dispute = event.data.object;
+        const paymentIntent =
+          typeof dispute.payment_intent === "string"
+            ? dispute.payment_intent
+            : dispute.payment_intent?.id;
+        if (!paymentIntent) return "ignored";
+        // A disputed payment is taken back in full, less what refunds already took.
+        const taken = await ledger.clawbackTopup({
+          paymentIntentId: paymentIntent,
+          refunded: 1,
+          charged: 1,
+          idempotencyKey: `stripe:dispute:${dispute.id}`,
+          actor: `stripe:${event.id}`,
+          reason: "payment disputed",
+        });
+        if (!taken) return "ignored";
+        await this.auditClawback(db, event.id, taken, "payment disputed");
+        await db.insert(schema.abuseFlags).values({
+          orgId: taken.orgId,
+          kind: "payment",
+          severity: "warn",
+          details: { dispute: dispute.id, reason: dispute.reason },
+        });
+        this.onAlert?.({
+          severity: "warn",
+          title: "Top-up payment disputed",
+          body: `org ${taken.orgId}: dispute ${dispute.id} (${dispute.reason}) took back ${formatCredits(taken.amount)} credits; the org owes ${formatCredits(taken.debt)}`,
+        });
+        return "processed";
+      }
       default:
         return "ignored";
     }
+  }
+
+  private auditClawback(db: DjlDatabase | Tx, eventId: string, taken: Clawback, reason: string) {
+    return writeAudit(db, {
+      actorType: "stripe",
+      actorId: eventId,
+      action: "credits.clawback",
+      targetType: "org",
+      targetId: taken.orgId,
+      after: { credits: formatCredits(taken.amount), debt: formatCredits(taken.debt) },
+      reason,
+    });
   }
 }

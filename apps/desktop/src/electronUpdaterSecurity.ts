@@ -352,8 +352,10 @@ export async function verifyWindowsUpdateCodeSignature(
       for (const name of publisherNames) {
         const dn = parseDistinguishedName(name);
         if (dn.size > 0) {
+          // A configured distinguished name is the certificate's whole subject: a certificate
+          // carrying the same fields plus others was issued to a different subject.
           const keys = Array.from(dn.keys());
-          if (keys.every((key) => dn.get(key) === subject.get(key))) {
+          if (dn.size === subject.size && keys.every((key) => dn.get(key) === subject.get(key))) {
             return null;
           }
         } else if (name === subject.get("CN")) {

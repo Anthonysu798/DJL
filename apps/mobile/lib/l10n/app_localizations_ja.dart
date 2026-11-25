@@ -1672,6 +1672,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'パソコンの DJL を更新してください。このペアリングは別のプロトコルを使っています。';
 
   @override
+  String get pairingProofMismatch =>
+      'ペアリングコードまたは QR コードが一致しませんでした。新しいコードを生成して、もう一度お試しください。';
+
+  @override
   String get pairingInvalidIdentifier => 'デバイスまたはセッションの ID が無効です。';
 
   @override

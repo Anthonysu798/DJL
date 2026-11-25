@@ -91,6 +91,27 @@ describe("TrialService", () => {
     expect(await trial.onFirstCloudRequest(c.orgId)).toBe(false);
   });
 
+  it("treats every spelling of one number as the same phone and refuses malformed numbers", async () => {
+    const p = phone();
+    const claim = async (phoneNumber: string) => {
+      const { orgId, userId } = await seedOrg(conn.db, "trial-fmt");
+      return trial.claim({
+        orgId,
+        userId,
+        phoneNumber,
+        phoneVerified: true,
+        deviceFingerprint: null,
+        ip: null,
+        suspended: false,
+      });
+    };
+    await claim(`${p.slice(0, 2)} ${p.slice(2, 5)} ${p.slice(5)}`);
+    for (const spelling of [p, `${p.slice(0, 2)}-${p.slice(2, 5)}-${p.slice(5)}`])
+      await expect(claim(spelling)).rejects.toMatchObject({ code: "phone_already_used" });
+    for (const malformed of [p.slice(1), `${p}x`, "+1"])
+      await expect(claim(malformed)).rejects.toMatchObject({ code: "phone_required" });
+  });
+
   it("requires a verified phone", async () => {
     const { orgId, userId } = await seedOrg(conn.db, "trial-np");
     await expect(

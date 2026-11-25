@@ -3,10 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildHandshakeTranscript,
+  buildRelayMacRegistrationTranscript,
+  buildRelayPhoneConnectTranscript,
   buildTrustedSessionResolveTranscript,
   DJL_PAIRING_QR_VERSION,
   DJL_SECURE_PROTOCOL_VERSION,
   PairingQrPayload,
+  buildPairingProofInput,
+  splitPairingCodeKeyMaterial,
   SecureControlMessage,
   secureNonce,
 } from "./index";
@@ -24,12 +28,46 @@ describe("DJL remote protocol", () => {
       macIdentityPublicKey: btoa(String.fromCharCode(...new Uint8Array(32).fill(1))),
       expiresAt: 1_784_376_000_000,
       displayName: "Toni’s Mac",
+      pairingSecret: btoa(String.fromCharCode(...new Uint8Array(32).fill(2))),
     };
 
     expect(Schema.decodeUnknownSync(PairingQrPayload)(payload)).toEqual(payload);
     expect(() =>
       Schema.decodeUnknownSync(PairingQrPayload)({ ...payload, relay: "ws://relay.djl.app" }),
     ).toThrow();
+  });
+
+  it("rejects a pairing payload without the pairing secret", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(PairingQrPayload)({
+        v: DJL_PAIRING_QR_VERSION,
+        relay: "wss://relay.djl.app/connect",
+        sessionId: "session-123",
+        macDeviceId: "mac-1",
+        macIdentityPublicKey: btoa(String.fromCharCode(...new Uint8Array(32).fill(1))),
+        expiresAt: 1_784_376_000_000,
+      }),
+    ).toThrow();
+  });
+
+  it("splits pairing-code key material into a lookup code and a separate secret", () => {
+    const keyMaterial = Uint8Array.from({ length: 64 }, (_, index) => index);
+    const { lookupCode, pairingSecret } = splitPairingCodeKeyMaterial(keyMaterial);
+
+    expect(lookupCode).toBe("ABCDEFGHJK");
+    expect(Array.from(pairingSecret)).toEqual(Array.from(keyMaterial.slice(32)));
+    expect(() => splitPairingCodeKeyMaterial(new Uint8Array(32))).toThrow(RangeError);
+  });
+
+  it("domain-separates the two pairing proofs", () => {
+    const transcript = new Uint8Array([1, 2, 3]);
+    const mac = buildPairingProofInput(transcript, "pairing-proof-mac");
+    const phone = buildPairingProofInput(transcript, "pairing-proof-phone");
+
+    expect(toHex(mac)).toBe(
+      `010203${"00000011"}${toHex(new TextEncoder().encode("pairing-proof-mac"))}`,
+    );
+    expect(toHex(phone)).not.toBe(toHex(mac));
   });
 
   it("rejects unknown secure control messages", () => {
@@ -83,6 +121,37 @@ describe("DJL remote protocol", () => {
         "000000056d61632d310000000770686f6e652d3100000020070707070707070707070707" +
         "0707070707070707070707070707070707070707000000076e6f6e63652d310000000d" +
         "31373834333736303030303030",
+    );
+  });
+
+  it("domain-separates the relay registration and phone connect transcripts", () => {
+    const key = new Uint8Array(32).fill(7);
+    const hexKey = `00000020${"07".repeat(32)}`;
+    const hexSession = `0000000b${toHex(new TextEncoder().encode("session-123"))}`;
+
+    expect(
+      toHex(
+        buildRelayMacRegistrationTranscript({
+          sessionId: "session-123",
+          macDeviceId: "mac-1",
+          macIdentityPublicKey: key,
+        }),
+      ),
+    ).toBe(
+      `0000001d${toHex(new TextEncoder().encode("djl-relay-mac-registration-v1"))}` +
+        `${hexSession}00000005${toHex(new TextEncoder().encode("mac-1"))}${hexKey}`,
+    );
+    expect(
+      toHex(
+        buildRelayPhoneConnectTranscript({
+          sessionId: "session-123",
+          phoneDeviceId: "mac-1",
+          phoneIdentityPublicKey: key,
+        }),
+      ),
+    ).toBe(
+      `0000001a${toHex(new TextEncoder().encode("djl-relay-phone-connect-v1"))}` +
+        `${hexSession}00000005${toHex(new TextEncoder().encode("mac-1"))}${hexKey}`,
     );
   });
 

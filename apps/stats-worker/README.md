@@ -15,7 +15,8 @@ site's Download buttons, and unique desktop installs. All events are stored in a
   Cloudflare derives from the request.
 
 No IP address, hostname, username, email address, referrer, query string, user agent, project data,
-or application content is received or stored.
+or application content is stored. The sender's address is used only as the key of Cloudflare's
+rate limiter and is never written to D1.
 
 Deployed at `https://djl-stats.slcor.workers.dev` (D1 database `djl-stats`, account subdomain
 `slcor.workers.dev`). The read token lives outside the repository.
@@ -29,6 +30,12 @@ Deployed at `https://djl-stats.slcor.workers.dev` (D1 database `djl-stats`, acco
   private breakdowns by country, path, platform, source, version, and the last 30 days.
 - `GET /v1/public-stats` — public, cached for 60 seconds, and returns only aggregate download totals
   by source, platform, and day. It exposes no visit, install, country, visitor ID, or raw-row data.
+
+The three `POST` routes are public, so each is bounded: a body over 4 KiB or with an unexpected
+shape is rejected, and each source address is limited per minute by the `ratelimits` bindings in
+`wrangler.jsonc` (20 install reports; 600 visit and download reports combined, because the landing
+site sends all of them from its own server address). A limited request gets `429 rate_limited`;
+the desktop app retries its install report on the next launch.
 
 ## One-time setup
 

@@ -44,7 +44,9 @@ Compatibility identifiers such as the `@djl/*` package scope remain internal. DJ
 
 ## Pairing and key agreement
 
-The QR contains the relay URL, a random session identifier, the computer device identifier and Ed25519 public identity, the expiry, protocol version, and display name. It does not contain the computer private key, relay host secret, notification secret, or an application traffic key.
+The QR contains the relay URL, a random session identifier, the computer device identifier and Ed25519 public identity, the expiry, protocol version, display name, and a 32-byte pairing secret. It does not contain the computer private key, relay host secret, notification secret, or an application traffic key.
+
+The pairing secret never reaches the relay. A typed pairing code is stretched with PBKDF2-HMAC-SHA256 into a lookup code, which the relay stores, and the same pairing secret, which it does not. During first pairing the computer sends an HMAC of the handshake transcript under that secret in ServerHello and the phone sends its own in ClientAuth; each side rejects the other without it. The relay sees every other handshake field, so this proof is what stops it from pairing a device of its own or substituting its own computer key. Trusted reconnects do not use the secret: they rely on the pinned identities.
 
 ```mermaid
 sequenceDiagram
@@ -75,6 +77,15 @@ When the QR session expires or DJL restarts, the computer registers a fresh rand
 
 The registry response never grants trust by itself. The gateway still verifies the phone identity against its single local trust record and the phone verifies the computer identity against its Keychain record. An identity mismatch requires re-pairing.
 
+## Relay connection authentication
+
+The relay also checks who is on each socket, separately from the end-to-end handshake. Both signatures below are Ed25519 over a length-prefixed, domain-separated transcript of the relay session ID, the device ID, and the identity key. They carry no timestamp because the session ID is random for each launch.
+
+- The computer signs its registration on every connect. The registry pins the first signed identity key for a computer device ID and afterwards refuses a registration for that ID that is unsigned or uses another key, so another session cannot overwrite the entry. Only the computer that owns a pairing-code row can replace or delete it. Computers that have not updated register unsigned and stay unpinned until they do.
+- The phone signs every connect. A phone that proves it is the registration's trusted phone replaces every other phone socket. Any other phone socket (a phone that is pairing, an older app that sends no identity, or anyone holding the session ID) cannot disconnect the trusted phone and, while it is connected, receives only `serverHello`, `secureReady`, `secureError`, and host presence. Encrypted envelopes go to the trusted socket alone. When the computer registers a newly paired phone, that phone's socket takes over and the previous trusted socket is closed.
+- The computer's `relayMacRegistration` updates are consumed by the relay and never forwarded. They may only restate the identity registered at connect time.
+- The gateway keeps its live encrypted session while a new handshake is still unauthenticated. Only a handshake that passes `ClientAuth` replaces it.
+
 ## Relay privacy boundary
 
 The relay can observe:
@@ -88,7 +99,7 @@ The relay cannot decrypt prompts, responses, transcript history, approvals, file
 ## Lifecycle, failure, and revocation
 
 - Electron starts the gateway after app readiness, restarts an unexpected exit with bounded backoff, and terminates it during desktop shutdown.
-- A newer socket for the same role replaces the older socket. A session permits one computer and one phone connection.
+- A newer computer socket replaces the older one. A newer phone socket replaces older phone sockets, except that only the trusted phone can replace the trusted phone (see Relay connection authentication).
 - Frames are capped at 1 MiB and each connection has a bounded message rate. Oversized, malformed, stale, or replayed input is rejected.
 - The iPhone shows a reconnecting state during transient network loss. Identity mismatch, revocation, or unsupported protocol versions become explicit re-pair/update states.
 - **Reset trusted phone** removes the computer's local trust and rotates the pairing session. The relay administrator endpoint can revoke a session, immediately closing both sockets.

@@ -25,6 +25,7 @@ interface PairingPayload {
   macIdentityPublicKey: string;
   expiresAt: number;
   displayName: string;
+  pairingSecret: string;
 }
 
 const gateway = require("@djl/remote-gateway") as GatewayModule;
@@ -53,7 +54,8 @@ function sanitizePairingPayload(value: unknown): PairingPayload | null {
     typeof source.macDeviceId !== "string" ||
     typeof source.macIdentityPublicKey !== "string" ||
     typeof source.expiresAt !== "number" ||
-    typeof source.displayName !== "string"
+    typeof source.displayName !== "string" ||
+    typeof source.pairingSecret !== "string"
   ) {
     return null;
   }
@@ -65,6 +67,7 @@ function sanitizePairingPayload(value: unknown): PairingPayload | null {
     macIdentityPublicKey: source.macIdentityPublicKey,
     expiresAt: source.expiresAt,
     displayName: source.displayName,
+    pairingSecret: source.pairingSecret,
   };
 }
 

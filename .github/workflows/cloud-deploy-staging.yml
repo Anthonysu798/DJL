@@ -19,9 +19,16 @@ concurrency:
 jobs:
   # Staging infrastructure is provisioned by hand once. Until its secrets exist,
   # the deploy job is skipped instead of failing every push to main.
+  # A Cloud CI run only qualifies when it was a push to this repository. A pull request from a
+  # fork whose branch is also named `main` satisfies the branch filter above, so the event and
+  # the source repository are checked here, before any job that can read staging secrets.
   preflight:
     name: Staging secrets present
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
     outputs:
       ready: ${{ steps.check.outputs.ready }}
@@ -51,7 +58,11 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Require the deployed commit to be on main
+        run: |
+          git merge-base --is-ancestor HEAD origin/main || { echo "commit is not on main"; exit 1; }
       - name: Require successful Cloud CI for the exact deployed commit
         env:
           GH_TOKEN: ${{ github.token }}

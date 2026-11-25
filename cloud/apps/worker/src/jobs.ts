@@ -25,6 +25,8 @@ export interface JobDeps {
 /**
  * Reservations without settlement after 10 minutes are released (which also
  * drops their usage window holds); holds left without a reservation expire.
+ * A stream that is still running keeps its hold alive, and the ledger skips
+ * reservations with a live hold, so long streams are not released under it.
  */
 export async function releaseStaleReservations(
   deps: JobDeps,
@@ -104,7 +106,7 @@ export async function purgeDeletedUsers(deps: JobDeps): Promise<number> {
       banExpires: schema.user.banExpires,
     })
     .from(schema.user)
-    .where(and(eq(schema.user.banReason, "self_delete"), lt(schema.user.banExpires, cutoff)));
+    .where(and(eq(schema.user.banReason, "self_delete"), lt(schema.user.deletedAt, cutoff)));
   let count = 0;
   for (const u of due) {
     await deps.db.transaction(async (tx) => {

@@ -1,9 +1,10 @@
 /**
  * Self-service account deletion (required for App Store review). Uses the
  * same soft delete as the admin console: the account is locked with
- * `ban_reason = 'self_delete'`, the worker purges it after the 30-day grace,
- * and every session ends now (their access tokens go on the denylist through
- * the session delete hook).
+ * `ban_reason = 'self_delete'` and `deleted_at`, the worker purges it after the
+ * 30-day grace, and every session ends now (their access tokens go on the
+ * denylist through the session delete hook). The ban never expires: Better Auth
+ * lifts an expired ban at the next sign-in, which would undelete the account.
  */
 import { eq } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
@@ -23,7 +24,7 @@ export async function deleteOwnAccount(input: {
   await db.transaction(async (tx) => {
     await tx
       .update(schema.user)
-      .set({ banned: true, banReason: "self_delete", banExpires: deletedAt })
+      .set({ banned: true, banReason: "self_delete", banExpires: null, deletedAt })
       .where(eq(schema.user.id, userId));
     await writeAudit(tx, {
       actorType: "user",

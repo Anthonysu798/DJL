@@ -11,6 +11,20 @@
       "migrations_dir": "migrations",
     },
   ],
+  // Per-address ceilings for the public ingest routes. The landing site reports every visit and
+  // download from its own server address, so it gets a much higher ceiling than a single desktop.
+  "ratelimits": [
+    {
+      "name": "INSTALL_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 },
+    },
+    {
+      "name": "LANDING_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 600, "period": 60 },
+    },
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 0.1,

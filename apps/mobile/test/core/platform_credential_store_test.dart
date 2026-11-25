@@ -152,6 +152,7 @@ void main() {
           'expiresAt': 1,
         }),
         checkExpiry: false,
+        requireSecret: false,
       );
       nativeHandler((call) async {
         if (unavailable) {

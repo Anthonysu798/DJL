@@ -83,7 +83,7 @@ describe('QA-only one-time pairing codes',()=>{
  test('success preserves exactly one fresh production wire payload and omits relay/extras',async()=>{
   const jwk=generateKeyPairSync('ed25519').privateKey.export({format:'jwk'});
   const wire=secure.createBridgeSecureTransport({sessionId:'unit-test-session',relayUrl:relay,persistTrustedPhone:false,deviceState:{macDeviceId:'unit-test-mac',macIdentityPrivateKey:b64(jwk.d!),macIdentityPublicKey:b64(jwk.x!),trustedPhones:{}}});
-  let actual:Record<string,unknown>|undefined;const f=setup(()=>{actual=wire.createPairingPayload();return actual;});const {code}=await f.issue();expect(actual).toBeUndefined();const response=await f.resolve(code);expect(response?.status).toBe(200);const {relay:omitted,...expected}=actual!;expect(omitted).toBe(relay);expect(await response!.json()).toEqual({ok:true,...expected});expect(f.calls()).toBe(1);
+  let actual:Record<string,unknown>|undefined;const f=setup(()=>{actual=wire.createPairingPayload();return actual;});const {code}=await f.issue();expect(actual).toBeUndefined();const response=await f.resolve(code);expect(response?.status).toBe(200);const {relay:omitted,pairingSecret,...expected}=actual!;expect(omitted).toBe(relay);expect(pairingSecret).toMatch(/^[A-Za-z0-9+/]{43}=$/);expect(await response!.json()).toEqual({ok:true,...expected});expect(f.calls()).toBe(1);
  });
  test('displayName is optional and expected relay must be actual loopback websocket route',async()=>{
   const base={v:2,relay,sessionId:'s',macDeviceId:'m',macIdentityPublicKey:publicKey,expiresAt:301000};const f=setup(()=>base);const {code}=await f.issue();const response=await f.resolve(code);expect(Object.keys(await response!.json())).not.toContain('displayName');

@@ -39,6 +39,58 @@ void main() {
       );
     },
   );
+  test('relay connect transcript and signature match the relay', () async {
+    final vectors = fixture['relayAuth'] as Map<String, dynamic>;
+    final publicKey = input['phoneIdentityPublicKey'] as String;
+    final transcript = relayPhoneConnectTranscript(
+      'fixture-session',
+      'fixture-phone',
+      publicKey,
+    );
+    expect(base64Encode(transcript), vectors['phoneConnectTranscript']);
+    final signature = await Ed25519().sign(
+      transcript,
+      keyPair: await Ed25519().newKeyPairFromSeed(
+        base64Decode(fixture['phoneSeed'] as String),
+      ),
+    );
+    expect(base64Encode(signature.bytes), vectors['phoneConnectSignature']);
+    expect(
+      await Ed25519().verify(
+        transcript,
+        signature: Signature(
+          signature.bytes,
+          publicKey: SimplePublicKey(
+            base64Decode(publicKey),
+            type: KeyPairType.ed25519,
+          ),
+        ),
+      ),
+      isTrue,
+    );
+  });
+  test('typed code derives the relay lookup code and pairing secret', () async {
+    final pairing = fixture['pairing'] as Map<String, dynamic>;
+    final keys = await derivePairingCodeKeys(pairing['code'] as String);
+    expect(keys.lookupCode, pairing['lookupCode']);
+    expect(base64Encode(keys.pairingSecret), pairing['pairingSecret']);
+  });
+  test(
+    'pairing proofs match the gateway over the fixture transcript',
+    () async {
+      final pairing = fixture['pairing'] as Map<String, dynamic>;
+      final secret = base64Decode(pairing['pairingSecret'] as String);
+      final transcript = base64Decode(fixture['transcript'] as String);
+      expect(
+        await pairingProof(secret, transcript, pairingProofMacLabel),
+        pairing['macPairingProof'],
+      );
+      expect(
+        await pairingProof(secret, transcript, pairingProofPhoneLabel),
+        pairing['phonePairingProof'],
+      );
+    },
+  );
   test('X25519 and directional HKDF keys match gateway test vectors', () async {
     final keys = await deriveRemoteKeys(
       input,

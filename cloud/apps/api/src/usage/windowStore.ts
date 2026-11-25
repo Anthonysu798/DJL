@@ -129,30 +129,48 @@ export async function holdWindows(
 }
 
 /**
+ * Keep a running request's hold alive. The stale reservation job releases
+ * only reservations whose hold has expired, so a stream that outlives
+ * HOLD_TTL_MS is neither released nor swept while it still reports in.
+ */
+export async function extendHold(
+  db: DjlDatabase | Tx,
+  reservationId: string,
+  now: Date,
+): Promise<void> {
+  await db
+    .update(usageHolds)
+    .set({ expiresAt: new Date(now.getTime() + HOLD_TTL_MS) })
+    .where(eq(usageHolds.id, reservationId));
+}
+
+/**
  * Replace a reservation's hold with its actual cost in the current bucket.
- * The window records at most what it held (a cut stream can overshoot by one
- * chunk), so concurrent requests never push a window past its cap; the
- * ledger still charges the full actual cost.
+ * The window records what was actually spent, even past the hold, so the
+ * windows and the ledger agree. `userId` names whose windows to charge when
+ * the hold is already gone (it expired or the reservation was released while
+ * the request was still running).
  */
 export async function settleHold(
   tx: Tx,
   reservationId: string,
   actual: Microcredits,
   now: Date,
+  userId?: string,
 ): Promise<void> {
   const hold = await tx.query.usageHolds.findFirst({ where: eq(usageHolds.id, reservationId) });
-  if (!hold) return;
-  const state = await windowState(tx, hold.userId, true);
+  const spender = hold?.userId ?? userId;
+  if (!spender) return;
+  const state = await windowState(tx, spender, true);
   await tx.delete(usageHolds).where(eq(usageHolds.id, reservationId));
-  const spent = actual < hold.amountMicro ? actual : hold.amountMicro;
-  if (spent <= 0n) return;
+  if (actual <= 0n) return;
   const { weekStart } = windowBounds({ now, weekAnchorAt: state.weekAnchorAt, floor: state.floor });
   await tx
     .insert(usageBuckets)
-    .values({ userId: hold.userId, bucketStart: bucketStartFor(now, weekStart), spentMicro: spent })
+    .values({ userId: spender, bucketStart: bucketStartFor(now, weekStart), spentMicro: actual })
     .onConflictDoUpdate({
       target: [usageBuckets.userId, usageBuckets.bucketStart],
-      set: { spentMicro: sql`${usageBuckets.spentMicro} + ${spent}` },
+      set: { spentMicro: sql`${usageBuckets.spentMicro} + ${actual}` },
     });
 }
 

@@ -8,7 +8,21 @@ export const DJL_SECURE_PROTOCOL_VERSION = 2 as const;
 export const DJL_SECURE_HANDSHAKE_TAG = "djl-e2ee-v1" as const;
 export const DJL_CLIENT_AUTH_LABEL = "client-auth" as const;
 export const DJL_TRUSTED_SESSION_RESOLVE_TAG = "djl-trusted-session-resolve-v1" as const;
+export const DJL_RELAY_MAC_REGISTRATION_TAG = "djl-relay-mac-registration-v1" as const;
+export const DJL_RELAY_PHONE_CONNECT_TAG = "djl-relay-phone-connect-v1" as const;
 export const DJL_PAIRING_TTL_MS = 5 * 60 * 1_000;
+// Pairing secret: PBKDF2-HMAC-SHA256 of the typed pairing code gives 64 bytes. The first ten
+// become the lookup code the relay stores; the last 32 are the secret the relay never sees.
+// Both sides prove they hold it, so a relay cannot pair its own device or swap in its own key.
+// The QR version stays at 2: deployed relays reject any other value at registration.
+export const DJL_PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" as const;
+export const DJL_PAIRING_CODE_LENGTH = 10;
+export const DJL_PAIRING_CODE_KDF_SALT = "djl-pairing-code-v1" as const;
+export const DJL_PAIRING_CODE_KDF_ITERATIONS = 100_000;
+export const DJL_PAIRING_CODE_KDF_BYTES = 64;
+export const DJL_PAIRING_SECRET_BYTES = 32;
+export const DJL_PAIRING_PROOF_MAC_LABEL = "pairing-proof-mac" as const;
+export const DJL_PAIRING_PROOF_PHONE_LABEL = "pairing-proof-phone" as const;
 export const DJL_MAX_REPLAY_MESSAGES = 500;
 export const DJL_MAX_REPLAY_BYTES = 10 * 1_024 * 1_024;
 
@@ -42,6 +56,7 @@ export const PairingQrPayload = Schema.Struct({
   macIdentityPublicKey: Base64Key,
   expiresAt: PositiveTimestamp,
   displayName: Schema.optional(Schema.String.check(Schema.isMaxLength(160))),
+  pairingSecret: Base64Key,
 });
 export type PairingQrPayload = typeof PairingQrPayload.Type;
 
@@ -71,6 +86,8 @@ export const SecureServerHello = Schema.Struct({
   macSignature: Base64Value,
   clientNonce: Schema.optional(Base64Value),
   displayName: Schema.optional(Schema.String.check(Schema.isMaxLength(160))),
+  // Present for qr_bootstrap: HMAC of the transcript under the pairing secret.
+  pairingProof: Schema.optional(Base64Value),
 });
 
 export const SecureClientAuth = Schema.Struct({
@@ -79,6 +96,8 @@ export const SecureClientAuth = Schema.Struct({
   phoneDeviceId: BoundedIdentifier,
   keyEpoch: NonNegativeInt,
   phoneSignature: Base64Value,
+  // Required for qr_bootstrap: HMAC of the transcript under the pairing secret.
+  pairingProof: Schema.optional(Base64Value),
 });
 
 export const SecureReady = Schema.Struct({
@@ -184,6 +203,29 @@ export const buildHandshakeTranscript = (input: HandshakeTranscriptInput): Uint8
     lengthPrefixedUtf8(input.expiresAtForTranscript),
   ]);
 
+/** The bytes each side MACs with the pairing secret during qr_bootstrap. */
+export const buildPairingProofInput = (
+  transcript: Uint8Array,
+  label: typeof DJL_PAIRING_PROOF_MAC_LABEL | typeof DJL_PAIRING_PROOF_PHONE_LABEL,
+): Uint8Array => concatenate([transcript, lengthPrefixedUtf8(label)]);
+
+/** Splits the pairing-code KDF output into the relay lookup code and the pairing secret. */
+export const splitPairingCodeKeyMaterial = (
+  keyMaterial: Uint8Array,
+): { readonly lookupCode: string; readonly pairingSecret: Uint8Array } => {
+  if (keyMaterial.byteLength !== DJL_PAIRING_CODE_KDF_BYTES) {
+    throw new RangeError("Pairing code key material must be 64 bytes");
+  }
+  let lookupCode = "";
+  for (let index = 0; index < DJL_PAIRING_CODE_LENGTH; index += 1) {
+    lookupCode += DJL_PAIRING_CODE_ALPHABET[keyMaterial[index]! % DJL_PAIRING_CODE_ALPHABET.length];
+  }
+  return {
+    lookupCode,
+    pairingSecret: keyMaterial.slice(DJL_PAIRING_CODE_KDF_BYTES - DJL_PAIRING_SECRET_BYTES),
+  };
+};
+
 export interface TrustedSessionResolveTranscriptInput {
   readonly macDeviceId: string;
   readonly phoneDeviceId: string;
@@ -202,6 +244,40 @@ export const buildTrustedSessionResolveTranscript = (
     lengthPrefixed(input.phoneIdentityPublicKey),
     lengthPrefixedUtf8(input.nonce),
     lengthPrefixedUtf8(input.timestamp),
+  ]);
+
+export interface RelayMacRegistrationTranscriptInput {
+  readonly sessionId: string;
+  readonly macDeviceId: string;
+  readonly macIdentityPublicKey: Uint8Array;
+}
+
+/** What the computer signs so the relay can pin its identity to its device id. */
+export const buildRelayMacRegistrationTranscript = (
+  input: RelayMacRegistrationTranscriptInput,
+): Uint8Array =>
+  concatenate([
+    lengthPrefixedUtf8(DJL_RELAY_MAC_REGISTRATION_TAG),
+    lengthPrefixedUtf8(input.sessionId),
+    lengthPrefixedUtf8(input.macDeviceId),
+    lengthPrefixed(input.macIdentityPublicKey),
+  ]);
+
+export interface RelayPhoneConnectTranscriptInput {
+  readonly sessionId: string;
+  readonly phoneDeviceId: string;
+  readonly phoneIdentityPublicKey: Uint8Array;
+}
+
+/** What the phone signs on every relay connect so the relay can tell it from a stranger. */
+export const buildRelayPhoneConnectTranscript = (
+  input: RelayPhoneConnectTranscriptInput,
+): Uint8Array =>
+  concatenate([
+    lengthPrefixedUtf8(DJL_RELAY_PHONE_CONNECT_TAG),
+    lengthPrefixedUtf8(input.sessionId),
+    lengthPrefixedUtf8(input.phoneDeviceId),
+    lengthPrefixed(input.phoneIdentityPublicKey),
   ]);
 
 export const secureNonce = (sender: SecureSender, counter: number): Uint8Array => {

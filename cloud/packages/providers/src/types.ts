@@ -96,6 +96,7 @@ export interface ImageEditRequest {
   readonly image: { readonly bytes: Uint8Array; readonly mimeType: string };
   readonly n: number;
   readonly size?: string;
+  readonly quality?: string;
   readonly user?: string;
 }
 

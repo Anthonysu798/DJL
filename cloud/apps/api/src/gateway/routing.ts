@@ -4,6 +4,8 @@
  * code that is stored on the usage row (PRD 25, 34.1).
  */
 import type { schema } from "@djl/db";
+import { estimateTokens } from "@djl/domain";
+import type { ChatRequest, ContentPart } from "@djl/providers";
 
 export type CatalogModel = typeof schema.modelCatalog.$inferSelect;
 
@@ -75,19 +77,34 @@ function pick(models: readonly CatalogModel[], prefer: "quality" | "cost"): Cata
   return sorted[0] ?? null;
 }
 
-/** Rough token estimate for reservations: 4 chars per token plus per-message overhead; images ~1k tokens. */
-export function estimateInputTokens(messages: readonly { readonly content: unknown }[]): number {
-  let chars = 0;
+/** Tokens counted for one image part: providers bill an image by its size, not by the bytes sent. */
+const IMAGE_TOKENS = 1_600;
+
+/**
+ * Input estimate for a chat request, from everything that is sent upstream:
+ * every message with its tool calls and content parts, the tool definitions,
+ * and the response format. Text is counted on the serialized request with the
+ * conservative ratio of `estimateTokens`; an image part counts a flat amount
+ * in place of its URL or bytes. `chars` is the serialized size without image
+ * data, for the context window check.
+ */
+export function estimateInput(request: ChatRequest): {
+  readonly tokens: number;
+  readonly chars: number;
+} {
   let images = 0;
-  for (const m of messages) {
-    if (typeof m.content === "string") chars += m.content.length;
-    else if (Array.isArray(m.content)) {
-      for (const part of m.content as { type: string; text?: string }[]) {
-        if (part.type === "text") chars += part.text?.length ?? 0;
-        else images += 1;
-      }
-    }
-    chars += 16;
-  }
-  return Math.ceil(chars / 4) + images * 1000;
+  const messages = request.messages.map((message) =>
+    Array.isArray(message?.content)
+      ? {
+          ...message,
+          content: message.content.map((part: ContentPart) => {
+            if (part?.type !== "image_url" || typeof part.image_url?.url !== "string") return part;
+            images += 1;
+            return { ...part, image_url: { ...part.image_url, url: "" } };
+          }),
+        }
+      : message,
+  );
+  const text = JSON.stringify({ ...request, messages });
+  return { tokens: Math.ceil(estimateTokens(text)) + images * IMAGE_TOKENS, chars: text.length };
 }

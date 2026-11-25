@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   allocateDebit,
+  clawbackDue,
+  debtOf,
   expireBucket,
   foldBalances,
   release,
   reserve,
   settle,
   spendable,
+  splitGrant,
   topupRefundable,
   totalAvailable,
   type LedgerEntry,
@@ -134,6 +137,97 @@ describe("ledger", () => {
     log.push(...entries.map((e) => entry(e)));
     expect(foldBalances(log).trial).toBe(0n);
     expect(uncovered).toBe(creditsToMicro(60));
+    // Nothing consumed is dropped: the shortfall is debt on the topup bucket.
+    const settled = entries.filter((e) => e.type === "settlement");
+    expect(settled.reduce((sum, e) => sum - e.amount, 0n)).toBe(creditsToMicro(260));
+    expect(foldBalances(log).topup).toBe(-creditsToMicro(60));
+    expect(debtOf(foldBalances(log))).toBe(creditsToMicro(60));
+  });
+
+  it("an org in debt can spend only its free allowance until the debt is cleared", () => {
+    const owing = {
+      free: creditsToMicro(10),
+      trial: 0n,
+      plan: creditsToMicro(100),
+      topup: -creditsToMicro(5),
+    };
+    expect(spendable(owing, false)).toBe(0n);
+    expect(spendable(owing, true)).toBe(creditsToMicro(10));
+    const paid = reserve(
+      { orgId: org, reservationId: "r1", estimate: 1n, idempotencyKey: "k1" },
+      owing,
+    );
+    expect(paid).toMatchObject({ ok: false, reason: "insufficient_credits" });
+    const free = reserve(
+      {
+        orgId: org,
+        reservationId: "r2",
+        estimate: creditsToMicro(10),
+        idempotencyKey: "k2",
+        freeEligible: true,
+      },
+      owing,
+    );
+    expect(free.ok && free.entries.map((e) => e.bucket)).toEqual(["free"]);
+    // A top-up larger than the debt clears it and the plan credits are spendable again.
+    const cleared = { ...owing, topup: owing.topup + creditsToMicro(20) };
+    expect(debtOf(cleared)).toBe(0n);
+    expect(spendable(cleared, false)).toBe(creditsToMicro(115));
+  });
+
+  it("a paid grant clears debt before it reaches its own bucket; the free allowance never does", () => {
+    const owing = { free: 0n, trial: 0n, plan: 0n, topup: -creditsToMicro(30) };
+    expect(splitGrant("plan", creditsToMicro(100), owing)).toEqual({
+      repay: creditsToMicro(30),
+      rest: creditsToMicro(70),
+    });
+    expect(splitGrant("trial", creditsToMicro(20), owing)).toEqual({
+      repay: creditsToMicro(20),
+      rest: 0n,
+    });
+    expect(splitGrant("free", creditsToMicro(100), owing).repay).toBe(0n);
+    expect(splitGrant("topup", creditsToMicro(100), owing).repay).toBe(0n);
+    expect(splitGrant("plan", creditsToMicro(100), foldBalances(grants())).repay).toBe(0n);
+  });
+
+  it("settling a reservation that was already released still debits the actual cost, once", () => {
+    const log = grants().slice(2); // 500 topup credits
+    const decision = reserve(
+      { orgId: org, reservationId: "r1", estimate: creditsToMicro(100), idempotencyKey: "k1" },
+      foldBalances(log),
+    );
+    if (!decision.ok) throw new Error("expected ok");
+    const reservationEntries = decision.entries.map((e) => entry(e));
+    log.push(...reservationEntries);
+    // The stale reservation job releases it while the stream is still running.
+    const released = release(
+      { orgId: org, reservationId: "r1", idempotencyKey: "stale:r1" },
+      reservationEntries,
+    ).map((e) => entry(e));
+    log.push(...released);
+    expect(foldBalances(log).topup).toBe(creditsToMicro(500));
+    const late = settle(
+      { orgId: org, reservationId: "r1", actual: creditsToMicro(80), idempotencyKey: "k1" },
+      [...reservationEntries, ...released],
+      foldBalances(log),
+    );
+    expect(late.entries.map((e) => e.type)).toEqual(["settlement"]);
+    log.push(...late.entries.map((e) => entry(e)));
+    expect(foldBalances(log).topup).toBe(creditsToMicro(420));
+  });
+
+  it("claws back the refunded share of a top-up, never more than was granted", () => {
+    const granted = creditsToMicro(1000);
+    const due = (refunded: bigint, alreadyTaken = 0n, charged = 1130n) =>
+      clawbackDue({ granted, alreadyTaken, refunded, charged });
+    expect(due(1130n)).toBe(granted);
+    expect(due(565n)).toBe(creditsToMicro(500));
+    // A second partial refund takes only the difference; a replay takes nothing.
+    expect(due(1130n, creditsToMicro(500))).toBe(creditsToMicro(500));
+    expect(due(1130n, granted)).toBe(0n);
+    expect(due(5000n)).toBe(granted);
+    expect(due(0n)).toBe(0n);
+    expect(due(100n, 0n, 0n)).toBe(granted);
   });
 
   it("release returns exactly the reserved amounts", () => {
@@ -264,6 +358,7 @@ describe("ledger", () => {
     );
     let rng = 42;
     const rand = () => (rng = (rng * 1103515245 + 12345) % 2147483648) / 2147483648;
+    let spent = 0n;
     for (let i = 0; i < 200; i += 1) {
       const estimate = creditsToMicro(Math.floor(rand() * 400));
       const freeEligible = rand() < 0.5;
@@ -291,8 +386,11 @@ describe("ledger", () => {
       expect(b.trial).toBeGreaterThanOrEqual(0n);
       expect(b.plan).toBeGreaterThanOrEqual(0n);
       expect(b.topup).toBeGreaterThanOrEqual(0n);
+      spent += actual;
       const sum = log.reduce((acc, e) => acc + e.amount, 0n);
       expect(totalAvailable(b)).toBe(sum);
     }
+    // Every microcredit of actual cost was debited.
+    expect(totalAvailable(foldBalances(log))).toBe(creditsToMicro(3000) - spent);
   });
 });

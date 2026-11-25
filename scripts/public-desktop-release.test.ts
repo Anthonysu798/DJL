@@ -429,6 +429,32 @@ describe("public desktop release preparation", () => {
     );
     assert.match(cloudProductionWorkflow, /tags: \["cloud-v\*"\]/);
     assert.notMatch(cloudProductionWorkflow, /tags:[^\n]*"v\*/);
+    // Production deploys the commit its verify job checked, not a tag re-resolved after approval.
+    assert.match(cloudProductionWorkflow, /ref: \$\{\{ needs\.verify\.outputs\.sha \}\}/);
+
+    // Staging deploys only a Cloud CI run that was a push to this repository, for a commit on main.
+    const cloudStagingWorkflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/cloud-deploy-staging.yml"),
+      "utf8",
+    );
+    assert.match(cloudStagingWorkflow, /github\.event\.workflow_run\.event == 'push'/);
+    assert.match(
+      cloudStagingWorkflow,
+      /github\.event\.workflow_run\.head_repository\.full_name == github\.repository/,
+    );
+    assert.match(cloudStagingWorkflow, /git merge-base --is-ancestor HEAD origin\/main/);
+    assert.match(cloudStagingWorkflow, /environment: staging/);
+
+    // Every workflow runs third-party actions from a commit, never from a movable tag.
+    for (const workflow of workflows) {
+      const contents = readFileSync(
+        resolve(REPOSITORY_ROOT, ".github/workflows", workflow),
+        "utf8",
+      );
+      for (const [, action] of contents.matchAll(/^\s*(?:- )?uses: (\S+)/gm)) {
+        assert.match(action!, /^\.\/|@[0-9a-f]{40}$/, `${workflow} must pin ${action}`);
+      }
+    }
 
     // The landing mirror deploys the marketing site only. It must never grow into a second desktop
     // pipeline, never run for fork pull requests, and never hold write access to this repository.
@@ -558,6 +584,26 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /Azure login for Artifact Signing/);
     assert.match(ciWorkflow, /djl-windows-release-prod/);
     assert.match(releaseWorkflow, /djl-windows-release-prod/);
+
+    // The publisher an installed Windows app requires of its next update is configured once and
+    // asserted by the shared package build, so CI package smoke proves it on every push to main.
+    const buildScript = readFileSync(
+      resolve(REPOSITORY_ROOT, "scripts/build-desktop-artifact.ts"),
+      "utf8",
+    );
+    const publisherNames = [ciWorkflow, releaseWorkflow].map((workflow) =>
+      [...workflow.matchAll(/^ +AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: (.+)$/gm)].map(
+        (match) => match[1],
+      ),
+    );
+    assert.deepStrictEqual(publisherNames[0], publisherNames[1]);
+    assert.equal(publisherNames[1]?.length, 1);
+    assert.match(buildScript, /assertPackagedWindowsUpdatePublisher\(/);
+    assert.match(buildScript, /verifyWindowsUpdateCodeSignature\(\[publisherName\], installer\)/);
+    assert.match(
+      ciWorkflow,
+      /if \[\[ "\$\{\{ matrix\.platform \}\}" == "win" \]\]; then\n[^\n]*\n +args\+=\(--signed\)/,
+    );
     assert.match(releaseWorkflow, /http:\/\/timestamp\.acs\.microsoft\.com/);
     assert.match(
       releaseWorkflow,

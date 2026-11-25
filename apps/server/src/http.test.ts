@@ -277,14 +277,27 @@ describe("createHttpRequestHandler", () => {
       isLegacyTokenAuthorized({
         config,
         url: new URL("http://127.0.0.1:3773/attachments/attachment-id?token=desktop-secret"),
+        remoteAddress: "192.168.1.20",
       }),
     ).toBe(true);
     expect(
       isLegacyTokenAuthorized({
         config,
         url: new URL("http://127.0.0.1:3773/attachments/attachment-id?token=wrong"),
+        remoteAddress: "127.0.0.1",
       }),
     ).toBe(false);
+  });
+
+  it("treats only loopback callers as the owner when no startup token is configured", async () => {
+    const config = await makeConfig();
+    const url = new URL("http://192.168.1.10:3773/ws");
+
+    expect(isLegacyTokenAuthorized({ config, url, remoteAddress: "127.0.0.1" })).toBe(true);
+    expect(isLegacyTokenAuthorized({ config, url, remoteAddress: "::ffff:127.0.0.1" })).toBe(true);
+    expect(isLegacyTokenAuthorized({ config, url, remoteAddress: "::1" })).toBe(true);
+    expect(isLegacyTokenAuthorized({ config, url, remoteAddress: "192.168.1.20" })).toBe(false);
+    expect(isLegacyTokenAuthorized({ config, url, remoteAddress: undefined })).toBe(false);
   });
 
   it("serves health readiness JSON", async () => {

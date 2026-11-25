@@ -1,4 +1,6 @@
-import { eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
+import { and, eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -38,6 +40,25 @@ const ev = (
   actorKind: "user",
   payload,
 });
+
+const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+const MB = 1024 * 1024;
+
+/** What the client's PUT to the presigned URL stores. */
+function put(begin: { readonly upload: { readonly url: string } }, bytes: Uint8Array) {
+  const key = decodeURIComponent(new URL(begin.upload.url).pathname.replace("/upload/", ""));
+  blobs.put(key, bytes);
+  return key;
+}
+
+/** A fresh org on the 100 MB trial quota with `freeBytes` of it left. */
+async function orgWithFreeBytes(freeBytes: number): Promise<Principal> {
+  const org = await seedOrg(conn.db, "sync-quota");
+  await conn.db
+    .insert(schema.syncUsage)
+    .values({ orgId: org.orgId, eventBytes: BigInt(100 * MB - freeBytes) });
+  return { ...p, userId: org.userId, orgId: org.orgId, personalOrgId: org.orgId };
+}
 
 beforeAll(async () => {
   const seeded = await seedOrg(conn.db, "sync");
@@ -164,7 +185,8 @@ describe("SyncService", () => {
   });
 
   it("uploads attachments by content hash and dedupes them", async () => {
-    const hash = "a".repeat(64);
+    const bytes = crypto.getRandomValues(new Uint8Array(1234));
+    const hash = sha256(bytes);
     const begin = await sync.beginAttachmentUpload(p, {
       contentHash: hash,
       mimeType: "image/png",
@@ -173,6 +195,7 @@ describe("SyncService", () => {
     expect(begin.alreadyPresent).toBe(false);
     if (begin.alreadyPresent) throw new Error("unexpected");
     expect(begin.upload.url).toContain("blob.test/upload");
+    put(begin, bytes);
     expect(await sync.completeAttachmentUpload(p, hash)).toEqual({ status: "ready" });
     expect(
       (
@@ -197,5 +220,115 @@ describe("SyncService", () => {
       personalOrgId: other.orgId,
     };
     await expect(sync.attachmentDownload(op, hash)).rejects.toMatchObject({ status: 404 }); // no cross-org reads
+  });
+
+  it.each([
+    "text/html",
+    "application/xhtml+xml",
+    "image/svg+xml",
+    "application/xml",
+    "text/xml",
+    "text/javascript",
+    "application/javascript",
+    "text/html; charset=utf-8",
+    "IMAGE/PNG",
+  ])("refuses to store an attachment declared as %s", async (mimeType) => {
+    await expect(
+      sync.beginAttachmentUpload(p, { contentHash: "b".repeat(64), mimeType, sizeBytes: 10 }),
+    ).rejects.toMatchObject({ code: "unsupported_type" });
+  });
+
+  it("rejects and deletes an upload whose bytes do not match the declared hash", async () => {
+    const real = crypto.getRandomValues(new Uint8Array(64));
+    const hash = sha256(real);
+    const input = { contentHash: hash, mimeType: "image/png", sizeBytes: real.byteLength };
+    const begin = await sync.beginAttachmentUpload(p, input);
+    if (begin.alreadyPresent) throw new Error("unexpected");
+    // Another member files different bytes of the same size under the victim's hash.
+    const key = put(begin, crypto.getRandomValues(new Uint8Array(64)));
+    await expect(sync.completeAttachmentUpload(p, hash)).rejects.toMatchObject({
+      code: "upload_mismatch",
+    });
+    expect(blobs.objects.has(key)).toBe(false);
+    await expect(sync.attachmentDownload(p, hash)).rejects.toMatchObject({ status: 404 });
+    // The hash is free again for the real bytes.
+    const retry = await sync.beginAttachmentUpload(p, input);
+    if (retry.alreadyPresent) throw new Error("unexpected");
+    put(retry, real);
+    expect(await sync.completeAttachmentUpload(p, hash)).toEqual({ status: "ready" });
+  });
+
+  it("keeps verified bytes out of reach of the still-valid upload URL and serves them inert", async () => {
+    const real = new TextEncoder().encode("the real attachment");
+    const hash = sha256(real);
+    const begin = await sync.beginAttachmentUpload(p, {
+      contentHash: hash,
+      mimeType: "text/plain",
+      sizeBytes: real.byteLength,
+    });
+    if (begin.alreadyPresent) throw new Error("unexpected");
+    const uploadKey = put(begin, real);
+    await sync.completeAttachmentUpload(p, hash);
+    // The presigned PUT is good for minutes more: writing to it again changes nothing served.
+    blobs.put(uploadKey, new TextEncoder().encode("<script>alert(1)"), "text/html");
+    const download = await sync.attachmentDownload(p, hash);
+    const url = new URL(download.url);
+    const servedKey = decodeURIComponent(url.pathname.slice(1));
+    expect(servedKey).not.toBe(uploadKey);
+    expect(blobs.objects.get(servedKey)).toMatchObject({
+      bytes: real,
+      mimeType: "application/octet-stream",
+    });
+    expect(url.searchParams.get("response-content-disposition")).toBe("attachment");
+    expect(url.searchParams.get("response-content-type")).toBe("application/octet-stream");
+    // A second completion neither fails nor counts the bytes twice.
+    const before = (await sync.status(p, desktop)).quota.usedBytes;
+    expect(await sync.completeAttachmentUpload(p, hash)).toEqual({ status: "ready" });
+    expect((await sync.status(p, desktop)).quota.usedBytes).toBe(before);
+  });
+
+  it("counts uploads that were started but never completed against the quota", async () => {
+    const tp = await orgWithFreeBytes(60 * MB);
+    const begin = (n: number) =>
+      sync.beginAttachmentUpload(tp, {
+        contentHash: n.toString(16).padStart(64, "0"),
+        mimeType: "application/octet-stream",
+        sizeBytes: 40 * MB,
+      });
+    expect((await begin(1)).alreadyPresent).toBe(false);
+    await expect(begin(2)).rejects.toMatchObject({ code: "sync_quota_exceeded" });
+    // Starting the same upload again is not a second reservation.
+    expect((await begin(1)).alreadyPresent).toBe(false);
+
+    // An abandoned upload gives its bytes back and its object is removed.
+    const pendingOne = and(
+      eq(schema.attachments.orgId, tp.orgId),
+      eq(schema.attachments.contentHash, (1).toString(16).padStart(64, "0")),
+    );
+    const [row] = await conn.db
+      .update(schema.attachments)
+      .set({ createdAt: new Date(Date.now() - 2 * 3_600_000) })
+      .where(pendingOne)
+      .returning({ bucketKey: schema.attachments.bucketKey });
+    expect(blobs.objects.has(row!.bucketKey)).toBe(true);
+    expect((await begin(2)).alreadyPresent).toBe(false);
+    expect(blobs.objects.has(row!.bucketKey)).toBe(false);
+    expect(await conn.db.select().from(schema.attachments).where(pendingOne)).toHaveLength(0);
+  });
+
+  it("does not let a parallel burst of upload starts outrun the quota", async () => {
+    const tp = await orgWithFreeBytes(60 * MB);
+    const results = await Promise.allSettled(
+      Array.from({ length: 6 }, (_, n) =>
+        sync.beginAttachmentUpload(tp, {
+          contentHash: (n + 1).toString(16).padStart(64, "0"),
+          mimeType: "application/octet-stream",
+          sizeBytes: 40 * MB,
+        }),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    for (const r of results)
+      if (r.status === "rejected") expect(r.reason).toMatchObject({ code: "sync_quota_exceeded" });
   });
 });

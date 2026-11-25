@@ -31,8 +31,39 @@ const CSRF_MESSAGES = {
   csrf_token: "Your page is out of date. Reload and try again.",
 } as const;
 
+/**
+ * The path as the router will match it. The router ignores letter case, repeated and
+ * trailing slashes, percent-encoding of plain characters, and anything after `;`, so
+ * `/ADMIN//v1/x` reaches the `/admin/v1/x` handler. Every guard below decides on this
+ * form; deciding on the raw path would let those spellings walk past the guard.
+ */
+export function routedPath(url: string): string {
+  const path = (url.startsWith("/") ? url : url.replace(/^https?:\/\/[^/]*\/?/, "/"))
+    .replace(/\/\/+/g, "/")
+    .split(/[?;#]/)[0]!
+    .replace(/(.)\/$/, "$1");
+  try {
+    return decodeURI(path).toLowerCase();
+  } catch {
+    return path.toLowerCase(); // malformed encoding: the router matches no route
+  }
+}
+
+/**
+ * The route shape for metrics and error reports, never a path value: only short plain
+ * route words survive, so ids, hashes, and secrets such as share tokens are dropped.
+ */
+export const routeLabel = (path: string) =>
+  path
+    .split("/")
+    .map((segment) =>
+      segment.length <= 32 && /^([a-z]+(-[a-z]+)*\d?)?$/.test(segment) ? segment : ":id",
+    )
+    .join("/");
+
 export function makeMiddleware(env: ApiEnv, region: string, scopedShopOrigin?: string) {
   const trusted = new Set(env.trustedOrigins);
+  const adminOrigin = new URL(env.adminPublicUrl).origin;
   return <E, R>(
     app: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   ): Effect.Effect<
@@ -45,12 +76,19 @@ export function makeMiddleware(env: ApiEnv, region: string, scopedShopOrigin?: s
       const traceId =
         request.headers["x-trace-id"]?.slice(0, 64) ?? currentTraceId() ?? newTraceId();
       const origin = request.headers["origin"] ?? null;
-      const path = new URL(request.url, "http://x").pathname;
+      const path = routedPath(request.url);
       const scoped =
         scopedShopOrigin !== undefined &&
         (isScopedCommercePath(path) || path === "/v1/shop/csrf" || path === "/v1/shop/account");
       const corsHeaders: Record<string, string> = {};
-      if (origin && (scoped ? origin === scopedShopOrigin : trusted.has(origin))) {
+      // Credentialed CORS on the admin API is for the admin console alone.
+      const corsAllowed = (o: string) =>
+        scoped
+          ? o === scopedShopOrigin
+          : path.startsWith("/admin/")
+            ? o === adminOrigin
+            : trusted.has(o);
+      if (origin && corsAllowed(origin)) {
         corsHeaders["access-control-allow-origin"] = origin;
         corsHeaders["access-control-allow-credentials"] = "true";
         corsHeaders["access-control-allow-headers"] = scoped
@@ -72,7 +110,11 @@ export function makeMiddleware(env: ApiEnv, region: string, scopedShopOrigin?: s
       // The mounted Shop auth/resources have their own exact Origin and write-token gates.
       const csrf = scoped
         ? null
-        : csrfRefusal({ method: request.method, path, headers: request.headers }, trusted);
+        : csrfRefusal(
+            { method: request.method, path, headers: request.headers },
+            trusted,
+            adminOrigin,
+          );
       if (csrf) {
         return HttpServerResponse.setHeaders(
           errorResponse(403, csrf, CSRF_MESSAGES[csrf], traceId),
@@ -103,13 +145,16 @@ export function makeMiddleware(env: ApiEnv, region: string, scopedShopOrigin?: s
           );
           captureError(new Error(String(cause)), {
             traceId,
-            path,
+            path: routeLabel(path),
           });
           return Effect.succeed(errorResponse(500, "internal", "Something went wrong.", traceId));
         }),
       );
-      const routeKey = path.replace(/[0-9a-f-]{20,}/g, ":id");
-      httpRequests.add(1, { route: routeKey, method: request.method, status: response.status });
+      httpRequests.add(1, {
+        route: routeLabel(path),
+        method: request.method,
+        status: response.status,
+      });
       return HttpServerResponse.setHeaders(response, {
         ...SECURITY_HEADERS,
         ...corsHeaders,

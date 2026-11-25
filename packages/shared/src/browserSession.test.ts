@@ -10,6 +10,8 @@ import {
   isLikelyOAuthHost,
   normalizeBrowserUrlInput,
   isBlankBrowserTabUrl,
+  isBrowserPermissionAllowed,
+  resolveBrowserExternalUrl,
   resolveCopyableBrowserTabUrl,
 } from "./browserSession";
 
@@ -139,6 +141,53 @@ describe("isLikelyOAuthHost", () => {
     expect(isLikelyOAuthHost("example.com")).toBe(false);
     expect(isLikelyOAuthHost("github.com")).toBe(false);
     expect(isLikelyOAuthHost("")).toBe(false);
+  });
+});
+
+describe("resolveBrowserExternalUrl", () => {
+  it("hands only mail links to the operating system", () => {
+    expect(resolveBrowserExternalUrl("mailto:hi@example.com")).toBe("mailto:hi@example.com");
+  });
+
+  it("refuses schemes that launch local files, shares, or other apps", () => {
+    for (const url of [
+      "file:///Applications/Calculator.app",
+      "smb://attacker.example/share",
+      "search-ms:query=x&crumb=location:%5C%5Cattacker%5Cshare",
+      "vscode://file/etc/passwd",
+      "zoommtg://zoom.us/join?confno=1",
+      "javascript:alert(1)",
+      "not a url",
+    ]) {
+      expect(resolveBrowserExternalUrl(url)).toBeNull();
+    }
+  });
+});
+
+describe("isBrowserPermissionAllowed", () => {
+  it("denies device and system access to pages in the in-app browser", () => {
+    for (const permission of [
+      "media",
+      "geolocation",
+      "notifications",
+      "clipboard-read",
+      "midi",
+      "display-capture",
+      "unknown",
+    ]) {
+      expect(isBrowserPermissionAllowed(permission)).toBe(false);
+    }
+  });
+
+  it("keeps copy buttons and fullscreen video working", () => {
+    expect(isBrowserPermissionAllowed("clipboard-sanitized-write")).toBe(true);
+    expect(isBrowserPermissionAllowed("fullscreen")).toBe(true);
+  });
+
+  it("lets a page open an external app only for a mail link", () => {
+    expect(isBrowserPermissionAllowed("openExternal", "mailto:hi@example.com")).toBe(true);
+    expect(isBrowserPermissionAllowed("openExternal", "zoommtg://zoom.us/join")).toBe(false);
+    expect(isBrowserPermissionAllowed("openExternal")).toBe(false);
   });
 });
 

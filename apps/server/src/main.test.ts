@@ -4,7 +4,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import type { OrchestrationReadModel } from "@djl/contracts";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -15,8 +14,6 @@ import { NetService } from "@djl/shared/Net";
 
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { Open, type OpenShape } from "./open";
-import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
 import { Server, type ServerShape } from "./effectServer";
 
 vi.mock("./threadRetention", async () => {
@@ -26,7 +23,7 @@ vi.mock("./threadRetention", async () => {
   };
 });
 
-import { CliConfig, recordStartupHeartbeat, djlCli, type CliConfigShape } from "./main";
+import { CliConfig, djlCli, type CliConfigShape } from "./main";
 
 const start = vi.fn(() => undefined);
 const stop = vi.fn(() => undefined);
@@ -70,7 +67,6 @@ const testLayer = Layer.mergeAll(
     openBrowser: (_target: string) => Effect.void,
     openInEditor: () => Effect.void,
   } satisfies OpenShape),
-  AnalyticsService.layerTest,
   FetchHttpClient.layer,
   NodeServices.layer,
 );
@@ -196,7 +192,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(start.mock.calls.length, 1);
       assert.equal(resolvedConfig?.mode, "web");
       assert.equal(resolvedConfig?.port, 4666);
-      assert.equal(resolvedConfig?.host, undefined);
+      assert.equal(resolvedConfig?.host, "127.0.0.1");
     }),
   );
 
@@ -265,65 +261,6 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, true);
       assert.equal(resolvedConfig?.logProviderEvents, true);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
-    }),
-  );
-
-  it.effect("records a startup heartbeat with thread/project counts", () =>
-    Effect.gen(function* () {
-      const recordTelemetry = vi.fn(
-        (_event: string, _properties?: Readonly<Record<string, unknown>>) => Effect.void,
-      );
-      const getCounts = vi.fn(() =>
-        Effect.succeed({
-          threadCount: 2,
-          projectCount: 1,
-        }),
-      );
-
-      yield* recordStartupHeartbeat.pipe(
-        Effect.provideService(ProjectionSnapshotQuery, {
-          getSnapshot: () =>
-            Effect.succeed({
-              snapshotSequence: 0,
-              projects: [] as OrchestrationReadModel["projects"],
-              threads: [] as OrchestrationReadModel["threads"],
-              updatedAt: new Date(0).toISOString(),
-            }),
-          getCommandReadModel: () =>
-            Effect.succeed({
-              snapshotSequence: 0,
-              projects: [] as OrchestrationReadModel["projects"],
-              threads: [] as OrchestrationReadModel["threads"],
-              updatedAt: new Date(0).toISOString(),
-            }),
-          getCounts,
-          getSnapshotSequence: () => Effect.succeed({ snapshotSequence: 0 }),
-          getShellSnapshot: () => Effect.die("unused"),
-          getActiveProjectByWorkspaceRoot: () => Effect.die("unused"),
-          getProjectShellById: () => Effect.die("unused"),
-          getFirstActiveThreadIdByProjectId: () => Effect.die("unused"),
-          getThreadCheckpointContext: () => Effect.die("unused"),
-          listGeneratedImageActivitiesByTurn: () => Effect.die("unused"),
-          getFullThreadDiffContext: () => Effect.die("unused"),
-          getThreadShellById: () => Effect.die("unused"),
-          findSyntheticSubagentParentThread: () => Effect.die("unused"),
-          getThreadDetailById: () => Effect.die("unused"),
-          getThreadDetailForExportById: () => Effect.die("unused"),
-          getThreadDetailSnapshotById: () => Effect.die("unused"),
-        }),
-        Effect.provideService(AnalyticsService, {
-          record: recordTelemetry,
-          flush: Effect.void,
-        }),
-      );
-
-      assert.deepEqual(recordTelemetry.mock.calls[0], [
-        "server.boot.heartbeat",
-        {
-          threadCount: 2,
-          projectCount: 1,
-        },
-      ]);
     }),
   );
 

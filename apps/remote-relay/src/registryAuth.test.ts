@@ -1,7 +1,13 @@
 import { buildTrustedSessionResolveTranscript } from "@djl/remote-protocol";
 import { describe, expect, it } from "vitest";
 
-import { type TrustedResolveRequest, verifyTrustedResolveRequest } from "./registryAuth";
+import fixture from "../../mobile/test/fixtures/remote-v2.json";
+import {
+  type TrustedResolveRequest,
+  verifyMacRegistrationSignature,
+  verifyPhoneConnectHeaders,
+  verifyTrustedResolveRequest,
+} from "./registryAuth";
 import type { RelayRegistration } from "./policy";
 
 const toBase64 = (bytes: ArrayBuffer | Uint8Array): string => {
@@ -79,6 +85,102 @@ describe("trusted reconnect authentication", () => {
         nonceAlreadyUsed: false,
       }),
     ).resolves.toEqual({ ok: false, code: "phone_not_trusted" });
+  });
+});
+
+describe("relay connection signatures", () => {
+  const { sessionId, macDeviceId, macIdentityPublicKey, phoneDeviceId, phoneIdentityPublicKey } =
+    fixture.input;
+  const { macRegistrationSignature, phoneConnectSignature } = fixture.relayAuth;
+  const phoneHeaders = (overrides: Record<string, string> = {}): Headers =>
+    new Headers({
+      "x-phone-device-id": phoneDeviceId,
+      "x-phone-identity-public-key": phoneIdentityPublicKey,
+      "x-phone-signature": phoneConnectSignature,
+      ...overrides,
+    });
+
+  it("accepts the computer's registration signature only for the signed session and identity", async () => {
+    const registration = { macDeviceId, macIdentityPublicKey };
+
+    expect(
+      await verifyMacRegistrationSignature(sessionId, registration, macRegistrationSignature),
+    ).toBe(true);
+    expect(
+      await verifyMacRegistrationSignature("other-session", registration, macRegistrationSignature),
+    ).toBe(false);
+    expect(
+      await verifyMacRegistrationSignature(
+        sessionId,
+        { ...registration, macDeviceId: "other-mac" },
+        macRegistrationSignature,
+      ),
+    ).toBe(false);
+    expect(
+      await verifyMacRegistrationSignature(
+        sessionId,
+        { ...registration, macIdentityPublicKey: phoneIdentityPublicKey },
+        macRegistrationSignature,
+      ),
+    ).toBe(false);
+    expect(await verifyMacRegistrationSignature(sessionId, registration, "")).toBe(false);
+    expect(await verifyMacRegistrationSignature(sessionId, registration, "not base64!")).toBe(
+      false,
+    );
+    // A phone connect signature is not a registration signature, even from the same key.
+    expect(
+      await verifyMacRegistrationSignature(
+        sessionId,
+        { macDeviceId: phoneDeviceId, macIdentityPublicKey: phoneIdentityPublicKey },
+        phoneConnectSignature,
+      ),
+    ).toBe(false);
+  });
+
+  it("reads the identity a phone proved on connect", async () => {
+    expect(await verifyPhoneConnectHeaders(phoneHeaders(), sessionId)).toEqual({
+      deviceId: phoneDeviceId,
+      publicKey: phoneIdentityPublicKey,
+    });
+  });
+
+  it("treats a phone without identity headers as an older app", async () => {
+    expect(await verifyPhoneConnectHeaders(new Headers(), sessionId)).toBeUndefined();
+  });
+
+  it("rejects identity headers whose signature is missing, malformed or for something else", async () => {
+    const incomplete = phoneHeaders();
+    incomplete.delete("x-phone-signature");
+
+    expect(await verifyPhoneConnectHeaders(incomplete, sessionId)).toBeNull();
+    expect(await verifyPhoneConnectHeaders(phoneHeaders(), "other-session")).toBeNull();
+    expect(
+      await verifyPhoneConnectHeaders(phoneHeaders({ "x-phone-device-id": "other" }), sessionId),
+    ).toBeNull();
+    expect(
+      await verifyPhoneConnectHeaders(
+        phoneHeaders({ "x-phone-identity-public-key": macIdentityPublicKey }),
+        sessionId,
+      ),
+    ).toBeNull();
+    expect(
+      await verifyPhoneConnectHeaders(phoneHeaders({ "x-phone-signature": "AAAA" }), sessionId),
+    ).toBeNull();
+    // atob ignores whitespace: the same key bytes in a longer string are not the same identity.
+    expect(
+      await verifyPhoneConnectHeaders(
+        phoneHeaders({
+          "x-phone-identity-public-key": `${phoneIdentityPublicKey.slice(0, 4)} ${phoneIdentityPublicKey.slice(4)}`,
+        }),
+        sessionId,
+      ),
+    ).toBeNull();
+    expect(
+      await verifyPhoneConnectHeaders(
+        new Headers({ "x-phone-signature": phoneConnectSignature }),
+        sessionId,
+      ),
+    ).toBeNull();
   });
 });
 

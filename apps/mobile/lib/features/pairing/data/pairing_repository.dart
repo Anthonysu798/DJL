@@ -61,8 +61,11 @@ Uri validateRelay(String value, {bool allowLocal = false}) {
 }
 
 class Pairing {
-  const Pairing(this.data);
+  const Pairing(this.data, {this.pairingSecret});
   final RemoteJson data;
+
+  /// Only for the first handshake. Never part of [data], which is what is saved.
+  final List<int>? pairingSecret;
   String get sessionId => data['sessionId'] as String;
   String get macDeviceId => data['macDeviceId'] as String;
   String get publicKey => data['macIdentityPublicKey'] as String;
@@ -73,6 +76,7 @@ class Pairing {
     String text, {
     bool allowLocal = false,
     bool checkExpiry = true,
+    bool requireSecret = true,
   }) {
     try {
       var raw = text.trim();
@@ -89,6 +93,17 @@ class Pairing {
       }
       if (value['v'] != 2) {
         throw FormatException(appStrings.pairingUpdateDesktop);
+      }
+      final rawSecret = value.remove('pairingSecret');
+      List<int>? secret;
+      if (requireSecret) {
+        try {
+          secret = base64Decode(rawSecret as String);
+        } catch (_) {}
+        // A desktop that sends no secret predates verified pairing.
+        if (secret?.length != 32) {
+          throw FormatException(appStrings.pairingUpdateDesktop);
+        }
       }
       for (final key in ['sessionId', 'macDeviceId']) {
         final id = value[key];
@@ -110,7 +125,7 @@ class Pairing {
               expires < DateTime.now().millisecondsSinceEpoch - 60000)) {
         throw FormatException(appStrings.pairingCodeExpired);
       }
-      return Pairing(value);
+      return Pairing(value, pairingSecret: secret);
     } on FormatException {
       rethrow;
     } catch (_) {
@@ -273,6 +288,7 @@ class PairingRepository {
     jsonEncode(row.containsKey('djlTrustedEntry') ? row['pairing'] : row),
     allowLocal: allowLocal,
     checkExpiry: false,
+    requireSecret: false,
   );
 
   Future<List<TrustedDeviceEntry>> _readTrustedEntries() async {
@@ -501,11 +517,17 @@ class PairingRepository {
         : uri.replace(
             path: '${uri.path.replaceFirst(RegExp(r'/$'), '')}/relay',
           );
+    final keys = await derivePairingCodeKeys(code);
     final response = await _resolve(uri, 'pairing/code/resolve', {
-      'code': code,
+      'code': keys.lookupCode,
     }, preservePath: true);
+    // The secret comes only from the typed code, never from the relay's answer.
     return Pairing.parse(
-      jsonEncode({...response, 'relay': relay.toString()}),
+      jsonEncode({
+        ...response,
+        'relay': relay.toString(),
+        'pairingSecret': base64Encode(keys.pairingSecret),
+      }),
       allowLocal: allowLocal,
     );
   }
@@ -547,6 +569,7 @@ class PairingRepository {
             .millisecondsSinceEpoch,
       }),
       allowLocal: allowLocal,
+      requireSecret: false,
     );
   }
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -217,6 +218,52 @@ void main() {
       expect(resolved.sessionId, 'new-session');
       expect(bodies, hasLength(2));
       expect(bodies.toSet(), hasLength(1));
+    },
+  );
+  test(
+    'typed code sends only its lookup code and never saves the pairing secret',
+    () async {
+      final vectors =
+          (jsonDecode(File('test/fixtures/remote-v2.json').readAsStringSync())
+                  as Map<String, dynamic>)['pairing']
+              as Map<String, dynamic>;
+      final bodies = <String>[];
+      final store = TestCredentials();
+      final repository = PairingRepository(
+        store,
+        client: MockClient((request) async {
+          bodies.add(request.body);
+          return http.Response(
+            jsonEncode({
+              'ok': true,
+              'v': 2,
+              'macDeviceId': 'mac',
+              'sessionId': 'session',
+              'macIdentityPublicKey': pairing.publicKey,
+              'expiresAt': DateTime.now()
+                  .add(const Duration(minutes: 2))
+                  .millisecondsSinceEpoch,
+              'pairingSecret': base64Encode(List.filled(32, 9)),
+            }),
+            200,
+          );
+        }),
+      );
+      final resolved = await repository.resolveCode(
+        'abcde-fghjk',
+        'wss://relay.test/relay',
+      );
+      expect(jsonDecode(bodies.single), {'code': vectors['lookupCode']});
+      expect(base64Encode(resolved.pairingSecret!), vectors['pairingSecret']);
+      expect(resolved.data.containsKey('pairingSecret'), isFalse);
+      await repository.trust(resolved);
+      expect(
+        store.values['desktop.trusted'],
+        isNot(
+          anyOf(contains('pairingSecret'), contains(vectors['pairingSecret'])),
+        ),
+      );
+      expect((await repository.trusted()).single.pairingSecret, isNull);
     },
   );
 }

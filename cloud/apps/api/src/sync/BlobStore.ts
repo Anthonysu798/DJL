@@ -12,10 +12,15 @@ export interface BlobStore {
     readonly headers: Record<string, string>;
     readonly expiresAt: string;
   }>;
-  /** Pre-signed GET, valid for `expiresSeconds` (default ten minutes). */
+  /**
+   * Pre-signed GET, valid for `expiresSeconds` (default ten minutes). With `attachment`
+   * the storage host answers `Content-Disposition: attachment` and an inert type, so a
+   * browser saves the object and never renders it; use it for bytes a user chose.
+   */
   readonly presignDownload: (
     key: string,
     expiresSeconds?: number,
+    attachment?: boolean,
   ) => Promise<{ readonly url: string; readonly expiresAt: string }>;
   /** Confirm an object exists and matches the expected size. */
   readonly head: (key: string) => Promise<{ readonly sizeBytes: number } | null>;
@@ -68,6 +73,12 @@ async function readBoundedResponse(response: Response, maxBytes: number): Promis
   }
 }
 
+/** S3 response overrides, part of the signed query, that make a download inert. */
+const ATTACHMENT = {
+  "response-content-disposition": "attachment",
+  "response-content-type": "application/octet-stream",
+};
+
 export class FakeBlobStore implements BlobStore {
   readonly objects = new Map<string, { sizeBytes: number; mimeType: string; bytes?: Uint8Array }>();
   async presignUpload(key: string, mimeType: string, sizeBytes: number) {
@@ -79,12 +90,10 @@ export class FakeBlobStore implements BlobStore {
       expiresAt: new Date(Date.now() + 600_000).toISOString(),
     };
   }
-  async presignDownload(key: string, expiresSeconds = 600) {
+  async presignDownload(key: string, expiresSeconds = 600, attachment = false) {
     const expiresAt = new Date(Date.now() + expiresSeconds * 1000).toISOString();
-    return {
-      url: `https://blob.test/${encodeURIComponent(key)}?expires=${encodeURIComponent(expiresAt)}`,
-      expiresAt,
-    };
+    const query = new URLSearchParams({ expires: expiresAt, ...(attachment ? ATTACHMENT : {}) });
+    return { url: `https://blob.test/${encodeURIComponent(key)}?${query.toString()}`, expiresAt };
   }
   /** What a client's PUT to the presigned URL would store. */
   put(key: string, bytes: Uint8Array, mimeType = "application/octet-stream") {
@@ -146,6 +155,7 @@ export function createS3BlobStore(config: {
     expiresSeconds: number,
     extraHeaders: Record<string, string> = {},
     endpoint = config.endpoint,
+    extraQuery: Record<string, string> = {},
   ) {
     const host = new URL(endpoint).host;
     const base = `${endpoint.replace(/\/+$/, "")}/${config.bucket}`;
@@ -169,7 +179,10 @@ export function createS3BlobStore(config: {
       "X-Amz-Date": amzDate,
       "X-Amz-Expires": String(expiresSeconds),
       "X-Amz-SignedHeaders": signedHeaders,
+      ...extraQuery,
     });
+    // SigV4 signs the query in byte order.
+    query.sort();
     const encodedKey = key.split("/").map(encodeURIComponent).join("/");
     const objectUrl = new URL(`${base}/${encodedKey}`);
     const canonicalRequest = [
@@ -206,8 +219,15 @@ export function createS3BlobStore(config: {
       );
       return { url, headers, expiresAt };
     },
-    async presignDownload(key, expiresSeconds = 600) {
-      return presign("GET", key, expiresSeconds, {}, config.publicEndpoint ?? config.endpoint);
+    async presignDownload(key, expiresSeconds = 600, attachment = false) {
+      return presign(
+        "GET",
+        key,
+        expiresSeconds,
+        {},
+        config.publicEndpoint ?? config.endpoint,
+        attachment ? ATTACHMENT : {},
+      );
     },
     async head(key) {
       const { url } = await presign("HEAD", key, 60);

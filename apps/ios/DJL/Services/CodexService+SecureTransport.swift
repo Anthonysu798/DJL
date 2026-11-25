@@ -25,9 +25,11 @@ extension CodexService {
             ? .trustedReconnect
             : .qrBootstrap
         let expectedMacIdentityPublicKey: String
+        let pairingSecret: Data?
         switch handshakeMode {
         case .trustedReconnect:
             expectedMacIdentityPublicKey = trustedMac?.macIdentityPublicKey ?? ""
+            pairingSecret = nil
             secureConnectionState = .reconnecting
         case .qrBootstrap:
             guard let pairingPublicKey = normalizedRelayMacIdentityPublicKey else {
@@ -35,7 +37,15 @@ extension CodexService {
                     "The initial pairing metadata is missing the device identity key. Scan a new QR code to reconnect."
                 )
             }
+            // The secret is never saved, so a pairing left unfinished by an earlier launch cannot be resumed.
+            guard let pendingPairingSecret else {
+                secureConnectionState = .rePairRequired
+                throw CodexSecureTransportError.invalidHandshake(
+                    "This pairing can no longer be completed. Scan a new QR code or enter a new pairing code."
+                )
+            }
             expectedMacIdentityPublicKey = pairingPublicKey
+            pairingSecret = pendingPairingSecret
             secureConnectionState = .handshaking
         }
 
@@ -124,6 +134,40 @@ extension CodexService {
             throw CodexSecureTransportError.invalidHandshake("The secure device signature could not be verified.")
         }
 
+        // The relay sees every other handshake field, so only the pairing secret proves that this
+        // is the computer that showed the QR or code, and proves to it that we are the phone that read it.
+        var phonePairingProof: String?
+        if let pairingSecret {
+            guard let macPairingProof = serverHello.pairingProof, !macPairingProof.isEmpty else {
+                secureConnectionState = .updateRequired
+                presentBridgeUpdatePrompt(
+                    message: "This version of DJL on your computer cannot pair securely. Update DJL on your computer and try again."
+                )
+                throw CodexSecureTransportError.incompatibleVersion(
+                    "Update DJL on your computer to pair with this iPhone."
+                )
+            }
+            let expectedMacPairingProof = codexPairingProof(
+                pairingSecret: pairingSecret,
+                transcriptBytes: transcriptBytes,
+                label: codexPairingProofMacLabel
+            )
+            guard expectedMacPairingProof == Data(base64EncodedOrEmpty: macPairingProof) else {
+                pendingPairingSecret = nil
+                secureConnectionState = .rePairRequired
+                throw CodexSecureTransportError.invalidHandshake(
+                    "The pairing code or QR code did not match. Generate a new one and try again."
+                )
+            }
+            phonePairingProof = Data(
+                codexPairingProof(
+                    pairingSecret: pairingSecret,
+                    transcriptBytes: transcriptBytes,
+                    label: codexPairingProofPhoneLabel
+                )
+            ).base64EncodedString()
+        }
+
         let serverReplayEpoch = serverHello.bridgeReplayEpoch?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if let serverReplayEpoch, !serverReplayEpoch.isEmpty,
@@ -152,7 +196,8 @@ extension CodexService {
             sessionId: sessionId,
             phoneDeviceId: phoneIdentityState.phoneDeviceId,
             keyEpoch: serverHello.keyEpoch,
-            phoneSignature: phoneSignatureData.base64EncodedString()
+            phoneSignature: phoneSignatureData.base64EncodedString(),
+            pairingProof: phonePairingProof
         )
         try await sendWireControlMessage(clientAuth)
 
@@ -194,6 +239,7 @@ extension CodexService {
         )
         pendingHandshake = nil
         shouldForceQRBootstrapOnNextHandshake = false
+        pendingPairingSecret = nil
         secureConnectionState = .encrypted
         secureMacFingerprint = codexSecureFingerprint(for: serverHello.macIdentityPublicKey)
         bridgeUpdatePrompt = nil
@@ -291,6 +337,7 @@ extension CodexService {
         lastAppliedBridgeOutboundSeq = 0
         lastAppliedBridgeReplayEpoch = nil
         shouldForceQRBootstrapOnNextHandshake = true
+        pendingPairingSecret = payload.pairingSecret.flatMap { Data(base64Encoded: $0) }
         trustedReconnectFailureCount = 0
         secureConnectionState = trustedMacRegistry.records[payload.macDeviceId] == nil ? .handshaking : .trustedMac
         secureMacFingerprint = codexSecureFingerprint(for: payload.macIdentityPublicKey)
@@ -420,11 +467,20 @@ extension CodexService {
             throw CodexSecureTransportError.invalidQR("The relay URL for pairing codes is invalid.")
         }
 
+        // The typed code never leaves the phone: the relay only sees the lookup code derived from it.
+        // The KDF is slow on purpose, so it runs off the main actor.
+        guard let pairingCodeKeys = await Task.detached(operation: {
+            codexDerivePairingCodeKeys(from: normalizedCode)
+        }).value else {
+            throw CodexSecureTransportError.invalidQR("The relay could not resolve that pairing code.")
+        }
+
         var lastRetriableError: CodexSecureTransportError?
         for (index, resolveURL) in resolveURLs.enumerated() {
             do {
                 return try await sendPairingCodeResolveRequest(
-                    code: normalizedCode,
+                    code: pairingCodeKeys.lookupCode,
+                    pairingSecret: pairingCodeKeys.pairingSecret,
                     relayURL: pairingRelayURL,
                     resolveURL: resolveURL
                 )
@@ -985,6 +1041,7 @@ private extension CodexService {
                 secureConnectionState = .updateRequired
                 presentBridgeUpdatePrompt(message: secureError.message)
             } else if secureError.code == "pairing_expired"
+                || secureError.code == "invalid_pairing_proof"
                 || secureError.code == "phone_not_trusted"
                 || secureError.code == "phone_identity_changed"
                 || secureError.code == "phone_replacement_required" {
@@ -1257,6 +1314,7 @@ private extension CodexService {
         relayMacIdentityPublicKey = resolved.macIdentityPublicKey
         relayProtocolVersion = codexSecureProtocolVersion
         shouldForceQRBootstrapOnNextHandshake = false
+        pendingPairingSecret = nil
         trustedReconnectFailureCount = 0
         secureConnectionState = .trustedMac
         secureMacFingerprint = codexSecureFingerprint(for: resolved.macIdentityPublicKey)
@@ -1292,6 +1350,7 @@ private extension CodexService {
 
     private func sendPairingCodeResolveRequest(
         code: String,
+        pairingSecret: Data,
         relayURL: String,
         resolveURL: URL
     ) async throws -> CodexPairingQRPayload {
@@ -1328,7 +1387,8 @@ private extension CodexService {
                 macDeviceId: resolved.macDeviceId,
                 macIdentityPublicKey: resolved.macIdentityPublicKey,
                 expiresAt: resolved.expiresAt,
-                displayName: resolved.displayName
+                displayName: resolved.displayName,
+                pairingSecret: pairingSecret.base64EncodedString()
             )
         }
 

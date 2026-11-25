@@ -48,16 +48,36 @@ const emptyResponse = (): Response => new Response(null, { status: 204, headers:
 
 type BodyRead = { readonly ok: true; readonly value: unknown } | { readonly ok: false };
 
+// Stops reading at the cap, so a body sent without a content-length cannot be buffered whole.
 async function readJsonBody(request: Request): Promise<BodyRead> {
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return { ok: false };
+  if (!request.body) return { ok: false };
+  const reader = request.body.getReader();
+  const bytes = new Uint8Array(MAX_BODY_BYTES);
+  let length = 0;
   try {
-    const text = await request.text();
-    if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) return { ok: false };
-    return { ok: true, value: JSON.parse(text) };
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (length + value.byteLength > MAX_BODY_BYTES) {
+        await reader.cancel();
+        return { ok: false };
+      }
+      bytes.set(value, length);
+      length += value.byteLength;
+    }
+    return { ok: true, value: JSON.parse(new TextDecoder().decode(bytes.subarray(0, length))) };
   } catch {
     return { ok: false };
   }
+}
+
+// Ingest is public and unauthenticated, so each source address gets a bounded number of events.
+// The address is only the limiter's key; it is never stored.
+async function isRateLimited(request: Request, limiter: RateLimit): Promise<boolean> {
+  const address = request.headers.get("cf-connecting-ip") ?? "unknown";
+  return !(await limiter.limit({ key: address })).success;
 }
 
 async function constantTimeEquals(left: string, right: string): Promise<boolean> {
@@ -246,12 +266,21 @@ export async function handleRequest(
   switch (pathname) {
     case "/v1/visits":
       if (request.method !== "POST") return errorResponse(405, "method_not_allowed");
+      if (await isRateLimited(request, env.LANDING_LIMITER)) {
+        return errorResponse(429, "rate_limited");
+      }
       return recordVisit(request, env, now);
     case "/v1/downloads":
       if (request.method !== "POST") return errorResponse(405, "method_not_allowed");
+      if (await isRateLimited(request, env.LANDING_LIMITER)) {
+        return errorResponse(429, "rate_limited");
+      }
       return recordDownload(request, env, now);
     case "/v1/installs":
       if (request.method !== "POST") return errorResponse(405, "method_not_allowed");
+      if (await isRateLimited(request, env.INSTALL_LIMITER)) {
+        return errorResponse(429, "rate_limited");
+      }
       return recordInstall(request as RequestWithCf, env, now);
     case "/v1/stats":
       if (request.method !== "GET") return errorResponse(405, "method_not_allowed");

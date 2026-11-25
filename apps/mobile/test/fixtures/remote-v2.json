@@ -1,4 +1,17 @@
 {
+  "pairing": {
+    "code": "ABCDEFGHJK",
+    "lookupCode": "7FMLNGRYRD",
+    "pairingSecret": "TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA=",
+    "macPairingProof": "d8OmuHZ5gMb5eLjXS3j1eaPJazlXufk9MssY+v7FWJw=",
+    "phonePairingProof": "kqruPBxVODSgXrtRnLRj3OemPY8huvRe7d5pihBGMHE="
+  },
+  "relayAuth": {
+    "macRegistrationTranscript": "AAAAHWRqbC1yZWxheS1tYWMtcmVnaXN0cmF0aW9uLXYxAAAAD2ZpeHR1cmUtc2Vzc2lvbgAAAAtmaXh0dXJlLW1hYwAAACCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXA==",
+    "macRegistrationSignature": "sSCOXZDqtX7WJvcTM9z4V63BbIBYFr8z1VxAT3WBfJDtmlahasqXtgYBBJu4EhTaKs+qtyVOIvqqXsMTmrthCg==",
+    "phoneConnectTranscript": "AAAAGmRqbC1yZWxheS1waG9uZS1jb25uZWN0LXYxAAAAD2ZpeHR1cmUtc2Vzc2lvbgAAAA1maXh0dXJlLXBob25lAAAAIIE5dw6ofRdfVqNUZsNMfszLjYqRtO43ol32D1uPybOU",
+    "phoneConnectSignature": "cHHtC0kjvcZXGXa2NQRCtzoMj7vmKCS+Jnq/rGuNdvdwGvIzqUsA7kGc9HmaUJzJpzA/RyzhwDpt7ks4/PZIAA=="
+  },
   "input": {
     "sessionId": "fixture-session",
     "protocolVersion": 2,

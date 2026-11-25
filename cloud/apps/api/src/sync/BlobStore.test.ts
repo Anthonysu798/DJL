@@ -165,6 +165,45 @@ describe("S3 blob store", () => {
       key = createHmac("sha256", key).update(part).digest();
     expect(signature).toBe(createHmac("sha256", key).update(toSign).digest("hex"));
   });
+  it("signs an attachment download so storage serves it inert and the override cannot be stripped", async () => {
+    const { blobs } = store();
+    const plain = new URL((await blobs.presignDownload("org/o/files/f", 300)).url);
+    expect(plain.searchParams.has("response-content-disposition")).toBe(false);
+    const url = new URL((await blobs.presignDownload("org/o/files/f", 300, true)).url);
+    expect(url.searchParams.get("response-content-disposition")).toBe("attachment");
+    expect(url.searchParams.get("response-content-type")).toBe("application/octet-stream");
+    const signature = url.searchParams.get("X-Amz-Signature");
+    url.searchParams.delete("X-Amz-Signature");
+    const date = url.searchParams.get("X-Amz-Date")!;
+    const sign = (query: string) => {
+      const request = [
+        "GET",
+        url.pathname,
+        query,
+        `host:${url.host}\n`,
+        "host",
+        "UNSIGNED-PAYLOAD",
+      ];
+      const toSign = [
+        "AWS4-HMAC-SHA256",
+        date,
+        `${date.slice(0, 8)}/us-east-2/s3/aws4_request`,
+        createHash("sha256").update(request.join("\n")).digest("hex"),
+      ].join("\n");
+      let key = Buffer.from("AWS4secret");
+      for (const part of [date.slice(0, 8), "us-east-2", "s3", "aws4_request"])
+        key = createHmac("sha256", key).update(part).digest();
+      return createHmac("sha256", key).update(toSign).digest("hex");
+    };
+    // The overrides are inside the signed, byte-ordered query: dropping them breaks the signature.
+    const names = [...url.searchParams.keys()];
+    expect(names).toEqual(names.toSorted());
+    expect(signature).toBe(sign(url.searchParams.toString()));
+    url.searchParams.delete("response-content-disposition");
+    url.searchParams.delete("response-content-type");
+    expect(signature).not.toBe(sign(url.searchParams.toString()));
+  });
+
   it("pins uploads to their type and size in the signature", async () => {
     const { blobs } = store();
     const upload = await blobs.presignUpload("org/o/files/f", "image/png", 1234);

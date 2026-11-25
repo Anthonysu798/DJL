@@ -7,9 +7,10 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { Redis } from "ioredis";
+import * as OTPAuth from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { ADMIN_LOCKOUT, AdminAuth } from "../admin/AdminAuth.ts";
+import { ADMIN_ACCOUNT_LOCKOUT_MAX, ADMIN_LOCKOUT, AdminAuth } from "../admin/AdminAuth.ts";
 import { loadApiEnv } from "../config/env.ts";
 import { startApi, type ApiRuntime } from "../server.ts";
 import { randomIp, TestClient } from "../testing/client.ts";
@@ -75,6 +76,12 @@ describe("Better Auth throttles", () => {
   });
 });
 
+/** The error code of each attempt, or "ok". */
+const codes = async (attempts: readonly Promise<unknown>[]) =>
+  (await Promise.allSettled(attempts)).map((r) =>
+    r.status === "rejected" ? (r.reason as { code?: string }).code : "ok",
+  );
+
 describe("admin lockouts", () => {
   const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:63799", {
     maxRetriesPerRequest: 2,
@@ -114,5 +121,74 @@ describe("admin lockouts", () => {
     await expect(
       after.login({ email, password, ip: randomIp(), userAgent: null }),
     ).resolves.toMatchObject({ principal: { email } });
+  });
+
+  const password = "a-long-admin-password-1";
+  const fresh = async (label: string) => {
+    const email = `${label}-${crypto.randomUUID().slice(0, 8)}@test.invalid`;
+    await instance().create({ email, name: label, role: "admin", password });
+    return email;
+  };
+
+  it("gives a parallel burst no more guesses than the cap", async () => {
+    const email = await fresh("burst");
+    const ip = randomIp();
+    const auth = instance();
+    const outcomes = await codes(
+      Array.from({ length: 30 }, (_, i) =>
+        auth.login({ email, password: `wrong-password-${i}`, ip, userAgent: null }),
+      ),
+    );
+    expect(outcomes.filter((c) => c === "bad_credentials")).toHaveLength(ADMIN_LOCKOUT.maxFailures);
+    expect(outcomes.filter((c) => c === "locked_out")).toHaveLength(30 - ADMIN_LOCKOUT.maxFailures);
+  });
+
+  it("gives a parallel burst of second-factor guesses no more than the cap", async () => {
+    const email = await fresh("burst-totp");
+    const auth = instance();
+    const first = await auth.login({ email, password, ip: randomIp(), userAgent: null });
+    const { secret } = await auth.beginTotpEnrollment(first.principal);
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret) });
+    expect(await auth.confirmTotpEnrollment(first.principal, totp.generate())).toBe(true);
+    const ip = randomIp();
+    const wrong = totp.generate({ timestamp: Date.now() - 3_600_000 });
+    const outcomes = await codes(
+      Array.from({ length: 30 }, () =>
+        auth.login({ email, password, totp: wrong, ip, userAgent: null }),
+      ),
+    );
+    expect(outcomes.filter((c) => c === "bad_totp")).toHaveLength(ADMIN_LOCKOUT.maxFailures);
+    expect(outcomes).not.toContain("ok");
+  });
+
+  it("caps failures per account however many networks they come from", async () => {
+    const email = await fresh("spread");
+    const auth = instance();
+    // Stay under the per-IP cap on every address: only the account cap can stop this.
+    const perIp = ADMIN_LOCKOUT.maxFailures - 1;
+    let failures = 0;
+    while (failures < ADMIN_ACCOUNT_LOCKOUT_MAX) {
+      const ip = randomIp();
+      for (let i = 0; i < perIp && failures < ADMIN_ACCOUNT_LOCKOUT_MAX; i += 1, failures += 1)
+        await expect(
+          auth.login({ email, password: "wrong-password-xyz", ip, userAgent: null }),
+        ).rejects.toMatchObject({ code: "bad_credentials" });
+    }
+    await expect(
+      auth.login({ email, password, ip: randomIp(), userAgent: null }),
+    ).rejects.toMatchObject({ code: "locked_out" });
+    // The cap follows the account, not the caller: another admin is unaffected.
+    const other = await fresh("spread-other");
+    await expect(
+      auth.login({ email: other, password, ip: randomIp(), userAgent: null }),
+    ).resolves.toMatchObject({ principal: { email: other } });
+  });
+
+  it("does not count successful sign-ins toward a lockout", async () => {
+    const email = await fresh("steady");
+    const auth = instance();
+    const ip = randomIp();
+    for (let i = 0; i < ADMIN_ACCOUNT_LOCKOUT_MAX + 2; i += 1)
+      await expect(auth.login({ email, password, ip, userAgent: null })).resolves.toBeDefined();
   });
 });

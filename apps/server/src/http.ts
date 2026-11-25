@@ -256,7 +256,7 @@ export const streamingAttachmentUploadEffectRouteLayer = HttpRouter.add(
         headers: { ...corsHeaders, Allow: "POST, OPTIONS" },
       });
     }
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -411,7 +411,7 @@ export const aiDetectorAnalysisEffectRouteLayer = HttpRouter.add(
         headers: { ...corsHeaders, Allow: "POST, OPTIONS" },
       });
     }
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       const authFailure = yield* requireAuthenticatedRequest.pipe(
         Effect.match({
           onFailure: (error) => authErrorResponse(error),
@@ -534,12 +534,15 @@ export const serverShimExecEffectRouteLayer = HttpRouter.add(
   }) as Effect.Effect<HttpServerResponse.HttpServerResponse, never, unknown>,
 );
 
+// With no startup token configured, only a caller on this machine is the owner. Everyone else
+// has to go through session auth, even when the server is bound to a LAN or wildcard address.
 export function isLegacyTokenAuthorized(input: {
   readonly config: ServerConfigShape;
   readonly url: URL;
+  readonly remoteAddress: string | undefined;
 }): boolean {
-  const legacyToken = input.url.searchParams.get("token");
-  return !input.config.authToken || legacyToken === input.config.authToken;
+  if (!input.config.authToken) return isLoopbackAddress(input.remoteAddress);
+  return input.url.searchParams.get("token") === input.config.authToken;
 }
 
 function encodeCookie(input: {
@@ -776,7 +779,7 @@ const siteFaviconEffectRouteLayer = HttpRouter.add(
     // same startup-token rule the local-image/attachments routes use so favicons
     // load in local dev without a session cookie.
     const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -816,7 +819,7 @@ const threadExportEffectRouteLayer = HttpRouter.add(
     if (!url) return HttpServerResponse.text("Bad Request", { status: 400 });
 
     const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -871,7 +874,7 @@ const editorIconEffectRouteLayer = HttpRouter.add(
     if (!url) return HttpServerResponse.text("Bad Request", { status: 400 });
 
     const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -942,7 +945,8 @@ export const documentPreviewEffectRouteLayer = HttpRouter.add(
     const url = HttpServerRequest.toURL(request);
     if (!url) return HttpServerResponse.text("Bad Request", { status: 400 });
     const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) yield* requireAuthenticatedRequest;
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress }))
+      yield* requireAuthenticatedRequest;
 
     const encodedId = url.pathname.slice(DOCUMENT_PREVIEW_ROUTE_PREFIX.length);
     let renderId = "";
@@ -1004,7 +1008,7 @@ export const localImageEffectRouteLayer = HttpRouter.add(
     if (!url) return HttpServerResponse.text("Bad Request", { status: 400 });
 
     const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -1056,7 +1060,7 @@ export const attachmentsEffectRouteLayer = HttpRouter.add(
     const config = yield* ServerConfig;
     // Desktop image tags cannot attach Authorization headers; preserve the same
     // startup token rule that the WebSocket route already accepts.
-    if (!isLegacyTokenAuthorized({ config, url })) {
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress })) {
       yield* requireAuthenticatedRequest;
     }
 
@@ -1253,6 +1257,7 @@ export function createHttpRequestHandler({
         if (url.pathname === EDITOR_ICON_ROUTE_PATH) {
           yield* serveEditorIcon({
             url,
+            remoteAddress: req.socket.remoteAddress,
             respond,
             serverConfig,
             fileSystem,
@@ -1366,11 +1371,18 @@ const serveProjectFavicon = Effect.fn(function* (input: {
 
 const serveEditorIcon = Effect.fn(function* (input: {
   readonly url: URL;
+  readonly remoteAddress: string | undefined;
   readonly respond: Respond;
   readonly serverConfig: ServerConfigShape;
   readonly fileSystem: FileSystem.FileSystem;
 }) {
-  if (!isLegacyTokenAuthorized({ config: input.serverConfig, url: input.url })) {
+  if (
+    !isLegacyTokenAuthorized({
+      config: input.serverConfig,
+      url: input.url,
+      remoteAddress: input.remoteAddress,
+    })
+  ) {
     input.respond(401, { "Content-Type": "text/plain" }, "Unauthorized");
     return;
   }
@@ -1549,7 +1561,8 @@ const marketingEffectRouteLayer = HttpRouter.add(
           "Access-Control-Allow-Headers": "Content-Type, X-DJL-Filename",
         },
       });
-    if (!isLegacyTokenAuthorized({ config, url })) yield* requireAuthenticatedRequest;
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress }))
+      yield* requireAuthenticatedRequest;
     const response = yield* marketingHandler(config);
     return HttpServerResponse.setHeaders(response, headers);
   }).pipe(Effect.catchTag("AuthError", (e) => Effect.succeed(authErrorResponse(e)))),
@@ -1586,7 +1599,8 @@ const multiPostEffectRouteLayer = HttpRouter.add(
           "Access-Control-Allow-Headers": "Content-Type, X-DJL-Filename",
         },
       });
-    if (!isLegacyTokenAuthorized({ config, url })) yield* requireAuthenticatedRequest;
+    if (!isLegacyTokenAuthorized({ config, url, remoteAddress: request.remoteAddress }))
+      yield* requireAuthenticatedRequest;
     const response = yield* multiPostHandler;
     return HttpServerResponse.setHeaders(response, headers);
   }).pipe(Effect.catchTag("AuthError", (e) => Effect.succeed(authErrorResponse(e)))),

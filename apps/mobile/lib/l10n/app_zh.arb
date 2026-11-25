@@ -490,6 +490,7 @@
   "pairingPairedMac": "已配对的 Mac",
   "pairingNotAPairingCode": "这不是 DJL 的配对二维码或配对码。",
   "pairingUpdateDesktop": "请更新电脑上的 DJL：此配对使用了不同的协议。",
+  "pairingProofMismatch": "配对码或二维码不匹配，请重新生成后再试。",
   "pairingInvalidIdentifier": "设备或会话标识无效。",
   "pairingInvalidIdentityKey": "电脑身份密钥无效。",
   "pairingCodeExpired": "此配对码已过期，请在 Mac 上生成新的配对码。",

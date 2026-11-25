@@ -236,8 +236,10 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
     handle(
       Effect.gen(function* () {
         const p = yield* principal({ mfa: false });
-        const r = yield* Effect.promise(() =>
-          deps.adminAuth.beginTotpEnrollment(p.adminId, p.email),
+        const body = (yield* readJson) as Partial<{ code: string }>;
+        const r = yield* attempt(
+          () => deps.adminAuth.beginTotpEnrollment(p, str(body?.code) ?? undefined),
+          FAIL,
         );
         return json(r);
       }),
@@ -251,8 +253,9 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       Effect.gen(function* () {
         const p = yield* principal({ mfa: false });
         const body = (yield* readJson) as Partial<{ code: string }>;
-        const ok = yield* Effect.promise(() =>
-          deps.adminAuth.confirmTotpEnrollment(p.adminId, p.sessionId, body.code ?? ""),
+        const ok = yield* attempt(
+          () => deps.adminAuth.confirmTotpEnrollment(p, str(body?.code) ?? ""),
+          FAIL,
         );
         if (!ok)
           return yield* Effect.fail(new ApiError(400, "bad_totp", "Authenticator code is wrong."));

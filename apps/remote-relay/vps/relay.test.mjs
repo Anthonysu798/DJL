@@ -1,10 +1,14 @@
 import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { generateKeyPairSync, randomBytes, sign } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
+import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  buildRelayMacRegistrationTranscript,
+  buildRelayPhoneConnectTranscript,
+} from "@djl/remote-protocol";
 import { afterEach, expect, it } from "vitest";
 import WebSocket from "ws";
 
@@ -100,6 +104,219 @@ const registration = (code = "ABCDEFGH23") => ({
   "x-pairing-version": "2",
   "x-pairing-expires-at": String(Date.now() + 120_000),
 });
+
+function identity(deviceId) {
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const raw = Buffer.from(publicKey.export({ format: "jwk" }).x, "base64url");
+  return {
+    deviceId,
+    publicKey: raw.toString("base64"),
+    sign: (transcript) => sign(null, transcript(raw), privateKey).toString("base64"),
+  };
+}
+const signedRegistration = (session, mac, code, trustedPhone) => ({
+  ...registration(code),
+  "x-mac-device-id": mac.deviceId,
+  "x-mac-identity-public-key": mac.publicKey,
+  "x-mac-registration-signature": mac.sign((macIdentityPublicKey) =>
+    buildRelayMacRegistrationTranscript({
+      sessionId: session,
+      macDeviceId: mac.deviceId,
+      macIdentityPublicKey,
+    }),
+  ),
+  ...(trustedPhone
+    ? {
+        "x-trusted-phone-device-id": trustedPhone.deviceId,
+        "x-trusted-phone-public-key": trustedPhone.publicKey,
+      }
+    : {}),
+});
+const phoneHeaders = (session, phone, signedSession = session) => ({
+  "x-phone-device-id": phone.deviceId,
+  "x-phone-identity-public-key": phone.publicKey,
+  "x-phone-signature": phone.sign((phoneIdentityPublicKey) =>
+    buildRelayPhoneConnectTranscript({
+      sessionId: signedSession,
+      phoneDeviceId: phone.deviceId,
+      phoneIdentityPublicKey,
+    }),
+  ),
+});
+// Records every frame after the relay's own hostPresence greeting.
+async function openPhone(session, headers) {
+  const socket = await open(session, "iphone", headers);
+  const frames = [];
+  await new Promise((resolve) =>
+    socket.on("message", (data) => {
+      const frame = data.toString();
+      if (frame.includes('"hostPresence"')) resolve();
+      else frames.push(frame);
+    }),
+  );
+  return { socket, frames };
+}
+const closeCode = (socket) => new Promise((resolve) => socket.once("close", resolve));
+const received = async (phone, expected) => {
+  while (!phone.frames.includes(expected)) await new Promise((resolve) => setTimeout(resolve, 10));
+};
+const frame = (kind, fields = {}) => JSON.stringify({ kind, ...fields });
+const registrationFrame = (headers, overrides = {}) =>
+  frame("relayMacRegistration", {
+    registration: {
+      macDeviceId: headers["x-mac-device-id"],
+      macIdentityPublicKey: headers["x-mac-identity-public-key"],
+      displayName: headers["x-machine-name"],
+      trustedPhoneDeviceId: headers["x-trusted-phone-device-id"],
+      trustedPhonePublicKey: headers["x-trusted-phone-public-key"],
+      pairingCode: headers["x-pairing-code"],
+      pairingVersion: 2,
+      pairingExpiresAt: Number(headers["x-pairing-expires-at"]),
+      ...overrides,
+    },
+  });
+
+integration(
+  "pins a signed computer identity against a session that claims its device id",
+  async () => {
+    await start();
+    const mac = identity("pinned-mac");
+    const session = randomBytes(24).toString("base64url");
+    const owner = signedRegistration(session, mac, "ABCDEFGH23");
+    await open(session, "mac", owner);
+
+    const hijack = () => randomBytes(24).toString("base64url");
+    const impostor = identity("pinned-mac");
+    const impostorSession = hijack();
+    // Unsigned, signed with another key, and the owner's key with a signature for another session.
+    await expect(
+      open(hijack(), "mac", { ...registration("ZZZZZZZZ23"), "x-mac-device-id": mac.deviceId }),
+    ).rejects.toThrow("403");
+    await expect(
+      open(impostorSession, "mac", signedRegistration(impostorSession, impostor, "ZZZZZZZZ23")),
+    ).rejects.toThrow("403");
+    await expect(
+      open(hijack(), "mac", signedRegistration(session, mac, "ZZZZZZZZ23")),
+    ).rejects.toThrow("401");
+
+    const resolved = await post("/v1/pairing/code/resolve", { code: "ABCDEFGH23" });
+    expect(await resolved.json()).toMatchObject({
+      sessionId: session,
+      macIdentityPublicKey: mac.publicKey,
+    });
+    expect((await post("/v1/pairing/code/resolve", { code: "ZZZZZZZZ23" })).status).toBe(404);
+    // The owner reconnects with its signature; an unsigned computer still registers elsewhere.
+    await open(session, "mac", owner);
+    await open(hijack(), "mac", registration("YYYYYYYY23"));
+  },
+  20_000,
+);
+
+integration(
+  "keeps a stranger with the session id from displacing or tapping the trusted phone",
+  async () => {
+    await start();
+    const mac = identity("routing-mac");
+    const trustedPhone = identity("trusted-phone");
+    const session = randomBytes(24).toString("base64url");
+    const headers = signedRegistration(session, mac, "ABCDEFGH23", trustedPhone);
+    const host = await open(session, "mac", headers);
+    const trusted = await openPhone(session, phoneHeaders(session, trustedPhone));
+
+    await expect(
+      open(session, "iphone", phoneHeaders(session, trustedPhone, "another-session-id-123")),
+    ).rejects.toThrow("401");
+    const stranger = await openPhone(session);
+    const strangerClosed = closeCode(stranger.socket);
+    const candidate = await openPhone(session, phoneHeaders(session, identity("other-phone")));
+    // A newer untrusted socket replaces the older untrusted one, never the trusted phone.
+    expect(await strangerClosed).toBe(4001);
+
+    const toHost = nextMessage(host);
+    candidate.socket.send(frame("clientHello"));
+    expect(await toHost).toBe(frame("clientHello"));
+
+    host.send(frame("encryptedEnvelope", { ciphertext: "secret" }));
+    host.send("opaque-host-frame");
+    host.send(registrationFrame(headers));
+    host.send(registrationFrame(headers, { macDeviceId: "someone-else" }));
+    host.send(registrationFrame(headers, { pairingExpiresAt: Date.now() - 1 }));
+    host.send(frame("serverHello"));
+    host.send(frame("secureError"));
+    host.send(frame("secureReady"));
+    await Promise.all([trusted, candidate].map((phone) => received(phone, frame("secureReady"))));
+
+    const handshake = [frame("serverHello"), frame("secureError"), frame("secureReady")];
+    expect(candidate.frames).toEqual(handshake);
+    expect(trusted.frames).toEqual([
+      frame("encryptedEnvelope", { ciphertext: "secret" }),
+      "opaque-host-frame",
+      ...handshake,
+    ]);
+    expect(trusted.socket.readyState).toBe(WebSocket.OPEN);
+  },
+  20_000,
+);
+
+integration(
+  "moves ciphertext to the phone the computer names as newly paired",
+  async () => {
+    await start();
+    const mac = identity("pairing-mac");
+    const oldPhone = identity("old-phone");
+    const newPhone = identity("new-phone");
+    const session = randomBytes(24).toString("base64url");
+    const headers = signedRegistration(session, mac, "ABCDEFGH23", oldPhone);
+    const host = await open(session, "mac", headers);
+    const previous = await openPhone(session, phoneHeaders(session, oldPhone));
+    const pairing = await openPhone(session, phoneHeaders(session, newPhone));
+    const previousClosed = closeCode(previous.socket);
+
+    // Sent after the pairing window closed: the trusted phone still moves.
+    host.send(
+      registrationFrame(headers, {
+        trustedPhoneDeviceId: newPhone.deviceId,
+        trustedPhonePublicKey: newPhone.publicKey,
+        pairingExpiresAt: Date.now() - 1,
+      }),
+    );
+    expect(await previousClosed).toBe(4001);
+    const delivered = nextMessage(pairing.socket);
+    host.send(frame("encryptedEnvelope", { ciphertext: "for-new-phone" }));
+    expect(await delivered).toBe(frame("encryptedEnvelope", { ciphertext: "for-new-phone" }));
+    expect(previous.frames).toEqual([]);
+
+    // The replaced phone is now only a candidate and cannot take the session back.
+    const returning = await openPhone(session, phoneHeaders(session, oldPhone));
+    host.send(frame("encryptedEnvelope", { ciphertext: "still-for-new-phone" }));
+    host.send(frame("secureError"));
+    await received(returning, frame("secureError"));
+    expect(returning.frames).toEqual([frame("secureError")]);
+    expect(pairing.socket.readyState).toBe(WebSocket.OPEN);
+  },
+  20_000,
+);
+
+integration(
+  "answers an oversized chunked JSON body at the cap without waiting for it to end",
+  async () => {
+    await start();
+    const socket = connect(Number(new URL(base).port), "127.0.0.1");
+    sockets.push({ terminate: () => socket.destroy() });
+    const status = new Promise((resolve) =>
+      socket.once("data", (data) => resolve(data.toString().split(" ")[1])),
+    );
+    // No content-length and no terminating chunk: only counting bytes can end this read.
+    const body = " ".repeat(16_385);
+    socket.write(
+      "POST /v1/pairing/code/resolve HTTP/1.1\r\nhost: relay\r\n" +
+        "content-type: application/json\r\ntransfer-encoding: chunked\r\n\r\n" +
+        `${body.length.toString(16)}\r\n${body}\r\n`,
+    );
+    expect(await status).toBe("400");
+  },
+  20_000,
+);
 
 integration(
   "keeps provider registration authenticated and distinguishes FCM from APNs",

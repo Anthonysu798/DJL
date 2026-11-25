@@ -490,6 +490,7 @@
   "pairingPairedMac": "Mac jumelé",
   "pairingNotAPairingCode": "Ce n’est pas un QR code ni un code de jumelage DJL.",
   "pairingUpdateDesktop": "Mettez à jour DJL sur votre ordinateur : ce jumelage utilise un autre protocole.",
+  "pairingProofMismatch": "Le code de jumelage ou le code QR ne correspond pas. Générez-en un nouveau et réessayez.",
   "pairingInvalidIdentifier": "Identifiant d’appareil ou de session non valide.",
   "pairingInvalidIdentityKey": "Clé d’identité de l’ordinateur non valide.",
   "pairingCodeExpired": "Ce code de jumelage a expiré. Générez-en un nouveau sur votre Mac.",

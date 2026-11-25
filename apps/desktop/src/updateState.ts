@@ -95,8 +95,9 @@ function parseUpdateVersion(version: string): ParsedUpdateVersion | null {
 export function isUpdateVersionNewer(currentVersion: string, candidateVersion: string): boolean {
   const current = parseUpdateVersion(currentVersion);
   const candidate = parseUpdateVersion(candidateVersion);
+  // A version that cannot be ordered is never an upgrade: installing it could be a rollback.
   if (!current || !candidate) {
-    return candidateVersion.trim() !== currentVersion.trim();
+    return false;
   }
 
   if (candidate.major !== current.major) return candidate.major > current.major;

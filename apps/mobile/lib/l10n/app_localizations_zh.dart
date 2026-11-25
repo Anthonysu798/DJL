@@ -1602,6 +1602,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pairingUpdateDesktop => '请更新电脑上的 DJL：此配对使用了不同的协议。';
 
   @override
+  String get pairingProofMismatch => '配对码或二维码不匹配，请重新生成后再试。';
+
+  @override
   String get pairingInvalidIdentifier => '设备或会话标识无效。';
 
   @override
@@ -6430,6 +6433,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get pairingUpdateDesktop => '請更新電腦上的 DJL：這次配對使用了不同的通訊協定。';
+
+  @override
+  String get pairingProofMismatch => '配對碼或 QR 碼不相符，請重新產生後再試一次。';
 
   @override
   String get pairingInvalidIdentifier => '裝置或工作階段識別碼無效。';

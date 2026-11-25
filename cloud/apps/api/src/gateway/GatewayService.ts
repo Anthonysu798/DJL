@@ -6,6 +6,9 @@
  * admission.ts) → route → reserve → stream from the provider while tracking
  * running cost → cut at zero → settle actual usage → usage row, trial hook,
  * abuse counting. Prompt and response content are never persisted or logged.
+ *
+ * What a settlement cannot cover becomes debt on the ledger (a negative topup
+ * balance) and an alert; the org gets no paid requests until it is cleared.
  */
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { CloudUsageTrailer } from "@djl/contracts/cloud";
@@ -13,6 +16,9 @@ import { schema, type DjlDatabase } from "@djl/db";
 import {
   costOfUsage,
   estimateReservation,
+  estimateTokens,
+  formatCredits,
+  MAX_CHARS_PER_TOKEN,
   spendable,
   type Microcredits,
   type ModelPrice,
@@ -48,12 +54,14 @@ import {
   type PlanLimits,
 } from "./admission.ts";
 import type { RateLimiter } from "./RateLimiter.ts";
-import { estimateInputTokens, resolveModel, type CatalogModel } from "./routing.ts";
+import { estimateInput, resolveModel, type CatalogModel } from "./routing.ts";
 
 export interface GatewayConfig {
   readonly region: string;
   readonly catalogTtlMs: number;
   readonly refusalFlagThreshold: number;
+  /** Longest a chat stream may run before it is cut and settled. Defaults to 30 minutes. */
+  readonly maxStreamMs?: number;
 }
 
 export interface GatewayDeps {
@@ -121,7 +129,8 @@ export interface Step {
    * The provider's output. Iterate it to the end or stop early (break, or
    * the signal); either way the request is settled and `result` resolves.
    * A step that is never iterated holds its reservation until the stale
-   * reservation job releases it.
+   * reservation job releases it; one that is being iterated keeps its
+   * reservation alive until it settles or reaches the maximum stream length.
    */
   readonly chunks: AsyncIterable<ChatCompletionChunk>;
   readonly result: Promise<StepResult>;
@@ -130,6 +139,35 @@ export interface Step {
 const TRAILER_EVENT = "djl.usage";
 const EDITABLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 export const MAX_EDIT_IMAGE_BYTES = 16 * 1024 * 1024;
+
+export const DEFAULT_MAX_STREAM_MS = 30 * 60_000;
+/** How long past the maximum stream length an unreleased concurrency slot survives. */
+const SLOT_GRACE_SECONDS = 60;
+/** How often a running stream tells the stale reservation job it is alive (holds last 10 minutes). */
+const HEARTBEAT_MS = 60_000;
+/** How long to keep reading for the provider's usage after the caller left a finished stream. */
+const USAGE_GRACE_MS = 2_000;
+const STREAM_TIMEOUT = {
+  code: "stream_timeout",
+  message: "This response reached the maximum stream length.",
+};
+
+/**
+ * The image variants the flat per-image price covers. Other sizes and
+ * qualities ("high", "hd", "auto") cost the provider several times more, so
+ * they are refused and the defaults are always sent explicitly.
+ */
+const IMAGE_SIZES = new Set(["1024x1024", "1536x1024", "1024x1536"]);
+const IMAGE_QUALITIES = new Set(["low", "medium"]);
+const MAX_IMAGES = 4;
+
+function imageVariant(body: { readonly size?: string; readonly quality?: string }) {
+  const size = body.size ?? "1024x1024";
+  const quality = body.quality ?? "medium";
+  if (!IMAGE_SIZES.has(size) || !IMAGE_QUALITIES.has(quality))
+    throw new ApiError(400, "bad_request", "That image size or quality is not available.");
+  return { size, quality };
+}
 
 /** The tightest spending limit on a stream and the error it ends with when reached. */
 function streamBudget(
@@ -186,12 +224,19 @@ export class GatewayService {
   private readonly breakers = new Map<ProviderId, CircuitBreaker>();
   private readonly load = { inFlight: 0 };
   private readonly policies: readonly AdmissionPolicy[];
+  private readonly maxStreamMs: number;
 
   constructor(private readonly deps: GatewayDeps) {
+    this.maxStreamMs = deps.config.maxStreamMs ?? DEFAULT_MAX_STREAM_MS;
     this.policies = [
       killSwitchPolicy(deps.db),
       deps.admission?.abuse ?? allowAll("abuse"),
-      rateLimitPolicy({ limiter: deps.limiter, settings: deps.settings, load: this.load }),
+      rateLimitPolicy({
+        limiter: deps.limiter,
+        settings: deps.settings,
+        load: this.load,
+        slotTtlSeconds: Math.ceil(this.maxStreamMs / 1000) + SLOT_GRACE_SECONDS,
+      }),
       deps.admission?.window ?? allowAll("window"),
     ];
   }
@@ -338,6 +383,16 @@ export class GatewayService {
       settledMicrocredits.add(Number(input.settled), { status: input.status });
   }
 
+  /** Usage the balance could not cover is now debt on the ledger; tell the team. */
+  private alertDebt(facts: RequestFacts, requestId: string, uncovered: Microcredits): void {
+    if (uncovered === 0n) return;
+    this.deps.onAlert?.({
+      severity: "warn",
+      title: "Usage exceeded the balance",
+      body: `org ${facts.principal.orgId} owes ${formatCredits(uncovered)} credits after request ${requestId}`,
+    });
+  }
+
   private async afterSettle(facts: RequestFacts, refusal: boolean): Promise<void> {
     await this.deps.trial.onFirstCloudRequest(facts.principal.orgId).catch(() => false);
     if (!refusal) return;
@@ -429,8 +484,30 @@ export class GatewayService {
       if (body.tools?.length && !model.capabilities.includes("tools"))
         throw new ApiError(400, "bad_request", "That model does not support tools.");
       const price = priceOf(model);
-      const inputTokens = estimateInputTokens(body.messages);
       const maxOutput = Math.min(body.max_tokens ?? 4096, model.maxOutputTokens ?? 8192);
+      // Forward only the fields this gateway prices. The body is client JSON, so a spread would
+      // pass routing fields such as OpenRouter's `models`, `plugins` and `provider`, or `n`,
+      // letting the provider serve and bill something other than the catalog model charged here.
+      const upstream: ChatRequest = {
+        model: model.upstreamModelId,
+        messages: body.messages,
+        ...(body.tools !== undefined ? { tools: body.tools } : {}),
+        ...(body.tool_choice !== undefined ? { tool_choice: body.tool_choice } : {}),
+        ...(body.temperature !== undefined ? { temperature: body.temperature } : {}),
+        ...(body.top_p !== undefined ? { top_p: body.top_p } : {}),
+        ...(body.stop !== undefined ? { stop: body.stop } : {}),
+        ...(body.response_format !== undefined ? { response_format: body.response_format } : {}),
+        max_tokens: maxOutput,
+        user: facts.principal.orgId.slice(0, 16),
+      };
+      // The estimate covers exactly what is sent, so nothing forwarded goes unreserved.
+      const { tokens: inputTokens, chars } = estimateInput(upstream);
+      if (model.contextWindow && chars > model.contextWindow * MAX_CHARS_PER_TOKEN)
+        throw new ApiError(
+          413,
+          "payload_too_large",
+          "This request is too large for the model's context window.",
+        );
       const estimate = estimateReservation(price, {
         inputTokens,
         maxOutputTokens: maxOutput,
@@ -458,8 +535,10 @@ export class GatewayService {
         throw e;
       }
       reserved = estimate;
+      // What the org could spend on this request: its reservation plus whatever is left.
+      const affordable = spendable(reservation.balances, model.freeEligible) + estimate;
       const budget = streamBudget(
-        spendable(reservation.balances, model.freeEligible) + estimate, // what the org could spend
+        affordable,
         reservation.windowHold !== null && reservation.windowHold < estimate
           ? reservation.windowHold
           : null,
@@ -477,35 +556,64 @@ export class GatewayService {
       const provider = this.deps.providers[model.provider]!;
       const breaker = this.breaker(model.provider);
       const abort = new AbortController();
-      const onAbort = () => abort.abort();
-      options.signal?.addEventListener("abort", onAbort, { once: true });
-      const upstream: ChatRequest = {
-        ...body,
-        model: model.upstreamModelId,
-        max_tokens: maxOutput,
-        user: facts.principal.orgId.slice(0, 16),
+      /** Output tokens estimated from what the provider streamed, delivered or not. */
+      let outputTokens = 0;
+      let usage: Usage | null = null;
+      let finish: ChatChunk["finish_reason"] = null;
+      let upstreamId: string | null = null;
+      let firstTokenAt: number | null = null;
+      let cut: StepResult["error"] = null;
+      let failed: ApiError | null = null;
+      let usageGrace: ReturnType<typeof setTimeout> | undefined;
+      /**
+       * Stop the provider because the caller is gone. Once the finish chunk is
+       * in, the provider's usage follows it: wait briefly for that, so leaving
+       * just before the usage chunk cannot swap the real count for an estimate.
+       */
+      const stopUpstream = () => {
+        if (finish !== null && usage === null && cut === null)
+          usageGrace ??= setTimeout(() => abort.abort(), USAGE_GRACE_MS);
+        else abort.abort();
       };
+      options.signal?.addEventListener("abort", stopUpstream, { once: true });
       let resolveResult!: (result: StepResult) => void;
       const result = new Promise<StepResult>((resolve) => {
         resolveResult = resolve;
       });
 
       const produce = async function* (this: GatewayService): AsyncGenerator<ChatCompletionChunk> {
-        let outputChars = 0;
-        let usage: Usage | null = null;
-        let finish: ChatChunk["finish_reason"] = null;
-        let upstreamId: string | null = null;
-        let firstTokenAt: number | null = null;
-        let cutOff = false;
-        let failed: ApiError | null = null;
-        const settle = async (): Promise<StepResult> => {
-          const finalUsage: Usage = usage ?? {
+        const beat = setInterval(
+          () => void this.deps.ledger.heartbeat(requestId).catch(() => undefined),
+          HEARTBEAT_MS,
+        );
+        const deadline = setTimeout(() => {
+          cut = STREAM_TIMEOUT;
+          abort.abort();
+          // A caller that has stopped reading would never reach the finally below.
+          void settleOnce().then(resolveResult);
+        }, this.maxStreamMs);
+        /** The provider's count once it reports one; until then the estimate of everything sent and streamed. */
+        const used = (): Usage =>
+          usage ?? {
             input_tokens: inputTokens,
-            output_tokens: Math.ceil(outputChars / 4),
+            output_tokens: Math.ceil(outputTokens),
             cached_input_tokens: 0,
           };
+        const costOf = (u: Usage) =>
+          costOfUsage(price, {
+            inputTokens: u.input_tokens,
+            cachedInputTokens: u.cached_input_tokens,
+            outputTokens: u.output_tokens,
+            images: 0,
+            requests: 1,
+          });
+        const settle = async (): Promise<StepResult> => {
+          clearInterval(beat);
+          clearTimeout(deadline);
+          clearTimeout(usageGrace);
+          const finalUsage = used();
           try {
-            if (failed && outputChars === 0 && !usage) {
+            if (failed && outputTokens === 0 && !usage) {
               await this.deps.ledger.release({
                 orgId: facts.principal.orgId,
                 reservationId: requestId,
@@ -521,25 +629,24 @@ export class GatewayService {
               });
               return { usage: null, error: { code: failed.code, message: failed.message } };
             }
-            const actual = costOfUsage(price, {
-              inputTokens: finalUsage.input_tokens,
-              cachedInputTokens: finalUsage.cached_input_tokens,
-              outputTokens: finalUsage.output_tokens,
-              images: 0,
-              requests: 1,
-            });
-            const { balances } = await this.deps.ledger.settle({
+            const cost = costOf(finalUsage);
+            // A stream cut at zero is charged down to zero and no further: the chunk that
+            // crossed the line was never delivered. The provider's own count is always charged.
+            const actual = cut && !usage && cost > affordable ? affordable : cost;
+            const { balances, uncovered } = await this.deps.ledger.settle({
               orgId: facts.principal.orgId,
               reservationId: requestId,
               actual,
               idempotencyKey: `req:${requestId}`,
               actor: "system:gateway",
               freeEligible: model.freeEligible,
+              userId: facts.principal.userId,
             });
+            this.alertDebt(facts, requestId, uncovered);
             const refusal = finish === "content_filter";
             await this.finishRequest({
               id: requestId,
-              status: cutOff ? "cut_off" : failed ? "failed" : "settled",
+              status: cut ? "cut_off" : failed ? "failed" : "settled",
               usage: finalUsage,
               settled: actual,
               upstreamRequestId: upstreamId,
@@ -557,13 +664,9 @@ export class GatewayService {
               outputTokens: finalUsage.output_tokens,
               settled: actual.toString(),
               remaining: spendable(balances, model.freeEligible).toString(),
-              cutOff,
+              cutOff: cut !== null,
             };
-            const error = cutOff
-              ? budget.error
-              : failed
-                ? { code: failed.code, message: failed.message }
-                : null;
+            const error = cut ?? (failed ? { code: failed.code, message: failed.message } : null);
             return { usage: trailer, error };
           } catch (error) {
             console.error(
@@ -579,28 +682,34 @@ export class GatewayService {
             await release();
           }
         };
+        let settling: Promise<StepResult> | undefined;
+        const settleOnce = () => (settling ??= settle());
+        const account = (chunk: ChatChunk) => {
+          if (firstTokenAt === null) firstTokenAt = Date.now();
+          upstreamId ??= chunk.id || null;
+          if (chunk.delta.content) outputTokens += estimateTokens(chunk.delta.content);
+          for (const t of chunk.delta.tool_calls ?? [])
+            outputTokens += estimateTokens(
+              (t.function?.name ?? "") + (t.function?.arguments ?? ""),
+            );
+          if (chunk.finish_reason) finish = chunk.finish_reason;
+          if (chunk.usage) usage = chunk.usage;
+        };
+        const upstreamChunks = provider.chatStream(upstream, abort.signal)[Symbol.asyncIterator]();
         try {
-          for await (const chunk of provider.chatStream(upstream, abort.signal)) {
-            if (firstTokenAt === null) firstTokenAt = Date.now();
-            upstreamId ??= chunk.id || null;
-            if (chunk.delta.content) outputChars += chunk.delta.content.length;
-            for (const t of chunk.delta.tool_calls ?? [])
-              outputChars += t.function?.arguments?.length ?? 0;
-            if (chunk.finish_reason) finish = chunk.finish_reason;
-            if (chunk.usage) usage = chunk.usage;
-            // Running cost check: cut immediately at zero (decision: Out of credits).
-            const running = costOfUsage(price, {
-              inputTokens,
-              cachedInputTokens: 0,
-              outputTokens: Math.ceil(outputChars / 4),
-              images: 0,
-              requests: 1,
-            });
-            if (running > budget.amount) {
-              cutOff = true;
+          for (;;) {
+            const next = await upstreamChunks.next();
+            if (next.done) break;
+            const chunk = next.value;
+            account(chunk);
+            // Running cost check on input and output: cut immediately at zero (decision: Out of credits).
+            if (costOf(used()) > budget.amount) {
+              cut = budget.error;
               abort.abort();
               break;
             }
+            // The caller is gone; only the provider's usage is still awaited (see stopUpstream).
+            if (options.signal?.aborted) continue;
             if (
               chunk.delta.content !== undefined ||
               chunk.delta.tool_calls ||
@@ -631,15 +740,30 @@ export class GatewayService {
               `provider_${error.code}`,
               "The model provider returned an error.",
             );
-          } else if (!cutOff && !options.signal?.aborted) {
+          } else if (!cut && !options.signal?.aborted) {
             failed = new ApiError(502, "provider_unknown", "The model provider failed.");
           }
         } finally {
           // Runs on normal completion, provider failure, the caller's abort, and
           // the caller stopping early (iterator.return()).
+          if (finish !== null && usage === null && cut === null && failed === null) {
+            // The caller stopped reading right after the finish chunk: same wait for the usage.
+            stopUpstream();
+            try {
+              for (;;) {
+                const next = await upstreamChunks.next();
+                if (next.done) break;
+                account(next.value);
+                if (next.value.usage) break;
+              }
+            } catch {
+              // Aborted: the grace period ran out.
+            }
+          }
           abort.abort();
-          options.signal?.removeEventListener("abort", onAbort);
-          resolveResult(await settle());
+          options.signal?.removeEventListener("abort", stopUpstream);
+          void upstreamChunks.return?.(undefined)?.catch(() => undefined);
+          resolveResult(await settleOnce());
         }
       };
       return { requestId, chunks: produce.call(this), result };
@@ -680,6 +804,7 @@ export class GatewayService {
     /** Aborted when the client disconnects; the provider call stops and nothing is charged. */
     options: { readonly signal?: AbortSignal } = {},
   ) {
+    const variant = imageVariant(body);
     return this.imageRequest(
       facts,
       {
@@ -691,14 +816,7 @@ export class GatewayService {
       },
       (provider, model, n, signal) =>
         provider.generateImage(
-          {
-            model,
-            prompt: body.prompt,
-            n,
-            ...(body.size ? { size: body.size } : {}),
-            ...(body.quality ? { quality: body.quality } : {}),
-            user: facts.principal.orgId.slice(0, 16),
-          },
+          { model, prompt: body.prompt, n, ...variant, user: facts.principal.orgId.slice(0, 16) },
           signal,
         ),
       options,
@@ -728,6 +846,7 @@ export class GatewayService {
         "bad_request",
         "The image must be a PNG, JPEG, or WebP file of up to 16 MB.",
       );
+    const variant = imageVariant(body);
     return this.imageRequest(
       facts,
       {
@@ -744,7 +863,7 @@ export class GatewayService {
             prompt: body.prompt,
             image: body.image,
             n,
-            ...(body.size ? { size: body.size } : {}),
+            ...variant,
             user: facts.principal.orgId.slice(0, 16),
           },
           signal,
@@ -780,7 +899,7 @@ export class GatewayService {
     const startedAt = Date.now();
     let reserved = false;
     try {
-      const n = Math.min(Math.max(input.n ?? 1, 1), 4);
+      const n = Number.isInteger(input.n) ? Math.min(Math.max(input.n!, 1), MAX_IMAGES) : 1;
       if (!input.prompt || input.prompt.length > 8000)
         throw new ApiError(400, "bad_request", "A prompt of up to 8,000 characters is required.");
       const { model, reason } = this.route(input.model, await this.catalog());
@@ -872,14 +991,16 @@ export class GatewayService {
         images: result.count,
         requests: 1,
       });
-      const { balances } = await this.deps.ledger.settle({
+      const { balances, uncovered } = await this.deps.ledger.settle({
         orgId: facts.principal.orgId,
         reservationId: requestId,
         actual,
         idempotencyKey: `req:${requestId}`,
         actor: "system:gateway",
         freeEligible: model.freeEligible,
+        userId: facts.principal.userId,
       });
+      this.alertDebt(facts, requestId, uncovered);
       await this.finishRequest({
         id: requestId,
         status: "settled",
@@ -935,7 +1056,7 @@ export class GatewayService {
       if (!model.capabilities.includes("embeddings"))
         throw new ApiError(400, "bad_request", "That model does not produce embeddings.");
       const price = priceOf(model);
-      const inputTokens = estimateInputTokens(inputs.map((content) => ({ content })));
+      const inputTokens = Math.ceil(estimateTokens(JSON.stringify(inputs)));
       const estimate = estimateReservation(price, { inputTokens, maxOutputTokens: 0, images: 0 });
       try {
         await this.deps.ledger.reserve({
@@ -1008,14 +1129,16 @@ export class GatewayService {
         images: 0,
         requests: 1,
       });
-      await this.deps.ledger.settle({
+      const { uncovered } = await this.deps.ledger.settle({
         orgId: facts.principal.orgId,
         reservationId: requestId,
         actual,
         idempotencyKey: `req:${requestId}`,
         actor: "system:gateway",
         freeEligible: model.freeEligible,
+        userId: facts.principal.userId,
       });
+      this.alertDebt(facts, requestId, uncovered);
       await this.finishRequest({
         id: requestId,
         status: "settled",

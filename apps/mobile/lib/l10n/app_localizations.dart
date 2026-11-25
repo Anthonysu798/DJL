@@ -3057,6 +3057,12 @@ abstract class AppLocalizations {
   /// **'Update DJL on your desktop: this pairing uses a different protocol.'**
   String get pairingUpdateDesktop;
 
+  /// No description provided for @pairingProofMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The pairing code or QR code did not match. Generate a new one and try again.'**
+  String get pairingProofMismatch;
+
   /// No description provided for @pairingInvalidIdentifier.
   ///
   /// In en, this message translates to:

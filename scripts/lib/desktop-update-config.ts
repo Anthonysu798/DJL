@@ -25,6 +25,44 @@ export function assertPackagedDesktopUpdateConfig(contents: string, expectedUrl:
   }
 }
 
+function unquoteYamlScalar(value: string): string {
+  return value.trim().replace(/^(['"])(.*)\1$/, "$2");
+}
+
+/** Reads the signer names electron-updater checks a Windows update's Authenticode subject against. */
+export function readPackagedUpdatePublisherNames(contents: string): string[] {
+  const lines = contents.split(/\r?\n/);
+  const index = lines.findIndex((line) => line.startsWith("publisherName:"));
+  if (index < 0) return [];
+  const inline = lines[index]!.slice("publisherName:".length).trim();
+  if (inline) return [unquoteYamlScalar(inline)];
+  const names: string[] = [];
+  for (const line of lines.slice(index + 1)) {
+    const item = /^\s*-\s+(.+)$/.exec(line);
+    if (!item?.[1]) break;
+    names.push(unquoteYamlScalar(item[1]));
+  }
+  return names;
+}
+
+/**
+ * electron-updater skips Authenticode verification entirely when app-update.yml carries no
+ * publisherName, so a signed Windows build must ship exactly the publisher it was signed for.
+ */
+export function assertPackagedWindowsUpdatePublisher(
+  contents: string,
+  expectedPublisher: string,
+): void {
+  const names = readPackagedUpdatePublisherNames(contents);
+  if (names.length !== 1 || names[0] !== expectedPublisher) {
+    throw new Error(
+      `Packaged Windows updater must verify updates against publisher "${expectedPublisher}", received ${
+        names.length > 0 ? names.map((name) => `"${name}"`).join(", ") : "no publisherName"
+      }.`,
+    );
+  }
+}
+
 export function findPackagedDesktopUpdateConfigs(directory: string): string[] {
   const matches: string[] = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {

@@ -10,6 +10,7 @@ const {
   SHORT_PAIRING_CODE_ALPHABET,
   SHORT_PAIRING_CODE_LENGTH,
   createShortPairingCode,
+  derivePairingCodeKeys,
   printQR,
   shouldPrintPairingJson,
 } = require("../src/qr");
@@ -23,6 +24,14 @@ test("createShortPairingCode emits a short human-friendly token", () => {
 
   assert.equal(code.length, SHORT_PAIRING_CODE_LENGTH);
   assert.match(code, new RegExp(`^[${SHORT_PAIRING_CODE_ALPHABET}]+$`));
+});
+
+test("derivePairingCodeKeys gives the relay a lookup code that is not the typed code", () => {
+  // Same vector as apps/mobile/test/fixtures/remote-v2.json, so every client derives the same keys.
+  assert.deepEqual(derivePairingCodeKeys("ABCDEFGHJK"), {
+    lookupCode: "7FMLNGRYRD",
+    pairingSecret: "TEaZ1ethYE23uB3tOIot0NEaq4mGN7y49uprY48IWoA=",
+  });
 });
 
 test("printQR prints the short pairing code without the full pairing JSON by default", () => {

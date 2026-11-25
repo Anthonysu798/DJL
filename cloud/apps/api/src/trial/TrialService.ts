@@ -17,6 +17,7 @@ import {
 } from "@djl/domain";
 
 import { writeAudit } from "../audit/AuditLog.ts";
+import { normalizePhoneNumber } from "../auth/phone.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
 import { ApiError } from "../http/errors.ts";
 
@@ -69,12 +70,14 @@ export class TrialService {
     const cfg = await this.loadConfig();
     const existing = await this.status(input.orgId);
     if (existing) return existing;
-    if (!input.phoneNumber || !input.phoneVerified)
+    // Hash the E.164 form, or each spelling of one number would be a new phone.
+    const phoneNumber = input.phoneNumber ? normalizePhoneNumber(input.phoneNumber) : null;
+    if (!phoneNumber || !input.phoneVerified)
       throw new ApiError(400, "phone_required", "Verify a mobile phone number first.");
 
-    const phoneHash = await sha256Hex(`${cfg.hashSalt}:${input.phoneNumber}`);
+    const phoneHash = await sha256Hex(`${cfg.hashSalt}:${phoneNumber}`);
     const ipHash = input.ip ? await sha256Hex(`${cfg.hashSalt}:${input.ip}`) : null;
-    const lineType = await this.lookup.lookupLineType(input.phoneNumber);
+    const lineType = await this.lookup.lookupLineType(phoneNumber);
     const since = new Date(Date.now() - 86_400_000);
     const [phoneUsed, byDevice, byIp, budget] = await Promise.all([
       this.db.query.trialGrants.findFirst({ where: eq(schema.trialGrants.phoneHash, phoneHash) }),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cryptography/cryptography.dart';
+import 'package:cryptography/helpers.dart';
 import '../../../core/security/remote_crypto.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'rpc_payload.dart';
@@ -56,7 +57,7 @@ class RemoteTransport {
 
     await closing;
     checkCurrent();
-    _pairing = pair;
+    _pairing = bootstrap ? Pairing(pair.data) : pair;
     final identity = await pairings.identity();
     checkCurrent();
     final saved = await pairings.credentials.read(
@@ -88,11 +89,25 @@ class RemoteTransport {
       ),
       'clientNonce': clientNonce,
     };
+    final phoneKey = await Ed25519().newKeyPairFromSeed(identity.seed);
+    final connectSignature = await Ed25519().sign(
+      relayPhoneConnectTranscript(
+        pair.sessionId,
+        identity.deviceId,
+        identity.publicKey,
+      ),
+      keyPair: phoneKey,
+    );
     checkCurrent();
     try {
       final socket = await WebSocket.connect(
         '${pair.relay.toString().replaceFirst(RegExp(r'/$'), '')}/${Uri.encodeComponent(pair.sessionId)}',
-        headers: {'x-role': 'iphone'},
+        headers: {
+          'x-role': 'iphone',
+          'x-phone-device-id': identity.deviceId,
+          'x-phone-identity-public-key': identity.publicKey,
+          'x-phone-signature': base64Encode(connectSignature.bytes),
+        },
       ).timeout(const Duration(seconds: 12));
       if (generation != _generation) {
         await socket.close();
@@ -130,12 +145,34 @@ class RemoteTransport {
         checkCurrent();
         break;
       }
+      String? phoneProof;
+      if (bootstrap) {
+        // The relay supplied the key that just verified. Only the secret from
+        // the QR or typed code proves this is the computer the user chose.
+        final secret = pair.pairingSecret, proof = server['pairingProof'];
+        if (secret == null || proof is! String) {
+          throw RemoteSecurityException(appStrings.pairingUpdateDesktop);
+        }
+        final bytes = handshakeTranscript(transcript);
+        final expected = await pairingProof(
+          secret,
+          bytes,
+          pairingProofMacLabel,
+        );
+        if (!constantTimeBytesEquality.equals(
+          proof.codeUnits,
+          expected.codeUnits,
+        )) {
+          throw RemoteSecurityException(appStrings.pairingProofMismatch);
+        }
+        phoneProof = await pairingProof(secret, bytes, pairingProofPhoneLabel);
+        checkCurrent();
+      }
       final epoch = server['bridgeReplayEpoch'] as String?;
       if (epoch != null && epoch != _replayEpoch) {
         _seq = 0;
         _replayEpoch = epoch;
       }
-      final phoneKey = await Ed25519().newKeyPairFromSeed(identity.seed);
       final signature = await Ed25519().sign(
         clientAuthTranscript(handshakeTranscript(transcript)),
         keyPair: phoneKey,
@@ -147,6 +184,7 @@ class RemoteTransport {
         'phoneDeviceId': identity.deviceId,
         'keyEpoch': server['keyEpoch'],
         'phoneSignature': base64Encode(signature.bytes),
+        'pairingProof': ?phoneProof,
       });
       while (true) {
         final ready = await _control(
@@ -211,8 +249,10 @@ class RemoteTransport {
       final frame = _decode(iterator.current);
       if (frame['kind'] == 'secureError') {
         throw RemoteSecurityException(
-          frame['message'] as String? ??
-              appStrings.desktopSecureConnectionRejected,
+          frame['code'] == 'invalid_pairing_proof'
+              ? appStrings.pairingProofMismatch
+              : frame['message'] as String? ??
+                    appStrings.desktopSecureConnectionRejected,
         );
       }
       if (frame['kind'] == kind) return frame;

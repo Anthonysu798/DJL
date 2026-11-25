@@ -648,6 +648,14 @@ extension CodexService {
         }
     }
 
+    // The relay session id is the last path component of the relay socket URL.
+    func relayPhoneConnectHeaders(for url: URL) -> [(name: String, value: String)] {
+        (try? codexRelayPhoneConnectHeaders(
+            sessionId: url.lastPathComponent,
+            phoneIdentityState: phoneIdentityState
+        )) ?? []
+    }
+
     // Mirrors litter's raw TCP websocket client so LAN/private-overlay pairing can bypass iOS proxy/WebSocket API bugs.
     func establishManualTCPWebSocketConnection(
         url: URL,
@@ -714,6 +722,7 @@ extension CodexService {
         var additionalHeaders: [(name: String, value: String)] = []
         if let role, !role.isEmpty {
             additionalHeaders.append((name: "x-role", value: role))
+            additionalHeaders.append(contentsOf: relayPhoneConnectHeaders(for: url))
         } else if !token.isEmpty {
             additionalHeaders.append((name: "Authorization", value: "Bearer \(token)"))
         }
@@ -766,6 +775,9 @@ extension CodexService {
         var request = URLRequest(url: url)
         if let role, !role.isEmpty {
             request.setValue(role, forHTTPHeaderField: "x-role")
+            for header in relayPhoneConnectHeaders(for: url) {
+                request.setValue(header.value, forHTTPHeaderField: header.name)
+            }
         } else if !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -947,6 +959,7 @@ extension CodexService {
         ]
         if let role, !role.isEmpty {
             requestLines.append("x-role: \(role)")
+            requestLines.append(contentsOf: relayPhoneConnectHeaders(for: url).map { "\($0.name): \($0.value)" })
         } else if !token.isEmpty {
             requestLines.append("Authorization: Bearer \(token)")
         }

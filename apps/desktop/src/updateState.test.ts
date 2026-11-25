@@ -169,6 +169,14 @@ describe("isUpdateVersionNewer", () => {
   it("rejects older versions", () => {
     expect(isUpdateVersionNewer("0.1.1", "0.1.0")).toBe(false);
     expect(isUpdateVersionNewer("1.0.0", "0.9.9")).toBe(false);
+    expect(isUpdateVersionNewer("0.5.13", "0.5.13-rc.1")).toBe(false);
+  });
+
+  it("refuses a feed version it cannot order against the running app", () => {
+    expect(isUpdateVersionNewer("0.5.13", "latest")).toBe(false);
+    expect(isUpdateVersionNewer("0.5.13", "0.5")).toBe(false);
+    expect(isUpdateVersionNewer("0.5.13", "9.9.9.9")).toBe(false);
+    expect(isUpdateVersionNewer("0.5.13", "")).toBe(false);
   });
 });
 

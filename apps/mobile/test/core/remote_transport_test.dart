@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:djl_mobile/core/security/remote_crypto.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:djl_mobile/features/desktop/data/remote_transport.dart';
@@ -318,7 +319,7 @@ void main() {
         final pair = Pairing({
           ...original.data,
           'relay': 'ws://127.0.0.1:${listener.port}/relay',
-        });
+        }, pairingSecret: original.pairingSecret);
         final transport = RemoteTransport(
           PairingRepository(TestCredentials(), allowLocal: true),
         );
@@ -351,6 +352,122 @@ void main() {
       timeout: const Timeout(Duration(seconds: 40)),
     );
   }
+
+  // A relay that swaps in its own key can sign the handshake but cannot make this proof.
+  for (final proof in ['missing', 'wrong', 'wrong secret']) {
+    test(
+      'pairing stops before clientAuth when the desktop proof is $proof',
+      () async {
+        final real = await readerGateway();
+        final listener = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final controls = <String>[];
+        WebSocket? client, gateway;
+        listener.listen((request) async {
+          client = await WebSocketTransformer.upgrade(request);
+          gateway = await WebSocket.connect(
+            '${real.$2.relay}/${real.$2.sessionId}',
+          );
+          client!.listen((frame) {
+            controls.add(
+              (jsonDecode(frame as String) as Map)['kind'] as String,
+            );
+            gateway!.add(frame);
+          });
+          gateway!.listen((frame) {
+            final value = jsonDecode(frame as String) as Map;
+            if (proof == 'missing') value.remove('pairingProof');
+            if (proof == 'wrong' && value['kind'] == 'serverHello') {
+              value['pairingProof'] = base64Encode(List.filled(32, 0));
+            }
+            client!.add(jsonEncode(value));
+          });
+        });
+        final repository = PairingRepository(
+          TestCredentials(),
+          allowLocal: true,
+        );
+        final transport = RemoteTransport(repository);
+        try {
+          await expectLater(
+            transport.connect(
+              Pairing(
+                {
+                  ...real.$2.data,
+                  'relay': 'ws://127.0.0.1:${listener.port}/relay',
+                },
+                pairingSecret: proof == 'wrong secret'
+                    ? List.filled(32, 0)
+                    : real.$2.pairingSecret,
+              ),
+              bootstrap: true,
+            ),
+            throwsA(
+              isA<RemoteSecurityException>().having(
+                (e) => e.message,
+                'message',
+                proof == 'missing'
+                    ? 'Update DJL on your desktop: this pairing uses a different protocol.'
+                    : 'The pairing code or QR code did not match. Generate a new one and try again.',
+              ),
+            ),
+          );
+          expect(controls, ['clientHello']);
+          expect(transport.connected, isFalse);
+          expect(await repository.trusted(), isEmpty);
+        } finally {
+          await transport.dispose();
+          await client?.close();
+          await gateway?.close();
+          await listener.close(force: true);
+          real.$1.kill();
+          await real.$1.exitCode;
+        }
+      },
+      timeout: const Timeout(Duration(seconds: 40)),
+    );
+  }
+
+  test('desktop rejecting the phone proof reads as a failed pairing', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      final socket = await WebSocketTransformer.upgrade(request);
+      socket.listen((_) {
+        socket.add(
+          jsonEncode({
+            'kind': 'secureError',
+            'code': 'invalid_pairing_proof',
+            'message': 'untranslated',
+          }),
+        );
+      });
+    });
+    final transport = RemoteTransport(
+      PairingRepository(TestCredentials(), allowLocal: true),
+    );
+    try {
+      await expectLater(
+        transport.connect(
+          Pairing({
+            'relay': 'ws://127.0.0.1:${server.port}/relay',
+            'sessionId': 'session',
+            'macDeviceId': 'mac',
+            'macIdentityPublicKey': base64Encode(List.filled(32, 0)),
+          }, pairingSecret: List.filled(32, 1)),
+          bootstrap: true,
+        ),
+        throwsA(
+          isA<RemoteSecurityException>().having(
+            (e) => e.message,
+            'message',
+            'The pairing code or QR code did not match. Generate a new one and try again.',
+          ),
+        ),
+      );
+    } finally {
+      await transport.dispose();
+      await server.close(force: true);
+    }
+  });
 
   test('cancel during cursor read cannot open a late socket', () async {
     final listener = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -434,6 +551,77 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 40)),
   );
+
+  for (final bootstrap in [true, false]) {
+    test(
+      'relay connect sends the signed phone identity, bootstrap=$bootstrap',
+      () async {
+        final listener = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final seen = Completer<Map<String, String?>>();
+        listener.listen((request) async {
+          seen.complete({
+            for (final name in [
+              'x-role',
+              'x-phone-device-id',
+              'x-phone-identity-public-key',
+              'x-phone-signature',
+            ])
+              name: request.headers.value(name),
+          });
+          request.response.statusCode = HttpStatus.unauthorized;
+          await request.response.close();
+        });
+        final seed = List.filled(32, 2);
+        final publicKey = await (await Ed25519().newKeyPairFromSeed(
+          seed,
+        )).extractPublicKey();
+        final pairs = DelayedIdentityPairings(TestCredentials());
+        pairs.gate.complete(
+          PhoneIdentity('fixture-phone', seed, base64Encode(publicKey.bytes)),
+        );
+        final transport = RemoteTransport(pairs);
+        try {
+          await expectLater(
+            transport.connect(
+              Pairing({
+                'macDeviceId': 'mac',
+                'sessionId': 'fixture-session',
+                'relay': 'ws://127.0.0.1:${listener.port}',
+                'macIdentityPublicKey': base64Encode(List.filled(32, 1)),
+              }),
+              bootstrap: bootstrap,
+            ),
+            throwsA(isA<WebSocketException>()),
+          );
+          final headers = await seen.future;
+          expect(headers['x-role'], 'iphone');
+          expect(headers['x-phone-device-id'], 'fixture-phone');
+          expect(
+            headers['x-phone-identity-public-key'],
+            base64Encode(publicKey.bytes),
+          );
+          expect(
+            await Ed25519().verify(
+              relayPhoneConnectTranscript(
+                'fixture-session',
+                'fixture-phone',
+                base64Encode(publicKey.bytes),
+              ),
+              signature: Signature(
+                base64Decode(headers['x-phone-signature']!),
+                publicKey: publicKey,
+              ),
+            ),
+            isTrue,
+          );
+          expect(transport.connected, isFalse);
+        } finally {
+          await transport.dispose();
+          await listener.close(force: true);
+        }
+      },
+    );
+  }
 
   test('cancel during identity read never opens a late socket', () async {
     final listener = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

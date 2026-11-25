@@ -224,6 +224,7 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
       form.set("prompt", req.prompt);
       form.set("n", String(req.n));
       if (req.size) form.set("size", req.size);
+      if (req.quality) form.set("quality", req.quality);
       if (req.user) form.set("user", req.user);
       const extension = req.image.mimeType.split("/")[1] ?? "png";
       form.set(
