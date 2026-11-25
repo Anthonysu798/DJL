@@ -589,6 +589,14 @@
   "chatUiDismissSearch": "Dismiss search",
   "chatUiStatusConnecting": "Connecting",
   "chatUiStatusDeviceOffline": "Device offline",
+  "chatUiStatusDeviceOfflineSince": "Asleep or offline since {time}",
+  "@chatUiStatusDeviceOfflineSince": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "chatUiStatusOffline": "Offline",
   "chatUiConnectionStatus": "Connection status: {status}",
   "@chatUiConnectionStatus": {

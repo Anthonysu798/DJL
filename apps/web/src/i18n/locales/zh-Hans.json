@@ -2497,7 +2497,28 @@
         "starting": "正在启动…",
         "unavailable": "不可用"
       },
-      "unavailable": "此桌面版本未配置远程访问。"
+      "unavailable": "此桌面版本未配置远程访问。",
+      "reach": {
+        "title": "保持可连接",
+        "description": "只有这台电脑处于唤醒状态时，手机才能连接到它。",
+        "keepAwake": {
+          "label": "保持这台电脑唤醒",
+          "never": "从不",
+          "pluggedIn": "仅在接通电源时",
+          "always": "始终"
+        },
+        "status": {
+          "awake": "DJL 正在让这台电脑保持唤醒，方便手机连接。",
+          "normal": "这台电脑会照常进入睡眠。"
+        },
+        "login": {
+          "label": "登录时启动 DJL",
+          "hint": "DJL 会在后台打开，随时等待手机连接。",
+          "unsupported": "仅适用于 macOS 和 Windows 上已安装的应用。"
+        },
+        "limits": "笔记本合上盖子后仍会睡眠，而且手机无法唤醒已睡眠的电脑。",
+        "saveFailed": "无法保存此设置。"
+      }
     },
     "route": {
       "advanced": {

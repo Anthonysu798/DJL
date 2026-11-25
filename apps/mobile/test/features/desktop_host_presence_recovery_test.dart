@@ -96,6 +96,27 @@ void main() {
     expect(desktop.host.connected, isFalse);
   });
 
+  presenceTest('remembers since when the computer has been asleep', (
+    tester,
+    desktop,
+    pairs,
+    transport,
+  ) async {
+    expect(desktop.hostOfflineSince, isNull);
+    presence(transport, false);
+    await tester.pump();
+    final since = desktop.hostOfflineSince;
+    expect(since, isNotNull);
+    // A repeated "still offline" keeps the first moment, not the latest one.
+    presence(transport, false);
+    await tester.pump(const Duration(seconds: 5));
+    expect(desktop.hostOfflineSince, since);
+    presence(transport, true);
+    await tester.pump();
+    expect(desktop.state, 'connected');
+    expect(desktop.hostOfflineSince, isNull);
+  });
+
   presenceTest(
     'an open relay socket resolves the restarted desktop without resending mutations',
     (tester, desktop, pairs, transport) async {

@@ -1073,6 +1073,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatUiStatusDeviceOffline => '기기 오프라인';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return '$time부터 잠자기 또는 오프라인';
+  }
+
+  @override
   String get chatUiStatusOffline => '오프라인';
 
   @override

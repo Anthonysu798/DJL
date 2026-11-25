@@ -1100,6 +1100,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatUiStatusDeviceOffline => 'Device offline';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return 'Asleep or offline since $time';
+  }
+
+  @override
   String get chatUiStatusOffline => 'Offline';
 
   @override

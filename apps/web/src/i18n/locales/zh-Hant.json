@@ -2497,7 +2497,28 @@
         "starting": "正在啟動…",
         "unavailable": "無法使用"
       },
-      "unavailable": "此桌面版本未設定遠端存取。"
+      "unavailable": "此桌面版本未設定遠端存取。",
+      "reach": {
+        "title": "保持可連線",
+        "description": "只有這台電腦處於喚醒狀態時，手機才能連線到它。",
+        "keepAwake": {
+          "label": "讓這台電腦保持喚醒",
+          "never": "永不",
+          "pluggedIn": "僅在接上電源時",
+          "always": "一律"
+        },
+        "status": {
+          "awake": "DJL 正讓這台電腦保持喚醒，方便手機連線。",
+          "normal": "這台電腦會照常進入睡眠。"
+        },
+        "login": {
+          "label": "登入時啟動 DJL",
+          "hint": "DJL 會在背景開啟，隨時等待手機連線。",
+          "unsupported": "僅適用於 macOS 和 Windows 上已安裝的應用程式。"
+        },
+        "limits": "筆電闔上螢幕後仍會睡眠，而且手機無法喚醒已睡眠的電腦。",
+        "saveFailed": "無法儲存此設定。"
+      }
     },
     "route": {
       "advanced": {

@@ -2497,7 +2497,28 @@
         "starting": "Iniciando…",
         "unavailable": "No disponible"
       },
-      "unavailable": "El acceso remoto no está configurado en esta compilación de escritorio."
+      "unavailable": "El acceso remoto no está configurado en esta compilación de escritorio.",
+      "reach": {
+        "title": "Mantener disponible",
+        "description": "Tu teléfono solo puede conectarse a esta computadora mientras está activa.",
+        "keepAwake": {
+          "label": "Mantener activa esta computadora",
+          "never": "Nunca",
+          "pluggedIn": "Solo conectada a la corriente",
+          "always": "Siempre"
+        },
+        "status": {
+          "awake": "DJL mantiene activa esta computadora para tu teléfono.",
+          "normal": "Esta computadora entra en reposo como siempre."
+        },
+        "login": {
+          "label": "Abrir DJL al iniciar sesión",
+          "hint": "DJL se abre en segundo plano, listo para tu teléfono.",
+          "unsupported": "Disponible en la app instalada en macOS y Windows."
+        },
+        "limits": "Una laptop entra en reposo al cerrar la tapa, y el teléfono no puede activar una computadora en reposo.",
+        "saveFailed": "No se pudo guardar este ajuste."
+      }
     },
     "route": {
       "advanced": {

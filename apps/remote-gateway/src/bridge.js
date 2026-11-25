@@ -2244,6 +2244,8 @@ function startBridge({
       ...status,
       activeDevice: activePhoneSummary,
       activePhone: activePhoneSummary,
+      // Lets the desktop keep the computer awake for a paired phone that is not connected yet.
+      phonePaired: Object.keys(deviceState?.trustedPhones || {}).length > 0,
     });
   }
 

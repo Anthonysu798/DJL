@@ -85,6 +85,7 @@ function sanitizeStatus(value: unknown): Record<string, unknown> | null {
     codexLaunchState:
       typeof source.codexLaunchState === "string" ? source.codexLaunchState : "starting",
     lastError: typeof source.lastError === "string" ? source.lastError : "",
+    ...(typeof source.phonePaired === "boolean" ? { phonePaired: source.phonePaired } : {}),
     activeDevice: active
       ? {
           connected: active.connected === true,

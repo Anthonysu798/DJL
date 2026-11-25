@@ -491,6 +491,19 @@ export interface DesktopRemoteGatewayState {
   message: string | null;
 }
 
+/** When DJL may stop this computer from idle-sleeping so a paired phone can reach it. */
+export type DesktopRemoteKeepAwakeMode = "never" | "pluggedIn" | "always";
+
+export interface DesktopRemoteReachabilityState {
+  keepAwake: DesktopRemoteKeepAwakeMode;
+  openAtLogin: boolean;
+  /** Start at login needs an installed app on macOS or Windows. */
+  openAtLoginSupported: boolean;
+  /** DJL is holding the computer awake right now. */
+  stayingAwake: boolean;
+  onBattery: boolean;
+}
+
 export interface DesktopWindowState {
   isMaximized: boolean;
   isFullscreen: boolean;
@@ -631,6 +644,11 @@ export interface DesktopBridge {
     refreshPairing: () => Promise<DesktopRemoteGatewayState>;
     resetPairing: () => Promise<DesktopRemoteGatewayState>;
     onState: (listener: (state: DesktopRemoteGatewayState) => void) => () => void;
+    getReachability?: () => Promise<DesktopRemoteReachabilityState>;
+    setReachability?: (change: {
+      keepAwake?: DesktopRemoteKeepAwakeMode;
+      openAtLogin?: boolean;
+    }) => Promise<DesktopRemoteReachabilityState>;
   };
   storageMigration: {
     readSnapshot: () => DjlStorageSnapshot | null;

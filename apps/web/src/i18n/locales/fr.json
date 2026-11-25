@@ -2497,7 +2497,28 @@
         "starting": "Démarrage…",
         "unavailable": "Indisponible"
       },
-      "unavailable": "L’accès à distance n’est pas configuré dans cette version de bureau."
+      "unavailable": "L’accès à distance n’est pas configuré dans cette version de bureau.",
+      "reach": {
+        "title": "Rester joignable",
+        "description": "Votre téléphone ne peut joindre cet ordinateur que lorsqu’il est en éveil.",
+        "keepAwake": {
+          "label": "Garder cet ordinateur en éveil",
+          "never": "Jamais",
+          "pluggedIn": "Sur secteur uniquement",
+          "always": "Toujours"
+        },
+        "status": {
+          "awake": "DJL garde cet ordinateur en éveil pour votre téléphone.",
+          "normal": "Cet ordinateur se met en veille comme d’habitude."
+        },
+        "login": {
+          "label": "Ouvrir DJL à l’ouverture de session",
+          "hint": "DJL s’ouvre en arrière-plan, prêt pour votre téléphone.",
+          "unsupported": "Disponible dans l’app installée sur macOS et Windows."
+        },
+        "limits": "Un portable se met en veille quand son écran est rabattu, et un ordinateur en veille ne peut pas être réveillé depuis le téléphone.",
+        "saveFailed": "Impossible d’enregistrer ce réglage."
+      }
     },
     "route": {
       "advanced": {

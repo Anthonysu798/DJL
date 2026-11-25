@@ -1109,6 +1109,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get chatUiStatusDeviceOffline => 'Dispositivo sin conexión';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return 'En reposo o sin conexión desde las $time';
+  }
+
+  @override
   String get chatUiStatusOffline => 'Sin conexión';
 
   @override

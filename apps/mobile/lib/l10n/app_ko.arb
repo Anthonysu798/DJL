@@ -319,6 +319,7 @@
   "chatUiDismissSearch": "검색 닫기",
   "chatUiStatusConnecting": "연결 중",
   "chatUiStatusDeviceOffline": "기기 오프라인",
+  "chatUiStatusDeviceOfflineSince": "{time}부터 잠자기 또는 오프라인",
   "chatUiStatusOffline": "오프라인",
   "chatUiConnectionStatus": "연결 상태: {status}",
   "chatUiGroups": "그룹",

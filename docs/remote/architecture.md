@@ -96,6 +96,31 @@ The relay can observe:
 
 The relay cannot decrypt prompts, responses, transcript history, approvals, file contents, image or voice data, terminal data, Git data, or application traffic keys. It does not queue transcript frames. APNs payloads contain only “DJL task finished,” an instruction to open DJL, routing IDs, and result state.
 
+## Staying reachable
+
+The phone can only reach a computer that is awake, so the desktop app (not the gateway) decides
+when to hold off idle sleep. The decision is `shouldStayAwake` in
+`apps/desktop/src/remoteReachability.ts`; the block itself is Electron's `powerSaveBlocker`
+(`prevent-app-suspension`), which works on macOS and Windows. The gateway's own macOS-only
+`caffeinate` assertion stays switched off in the desktop app (`DJL_KEEP_MAC_AWAKE=0`).
+
+- **Settings → Remote → Stay reachable** offers three choices: never, while plugged in (default),
+  always. They are saved in `remote-reachability.json` in the app's user-data folder.
+- The computer is kept awake while Remote is on and a phone is **paired**, not only while one is
+  connected: a phone that connects later needs the computer awake first. The gateway reports
+  `phonePaired` with each status message for this.
+- A phone that is connected right now keeps the computer awake on battery too, unless the choice
+  is never.
+- **Start DJL when I sign in** registers a login item (installed app on macOS and Windows only).
+  A launch made by the system at login keeps the window hidden until the user opens DJL.
+- After the computer wakes, the gateway reconnects to the relay within a few seconds
+  (`relay-reconnect-policy.js`), and the desktop takes its idle-sleep block again.
+- The phone shows since when the computer has been asleep or offline. Drafts written meanwhile
+  stay in the phone's queue and are sent when the computer returns. The relay still stores nothing.
+
+Limits no app can remove: a laptop sleeps when its lid is closed (on macOS, unless it is on power
+with an external display), and a sleeping computer cannot be woken from the phone.
+
 ## Lifecycle, failure, and revocation
 
 - Electron starts the gateway after app readiness, restarts an unexpected exit with bounded backoff, and terminates it during desktop shutdown.

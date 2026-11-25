@@ -2497,7 +2497,28 @@
         "starting": "시작 중…",
         "unavailable": "사용할 수 없음"
       },
-      "unavailable": "이 데스크톱 빌드에는 원격 접근이 설정되어 있지 않습니다."
+      "unavailable": "이 데스크톱 빌드에는 원격 접근이 설정되어 있지 않습니다.",
+      "reach": {
+        "title": "연결 가능 상태 유지",
+        "description": "이 컴퓨터가 깨어 있는 동안에만 휴대폰에서 연결할 수 있습니다.",
+        "keepAwake": {
+          "label": "이 컴퓨터를 깨어 있게 유지",
+          "never": "안 함",
+          "pluggedIn": "전원 연결 시에만",
+          "always": "항상"
+        },
+        "status": {
+          "awake": "DJL이 휴대폰 연결을 위해 이 컴퓨터를 깨어 있게 유지하고 있습니다.",
+          "normal": "이 컴퓨터는 평소처럼 잠자기에 들어갑니다."
+        },
+        "login": {
+          "label": "로그인할 때 DJL 시작",
+          "hint": "DJL이 백그라운드에서 열려 휴대폰 연결을 기다립니다.",
+          "unsupported": "macOS와 Windows에 설치된 앱에서만 사용할 수 있습니다."
+        },
+        "limits": "노트북은 덮개를 닫으면 잠자기에 들어가며, 잠든 컴퓨터는 휴대폰에서 깨울 수 없습니다.",
+        "saveFailed": "이 설정을 저장하지 못했습니다."
+      }
     },
     "route": {
       "advanced": {

@@ -202,6 +202,9 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     setEnabled: (enabled) => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.setEnabled, enabled),
     refreshPairing: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing),
     resetPairing: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.resetPairing),
+    getReachability: () => ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.getReachability),
+    setReachability: (change) =>
+      ipcRenderer.invoke(REMOTE_GATEWAY_IPC_CHANNELS.setReachability, change),
     onState: (listener) => {
       const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
         if (typeof state !== "object" || state === null) return;

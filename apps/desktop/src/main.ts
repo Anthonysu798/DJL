@@ -68,6 +68,7 @@ import {
   nativeTheme,
   protocol,
   powerMonitor,
+  powerSaveBlocker,
   screen,
   session,
   shell,
@@ -247,6 +248,18 @@ import {
   resolveRemoteRelayUrl,
   type RemoteGatewayPackageMetadata,
 } from "./remoteGatewayRuntime";
+import {
+  DEFAULT_REMOTE_REACHABILITY_PREFERENCES,
+  LOGIN_HIDDEN_ARG,
+  createStayAwakeController,
+  launchedHiddenAtLogin,
+  mergeRemoteReachabilityPreferences,
+  openAtLoginSupported,
+  parseRemoteReachabilityPreferences,
+  phonePairedFromChildMessage,
+  remoteReachabilityState,
+  shouldStayAwake,
+} from "./remoteReachability";
 
 // Capture the real archive identity before any explicit app.asar lookup. Static
 // snapshotting and the runtime watcher both use this same generation as their
@@ -285,6 +298,7 @@ const UPDATE_INSTALL_CHANNEL = "desktop:update-install";
 const NOTIFICATIONS_IS_SUPPORTED_CHANNEL = "desktop:notifications-is-supported";
 const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
 const REMOTE_GATEWAY_PREFERENCES_FILE = "remote-gateway-preferences.json";
+const REMOTE_REACHABILITY_PREFERENCES_FILE = "remote-reachability.json";
 const REMOTE_GATEWAY_RESTART_BASE_DELAY_MS = 1_000;
 const REMOTE_GATEWAY_RESTART_MAX_DELAY_MS = 30_000;
 const REMOTE_GATEWAY_STOP_TIMEOUT_MS = 5_000;
@@ -3137,7 +3151,94 @@ const remotePairingRenewal = createRemotePairingRenewal(
 function setRemoteGatewayState(state: DesktopRemoteGatewayState): void {
   remoteGatewayState = state;
   remotePairingRenewal.update(state);
+  syncRemoteStayAwake();
   emitRemoteGatewayState();
+}
+
+// ─── Staying reachable for the paired phone ───────────────────────────────────
+// The phone can only reach a computer that is awake, so DJL holds off idle sleep while a phone is
+// paired (by default only on power), and can start with the computer. A closed laptop lid still
+// sleeps, and nothing can wake a sleeping computer from the phone.
+let remoteReachabilityPreferences = DEFAULT_REMOTE_REACHABILITY_PREFERENCES;
+let remotePhonePaired = false;
+let hiddenLoginLaunchPending = true;
+const remoteStayAwake = createStayAwakeController(powerSaveBlocker);
+
+function remoteReachabilityPreferencesPath(): string {
+  return Path.join(app.getPath("userData"), REMOTE_REACHABILITY_PREFERENCES_FILE);
+}
+
+function remoteLoginItemSupported(): boolean {
+  return openAtLoginSupported({ platform: process.platform, packaged: app.isPackaged });
+}
+
+function syncRemoteStayAwake(): boolean {
+  if (!app.isReady()) return false;
+  return remoteStayAwake.set(
+    shouldStayAwake({
+      mode: remoteReachabilityPreferences.keepAwake,
+      remoteEnabled: remoteGatewayEnabled && remoteGatewayRelayUrl !== null,
+      phonePaired: remotePhonePaired,
+      phoneConnected: remoteGatewayState.status === "connected",
+      onBattery: powerMonitor.isOnBatteryPower(),
+    }),
+  );
+}
+
+function applyRemoteOpenAtLogin(): void {
+  if (!remoteLoginItemSupported()) return;
+  app.setLoginItemSettings({
+    openAtLogin: remoteReachabilityPreferences.openAtLogin,
+    // Windows passes this back at login so the window can stay in the background.
+    ...(process.platform === "win32" ? { args: [LOGIN_HIDDEN_ARG] } : {}),
+  });
+}
+
+function currentRemoteReachabilityState() {
+  return remoteReachabilityState({
+    preferences: remoteReachabilityPreferences,
+    openAtLoginSupported: remoteLoginItemSupported(),
+    stayingAwake: syncRemoteStayAwake(),
+    onBattery: app.isReady() && powerMonitor.isOnBatteryPower(),
+  });
+}
+
+function initializeRemoteReachability(): void {
+  try {
+    remoteReachabilityPreferences = parseRemoteReachabilityPreferences(
+      JSON.parse(FS.readFileSync(remoteReachabilityPreferencesPath(), "utf8")),
+    );
+  } catch {
+    remoteReachabilityPreferences = DEFAULT_REMOTE_REACHABILITY_PREFERENCES;
+  }
+  powerMonitor.on("on-ac", syncRemoteStayAwake);
+  powerMonitor.on("on-battery", syncRemoteStayAwake);
+  // Sleep drops the idle-sleep block on some systems; take it again on wake.
+  powerMonitor.on("resume", syncRemoteStayAwake);
+}
+
+function updateRemoteReachability(change: unknown) {
+  const next = mergeRemoteReachabilityPreferences(remoteReachabilityPreferences, change);
+  const loginChanged = next.openAtLogin !== remoteReachabilityPreferences.openAtLogin;
+  remoteReachabilityPreferences = next;
+  const target = remoteReachabilityPreferencesPath();
+  FS.mkdirSync(Path.dirname(target), { recursive: true });
+  FS.writeFileSync(target, JSON.stringify(next, null, 2), { mode: 0o600 });
+  if (loginChanged) applyRemoteOpenAtLogin();
+  return currentRemoteReachabilityState();
+}
+
+/** True once, for the first window of a launch the system made at login. */
+function consumeHiddenLoginLaunch(): boolean {
+  if (!hiddenLoginLaunchPending) return false;
+  hiddenLoginLaunchPending = false;
+  if (!remoteReachabilityPreferences.openAtLogin || !remoteLoginItemSupported()) return false;
+  return launchedHiddenAtLogin({
+    platform: process.platform,
+    argv: process.argv,
+    wasOpenedAtLogin:
+      process.platform === "darwin" && app.getLoginItemSettings().wasOpenedAtLogin === true,
+  });
 }
 
 function initializeRemoteGatewayConfiguration(): void {
@@ -3260,6 +3361,11 @@ function startRemoteGateway(): void {
         emitRemoteGatewayState();
         return;
       }
+    }
+    const phonePaired = phonePairedFromChildMessage(message, remotePhonePaired);
+    if (phonePaired !== remotePhonePaired) {
+      remotePhonePaired = phonePaired;
+      syncRemoteStayAwake();
     }
     const nextState = reduceRemoteGatewayChildMessage(remoteGatewayState, message);
     if (nextState !== remoteGatewayState) {
@@ -3752,6 +3858,16 @@ function registerIpcHandlers(): void {
     if (typeof enabled !== "boolean") throw new Error("Remote enabled state must be boolean.");
     return setRemoteGatewayEnabled(enabled);
   });
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.getReachability);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.getReachability, () =>
+    currentRemoteReachabilityState(),
+  );
+
+  ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.setReachability);
+  ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.setReachability, (_event, change: unknown) =>
+    updateRemoteReachability(change),
+  );
 
   ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing);
   ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing, async () => {
@@ -4319,6 +4435,13 @@ function createWindow(): BrowserWindow {
   const revealGate = createWindowRevealGate(() => {
     if (window.isDestroyed()) return;
     revealedWindows.add(window);
+    if (consumeHiddenLoginLaunch()) {
+      // Started by the system at login: stay in the background until the user opens DJL.
+      window.once("show", () => {
+        if (!window.isDestroyed()) window.maximize();
+      });
+      return;
+    }
     // Launch filling the screen work area; the 1100x780 size above stays as the
     // restore bounds when the user toggles the window back out of maximized.
     window.maximize();
@@ -4453,6 +4576,7 @@ async function bootstrap(): Promise<void> {
   await reserveBackendEndpoint("bootstrap");
 
   initializeRemoteGatewayConfiguration();
+  initializeRemoteReachability();
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
   ensureInitialBackendWindowOpen(backendHttpUrl);

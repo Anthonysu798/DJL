@@ -1125,6 +1125,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatUiStatusDeviceOffline => 'Appareil hors ligne';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return 'En veille ou hors ligne depuis $time';
+  }
+
+  @override
   String get chatUiStatusOffline => 'Hors ligne';
 
   @override

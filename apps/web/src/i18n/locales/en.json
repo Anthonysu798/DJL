@@ -2497,7 +2497,28 @@
         "starting": "Starting…",
         "unavailable": "Unavailable"
       },
-      "unavailable": "Remote access is not configured in this desktop build."
+      "unavailable": "Remote access is not configured in this desktop build.",
+      "reach": {
+        "title": "Stay reachable",
+        "description": "Your phone can only reach this computer while it is awake.",
+        "keepAwake": {
+          "label": "Keep this computer awake",
+          "never": "Never",
+          "pluggedIn": "While plugged in",
+          "always": "Always"
+        },
+        "status": {
+          "awake": "DJL is keeping this computer awake for your phone.",
+          "normal": "This computer sleeps as usual."
+        },
+        "login": {
+          "label": "Start DJL when I sign in",
+          "hint": "DJL opens in the background, ready for your phone.",
+          "unsupported": "Available in the installed app on macOS and Windows."
+        },
+        "limits": "A laptop still sleeps when its lid is closed, and a sleeping computer cannot be woken from the phone.",
+        "saveFailed": "Could not save this setting."
+      }
     },
     "route": {
       "advanced": {

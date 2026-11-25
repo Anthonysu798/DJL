@@ -2031,6 +2031,12 @@ abstract class AppLocalizations {
   /// **'Device offline'**
   String get chatUiStatusDeviceOffline;
 
+  /// No description provided for @chatUiStatusDeviceOfflineSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Asleep or offline since {time}'**
+  String chatUiStatusDeviceOfflineSince(String time);
+
   /// No description provided for @chatUiStatusOffline.
   ///
   /// In en, this message translates to:

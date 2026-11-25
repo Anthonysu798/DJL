@@ -1064,6 +1064,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatUiStatusDeviceOffline => 'デバイスがオフライン';
 
   @override
+  String chatUiStatusDeviceOfflineSince(String time) {
+    return '$time からスリープ中またはオフライン';
+  }
+
+  @override
   String get chatUiStatusOffline => 'オフライン';
 
   @override
