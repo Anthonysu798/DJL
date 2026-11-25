@@ -110,7 +110,14 @@ async function parseError(res: Response): Promise<CloudHttpError> {
 export interface CloudClient {
   readonly baseUrl: string;
   readonly get: <T>(path: string, token?: string | null) => Promise<T>;
-  readonly post: <T>(path: string, body: unknown, token?: string | null) => Promise<T>;
+  /** `timeoutMs` defaults to 10 seconds; long server-side work (site checks) passes more. */
+  readonly post: <T>(
+    path: string,
+    body: unknown,
+    token?: string | null,
+    timeoutMs?: number,
+  ) => Promise<T>;
+  readonly delete: <T>(path: string, token?: string | null) => Promise<T>;
   /** POST returning the raw response for SSE streams. */
   readonly stream: (
     path: string,
@@ -140,13 +147,21 @@ export function createCloudClient(baseUrl: string, fetchImpl: FetchLike = fetch)
           signal: AbortSignal.timeout(10_000),
         }),
       ),
-    post: async (path, body, token) =>
+    post: async (path, body, token, timeoutMs = 10_000) =>
       check(
         await fetchImpl(`${baseUrl}${path}`, {
           method: "POST",
           headers: headers(token),
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(timeoutMs),
+        }),
+      ),
+    delete: async (path, token) =>
+      check(
+        await fetchImpl(`${baseUrl}${path}`, {
+          method: "DELETE",
+          headers: headers(token),
+          signal: AbortSignal.timeout(30_000),
         }),
       ),
     stream: async (path, body, token, signal) => {

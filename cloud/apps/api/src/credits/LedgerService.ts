@@ -110,6 +110,8 @@ export class LedgerService {
     readonly actor: string;
     readonly reason?: string;
     readonly metadata?: Record<string, unknown>;
+    /** Runs inside the grant's transaction, e.g. to write its audit row atomically. */
+    readonly alsoInTransaction?: (tx: Tx) => Promise<void>;
   }): Promise<Balances> {
     if (input.amount <= 0n) throw new RangeError("grant amount must be positive");
     return this.db.transaction(async (tx) => {
@@ -135,10 +137,12 @@ export class LedgerService {
         reason: "debt repayment",
       };
       await this.insert(tx, [...(rest > 0n ? [entry] : []), ...(repay > 0n ? [repayment] : [])]);
-      return this.applyDelta(tx, input.orgId, balances, {
+      const after = await this.applyDelta(tx, input.orgId, balances, {
         [input.bucket]: rest,
         ...(repay > 0n ? { topup: repay } : {}),
       });
+      await input.alsoInTransaction?.(tx);
+      return after;
     });
   }
 

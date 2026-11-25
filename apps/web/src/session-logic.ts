@@ -1,6 +1,7 @@
 import {
   ApprovalRequestId,
   isToolLifecycleItemType,
+  SITE_READY_ACTIVITY_KIND,
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationLatestTurn,
   type OrchestrationThreadActivity,
@@ -76,6 +77,7 @@ export interface WorkLogEntry {
   subagents?: ReadonlyArray<WorkLogSubagent>;
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
+  siteReady?: WorkLogSiteReady;
   // Source activity kind, kept so the timeline can pick a kind-specific icon
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
@@ -90,7 +92,16 @@ export interface WorkLogAutomation {
   cadenceLabel: string;
 }
 
-export const WORK_LOG_PRESENTATION_VERSION = 6;
+// A website the agent built and checked; the card's Publish button puts it online.
+export interface WorkLogSiteReady {
+  fileCount: number;
+  bytes: number;
+  suggestedName: string;
+  linkedSiteName: string | null;
+  linkedSiteUrl: string | null;
+}
+
+export const WORK_LOG_PRESENTATION_VERSION = 7;
 
 export interface WorkLogSubagent {
   threadId: string;
@@ -854,6 +865,10 @@ function shouldKeepActivityForWorkLog(
   if (activity.kind === "automation.created") {
     return true;
   }
+  // The Website tool's Publish card has no turn id either (it comes from a tool server).
+  if (activity.kind === SITE_READY_ACTIVITY_KIND) {
+    return true;
+  }
 
   // An empty set means the transcript has no turn-stamped assistant messages
   // (e.g. providers that never supply turn ids); fall back to the legacy
@@ -921,6 +936,23 @@ function extractWorkLogAutomation(
   }
   const cadenceLabel = typeof payload.cadenceLabel === "string" ? payload.cadenceLabel : "";
   return { id, name, cadenceLabel };
+}
+
+const payloadCount = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+const payloadText = (value: unknown) => (typeof value === "string" ? value : null);
+
+function extractWorkLogSiteReady(payload: Record<string, unknown> | null): WorkLogSiteReady | null {
+  if (!payload || typeof payload.suggestedName !== "string") return null;
+  const count = payloadCount;
+  const text = payloadText;
+  return {
+    fileCount: count(payload.fileCount),
+    bytes: count(payload.bytes),
+    suggestedName: payload.suggestedName,
+    linkedSiteName: text(payload.linkedSiteName),
+    linkedSiteUrl: text(payload.linkedSiteUrl),
+  };
 }
 
 function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
@@ -1001,6 +1033,12 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     const automation = extractWorkLogAutomation(payload);
     if (automation) {
       entry.automation = automation;
+    }
+  }
+  if (activity.kind === SITE_READY_ACTIVITY_KIND) {
+    const siteReady = extractWorkLogSiteReady(payload);
+    if (siteReady) {
+      entry.siteReady = siteReady;
     }
   }
   const readableTitle =

@@ -63,6 +63,16 @@ import {
   CloudSignInPollResult,
   CloudSignInStartResult,
 } from "./cloud";
+import {
+  SitesListResult,
+  SitesNameInput,
+  SitesNameResult,
+  SitesProjectStatus,
+  SitesPublishInput,
+  SitesPublishResult,
+  SitesThreadInput,
+  SitesUnpublishInput,
+} from "./sites";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
 import {
@@ -1320,6 +1330,31 @@ export const WsCloudCompleteBrowserSignInRpc = Rpc.make(WS_METHODS.cloudComplete
   success: CloudAccountStatus,
   error: WsRpcError,
 });
+export const WsSitesListRpc = Rpc.make(WS_METHODS.sitesList, {
+  payload: CloudEmptyInput,
+  success: SitesListResult,
+  error: WsRpcError,
+});
+export const WsSitesProjectStatusRpc = Rpc.make(WS_METHODS.sitesProjectStatus, {
+  payload: SitesThreadInput,
+  success: SitesProjectStatus,
+  error: WsRpcError,
+});
+export const WsSitesNameAvailableRpc = Rpc.make(WS_METHODS.sitesNameAvailable, {
+  payload: SitesNameInput,
+  success: SitesNameResult,
+  error: WsRpcError,
+});
+export const WsSitesPublishRpc = Rpc.make(WS_METHODS.sitesPublish, {
+  payload: SitesPublishInput,
+  success: SitesPublishResult,
+  error: WsRpcError,
+});
+export const WsSitesUnpublishRpc = Rpc.make(WS_METHODS.sitesUnpublish, {
+  payload: SitesUnpublishInput,
+  success: SitesPublishResult,
+  error: WsRpcError,
+});
 export const WsHarnessListAccountsRpc = Rpc.make(WS_METHODS.harnessListAccounts, {
   payload: Schema.Struct({}),
   success: HarnessAccountsResult,
@@ -2089,9 +2124,23 @@ const WsGroupsRpcGroup = RpcGroup.make(
   WsSubscribeLentAgentAskRpc,
   WsSubscribeGroupEventsRpc,
 );
+// Website publishing calls have their own group for the same reason.
+const WsSitesRpcGroup = RpcGroup.make(
+  WsSitesListRpc,
+  WsSitesProjectStatusRpc,
+  WsSitesNameAvailableRpc,
+  WsSitesPublishRpc,
+  WsSitesUnpublishRpc,
+);
 export const WsRpcGroup: RpcGroup.RpcGroup<
   | RpcGroup.Rpcs<typeof WsCoreRpcGroup>
   | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
   | RpcGroup.Rpcs<typeof WsModelAccessRpcGroup>
   | RpcGroup.Rpcs<typeof WsGroupsRpcGroup>
-> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup, WsModelAccessRpcGroup, WsGroupsRpcGroup);
+  | RpcGroup.Rpcs<typeof WsSitesRpcGroup>
+> = WsCoreRpcGroup.merge(
+  WsPluginSourcesRpcGroup,
+  WsModelAccessRpcGroup,
+  WsGroupsRpcGroup,
+  WsSitesRpcGroup,
+);

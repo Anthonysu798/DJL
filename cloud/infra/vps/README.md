@@ -608,6 +608,35 @@ Create the first admin from a trusted shell with the existing
 `cloud/apps/api/src/admin/createAdmin.ts` command; enter its password interactively.
 Paid/staging admin access requires MFA.
 
+## User sites on slcor.site
+
+The `sites` service (same image as the API, `cloud/apps/sites`) serves published sites on
+`{name}.SITES_DOMAIN`. It reads site rows and deploy manifests from Postgres and file bytes
+from storage, forwards visitor reports to the API, and never sets cookies. Sites use their
+own registrable domain so a published page can never read or set `slcor.com` cookies.
+
+1. Add `SITES_DOMAIN` to Cloudflare as its own zone.
+2. DNS: `*` and `@` A records to the VPS, **proxied**. Cloudflare's Universal SSL covers
+   the apex and one wildcard level, so visitors get a valid certificate with no
+   Let's Encrypt wildcard (that would need a DNS-01 plugin Caddy does not ship with).
+3. SSL/TLS mode **Full (strict)**. Create an Origin CA certificate for
+   `*.SITES_DOMAIN, SITES_DOMAIN` and save it on the VPS as
+   `.secrets/sites-origin/cert.pem` and `.secrets/sites-origin/key.pem` (mode 600).
+4. Run `djl.sh check`; it writes `Caddyfile.sites.host` next to `Caddyfile.host`. Add those
+   blocks to the host Caddy only after the certificate files exist, validate, then reload.
+   They live in a separate file because a missing certificate would otherwise stop the
+   whole Caddy configuration, including the API, from loading.
+
+Visitor IPs come from `CF-Connecting-IP`. A client that reaches the origin directly can
+forge it to dodge per-IP limits; restrict port 443 for this hostname to Cloudflare's
+ranges, or enable Authenticated Origin Pulls, before heavy public use.
+
+Moderation: deploys whose pages contain password fields, forms posting to other sites, or
+wallet/card/identity phrases are held for review in the admin API
+(`/admin/v1/sites/held`). The `sites` kill switch pauses new sites and publishes; sites
+already live keep serving. Taking a site down (`/admin/v1/sites/:id/disable`) shows a
+neutral notice within 30 seconds.
+
 ## Verification
 
 Run `bun run cloud:ci`. Build all container images, boot a separate local Compose

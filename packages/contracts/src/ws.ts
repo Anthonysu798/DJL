@@ -8,6 +8,7 @@ import {
 } from "./harnessAccounts";
 import { CloudBrowserSignInCompleteInput, CloudEmptyInput, CloudSignInPollInput } from "./cloud";
 import { CodingPlanConnectInput, CodingPlanIdInput } from "./codingPlans";
+import { SitesNameInput, SitesPublishInput, SitesThreadInput, SitesUnpublishInput } from "./sites";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -326,6 +327,11 @@ export const WS_METHODS = {
   cloudSignOut: "cloud.signOut",
   cloudStartBrowserSignIn: "cloud.startBrowserSignIn",
   cloudCompleteBrowserSignIn: "cloud.completeBrowserSignIn",
+  sitesList: "sites.list",
+  sitesProjectStatus: "sites.projectStatus",
+  sitesNameAvailable: "sites.nameAvailable",
+  sitesPublish: "sites.publish",
+  sitesUnpublish: "sites.unpublish",
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
@@ -609,6 +615,11 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.cloudSignOut, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudStartBrowserSignIn, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudCompleteBrowserSignIn, CloudBrowserSignInCompleteInput),
+  tagRequestBody(WS_METHODS.sitesList, CloudEmptyInput),
+  tagRequestBody(WS_METHODS.sitesProjectStatus, SitesThreadInput),
+  tagRequestBody(WS_METHODS.sitesNameAvailable, SitesNameInput),
+  tagRequestBody(WS_METHODS.sitesPublish, SitesPublishInput),
+  tagRequestBody(WS_METHODS.sitesUnpublish, SitesUnpublishInput),
 
   // Desktop local-model runtimes
   tagRequestBody(WS_METHODS.localModelsGetSnapshot, Schema.Struct({})),

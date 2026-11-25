@@ -20,6 +20,7 @@ import { writeAudit } from "../audit/AuditLog.ts";
 import { normalizePhoneNumber } from "../auth/phone.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
 import { ApiError } from "../http/errors.ts";
+import type { Tx } from "../usage/windowStore.ts";
 
 export interface TrialConfig {
   readonly credits: number; // whole credits
@@ -159,20 +160,28 @@ export class TrialService {
       where: eq(schema.trialGrants.id, trialId),
     });
     if (!row || row.status !== "queued_for_review") return false;
-    const ok = await this.grant(row.id, `admin:${adminId}`);
-    await writeAudit(this.db, {
-      actorType: "admin",
-      actorId: adminId,
-      action: "trial.approve",
-      targetType: "trial",
-      targetId: trialId,
-      before: { status: row.status },
-      after: { status: "granted" },
-    });
+    const audit = (tx: Pick<DjlDatabase, "insert">, status: "granted" | "queued_for_review") =>
+      writeAudit(tx, {
+        actorType: "admin",
+        actorId: adminId,
+        action: "trial.approve",
+        targetType: "trial",
+        targetId: trialId,
+        before: { status: row.status },
+        after: { status },
+      });
+    const ok = await this.grant(row.id, `admin:${adminId}`, (tx) => audit(tx, "granted"));
+    // Still over the daily budget: the trial stays queued, and the audit says so.
+    if (!ok) await audit(this.db, "queued_for_review");
     return ok;
   }
 
-  private async grant(trialId: string, actor: string): Promise<boolean> {
+  /** `audit` runs in the same transaction as the credit grant and the status change. */
+  private async grant(
+    trialId: string,
+    actor: string,
+    audit?: (tx: Tx) => Promise<void>,
+  ): Promise<boolean> {
     const cfg = await this.loadConfig();
     const row = await this.db.query.trialGrants.findFirst({
       where: eq(schema.trialGrants.id, trialId),
@@ -195,11 +204,14 @@ export class TrialService {
       actor,
       reason: "trial credits",
       metadata: { expiresAt: expiresAt.toISOString() },
+      alsoInTransaction: async (tx) => {
+        await tx
+          .update(schema.trialGrants)
+          .set({ status: "granted", grantedAt: new Date(), expiresAt })
+          .where(eq(schema.trialGrants.id, trialId));
+        await audit?.(tx);
+      },
     });
-    await this.db
-      .update(schema.trialGrants)
-      .set({ status: "granted", grantedAt: new Date(), expiresAt })
-      .where(eq(schema.trialGrants.id, trialId));
     const day = new Date().toISOString().slice(0, 10);
     await this.db
       .insert(schema.trialBudgetDays)

@@ -10,7 +10,7 @@ import { requirePrincipal } from "../auth/guard.ts";
 import { RequestContext } from "../http/context.ts";
 import { ApiError } from "../http/errors.ts";
 import { attempt, handle } from "../http/handle.ts";
-import { json } from "../http/json.ts";
+import { json, readBoundedBytes } from "../http/json.ts";
 import { MAX_EDIT_IMAGE_BYTES, type GatewayService, type RequestFacts } from "./GatewayService.ts";
 
 export interface GatewayRouteDeps {
@@ -27,17 +27,9 @@ const GATEWAY_FAILURE = {
 const MAX_BODY_BYTES = 6 * 1024 * 1024; // vision payloads
 
 const readBody = Effect.gen(function* () {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const length = Number(request.headers["content-length"] ?? "0");
-  if (length > MAX_BODY_BYTES)
-    return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
-  const text = yield* request.text.pipe(
-    Effect.mapError(() => new ApiError(400, "bad_body", "Could not read body.")),
-  );
-  if (text.length > MAX_BODY_BYTES)
-    return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
+  const bytes = yield* readBoundedBytes(MAX_BODY_BYTES);
   try {
-    return JSON.parse(text) as Record<string, unknown>;
+    return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
   } catch {
     return yield* Effect.fail(new ApiError(400, "bad_json", "Body is not valid JSON."));
   }
@@ -140,14 +132,12 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
       Effect.gen(function* () {
         const f = yield* facts;
         const request = yield* HttpServerRequest.HttpServerRequest;
-        const length = Number(request.headers["content-length"] ?? "0");
-        if (length > MAX_EDIT_IMAGE_BYTES + 64 * 1024)
-          return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
-        const web = yield* HttpServerRequest.toWeb(request).pipe(
-          Effect.mapError(() => new ApiError(400, "bad_body", "Could not read body.")),
-        );
+        const body = yield* readBoundedBytes(MAX_EDIT_IMAGE_BYTES + 64 * 1024);
         const form = yield* Effect.tryPromise({
-          try: () => web.formData(),
+          try: () =>
+            new Response(body as Uint8Array<ArrayBuffer>, {
+              headers: { "content-type": request.headers["content-type"] ?? "" },
+            }).formData(),
           catch: () => new ApiError(400, "bad_body", "Send the edit as multipart/form-data."),
         });
         const model = form.get("model");

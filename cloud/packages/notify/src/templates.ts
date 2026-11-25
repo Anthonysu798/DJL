@@ -31,6 +31,9 @@ const strings = {
         ? `Your task "${title}" finished. Open it to see the result:\n${url}`
         : `Your task "${title}" could not finish. Open it to see what happened:\n${url}`,
     untitledTask: "Untitled task",
+    siteIdleSubject: (url: string) => `${url} will be unpublished in 14 days`,
+    siteIdleBody: (url: string) =>
+      `Nobody has visited ${url} for 90 days, so DJL will unpublish it in 14 days to free the name.\nTo keep it, publish it again from DJL or visit it once.`,
   },
   "zh-Hans": {
     otpSubject: (code: string) => `${code} 是你的 DJL Cloud 验证码`,
@@ -57,6 +60,9 @@ const strings = {
         ? `你的任务「${title}」已完成。打开查看结果：\n${url}`
         : `你的任务「${title}」未能完成。打开查看原因：\n${url}`,
     untitledTask: "未命名任务",
+    siteIdleSubject: (url: string) => `${url} 将在 14 天后下线`,
+    siteIdleBody: (url: string) =>
+      `${url} 已经 90 天没有访问，DJL 将在 14 天后下线这个网站并释放名称。\n如果想保留，在 DJL 中重新发布或访问一次即可。`,
   },
 } as const;
 
@@ -140,4 +146,11 @@ export function taskFinished(
   const s = strings[locale];
   const text = s.taskBody(ok, title ?? s.untitledTask, url);
   return { to, subject: s.taskSubject(ok), text, html: wrap(text), tag: "task-finished" };
+}
+
+/** A published site has had no visits or deploys for a long time and will be unpublished. */
+export function siteIdle(to: string, url: string, locale: Locale): EmailMessage {
+  const s = strings[locale];
+  const text = s.siteIdleBody(url);
+  return { to, subject: s.siteIdleSubject(url), text, html: wrap(text), tag: "site-idle" };
 }

@@ -78,6 +78,8 @@ import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
 import { RunLog } from "./runs/RunLog.ts";
 import { RunService } from "./runs/RunService.ts";
 import { ShareService } from "./shares/ShareService.ts";
+import { SiteAdminService } from "./sites/SiteAdminService.ts";
+import { SiteService } from "./sites/SiteService.ts";
 import { ContentReportService } from "./reports/ContentReportService.ts";
 import { PushTokenService } from "./push/PushTokenService.ts";
 import {
@@ -97,6 +99,9 @@ import { createRedisLockouts } from "./security/throttle.ts";
 import { ApiError } from "./http/errors.ts";
 import { ImageService } from "./images/ImageService.ts";
 import { NotificationService } from "./notifications/NotificationService.ts";
+
+/** Hard ceiling for any request body; routes apply their own smaller caps. */
+export const MAX_REQUEST_BODY_BYTES = 17 * 1024 * 1024;
 
 export interface ApiRuntime {
   readonly env: ApiEnv;
@@ -331,10 +336,11 @@ export async function startApi(
   const sync = new SyncService(db, blobs);
   const runLog = new RunLog(db, redis);
   const runner = new ChatRunner({ db, gateway, log: runLog, blobs });
-  const files = new FileService(db, blobs, settings);
+  const files = new FileService(db, blobs, settings, { limiter });
   const chat = new ChatService({ db, files, runner, tasks });
   const shares = new ShareService(db, chat, blobs, env.webPublicUrl);
   const runs = new RunService(db, runLog);
+  const sites = new SiteService(db, blobs, settings, limiter, env.sitesDomain);
   const adminAuth = new AdminAuth(db, {
     appSecret: env.betterAuthSecret,
     ipSalt: env.ipHashSalt,
@@ -501,9 +507,11 @@ export async function startApi(
     usage,
     usageAdmin,
     contentReports,
+    siteAdmin: new SiteAdminService(db, sites),
     chat,
     files,
     shares,
+    sites,
     runs,
     limiter,
     pushTokens: new PushTokenService(db),
@@ -521,7 +529,10 @@ export async function startApi(
           hostname: options.host ?? "0.0.0.0",
           port: options.port ?? env.port,
           idleTimeout: 0,
-          maxRequestBodySize: Number.MAX_SAFE_INTEGER,
+          // Above the largest route cap (16 MiB image edits plus form overhead). Bun applies
+          // this to declared lengths only; routes read bodies through `readBoundedBytes`,
+          // which also caps chunked bodies.
+          maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
           development: false,
         })
       : yield* NodeHttpServer.make(

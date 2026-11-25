@@ -9,7 +9,7 @@ import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 
 interface Switch {
-  name: "gateway" | "billing" | "sync";
+  name: "gateway" | "billing" | "sync" | "sites";
   engaged: boolean;
   reason: string | null;
   changedBy: string | null;
@@ -19,6 +19,7 @@ const DESCRIPTION: Record<Switch["name"], string> = {
   gateway: "Stops all model requests. Balances and history stay readable.",
   billing: "Stops checkouts and top-ups. Existing subscriptions keep running in Stripe.",
   sync: "Stops event and attachment uploads from devices. Pulling and reading continue.",
+  sites: "Stops new sites and publishes on slcor.site. Live sites keep serving.",
 };
 
 export default function SwitchesPage() {
@@ -33,7 +34,7 @@ export default function SwitchesPage() {
           {switches.error}
         </p>
       ) : null}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {switches.data?.map((s) => (
           <PageCard
             key={s.name}

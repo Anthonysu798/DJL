@@ -31,7 +31,7 @@ export async function seed(databaseUrl: string): Promise<void> {
         })
         .onConflictDoNothing({ target: plans.id });
     }
-    for (const name of ["gateway", "billing", "sync"] as const) {
+    for (const name of ["gateway", "billing", "sync", "sites"] as const) {
       await db
         .insert(killSwitches)
         .values({ name, engaged: false })

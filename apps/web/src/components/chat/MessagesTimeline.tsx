@@ -73,6 +73,7 @@ import {
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { AutomationCreatedCard } from "./AutomationCreatedCard";
+import { SiteReadyCard } from "../sites/SiteReadyCard";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
 import { ToolCallDetailsContent, ToolCallDetailsDialog } from "./ToolCallDetailsDialog";
@@ -3079,6 +3080,19 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
         : EMPTY_FILE_DIFF_STATS,
     [workEntry],
   );
+
+  // A built website renders as a Publish card instead of a tool-call line.
+  if (workEntry.siteReady) {
+    return (
+      <div className={cn(compact ? "py-0.5" : "py-1")}>
+        <SiteReadyCard
+          site={workEntry.siteReady}
+          textFontSizePx={textFontSizePx}
+          metaFontSizePx={chatMetaFontSizePx}
+        />
+      </div>
+    );
+  }
 
   // A created-automation row renders as its own card instead of a tool-call line.
   // Kept after the hooks above so the early return never changes hook order.

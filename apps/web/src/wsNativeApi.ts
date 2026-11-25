@@ -891,6 +891,18 @@ export function createWsNativeApi(): NativeApi {
       completeBrowserSignIn: (input) =>
         transport.request(WS_METHODS.cloudCompleteBrowserSignIn, input, { timeoutMs: 20_000 }),
     },
+    sites: {
+      list: () => transport.request(WS_METHODS.sitesList, {}, { timeoutMs: 20_000 }),
+      projectStatus: (input) =>
+        transport.request(WS_METHODS.sitesProjectStatus, input, { timeoutMs: 20_000 }),
+      nameAvailable: (input) =>
+        transport.request(WS_METHODS.sitesNameAvailable, input, { timeoutMs: 20_000 }),
+      // A publish runs the project's build (up to 5 minutes), uploads, and waits for checks.
+      publish: (input) =>
+        transport.request(WS_METHODS.sitesPublish, input, { timeoutMs: 9 * 60_000 }),
+      unpublish: (input) =>
+        transport.request(WS_METHODS.sitesUnpublish, input, { timeoutMs: 60_000 }),
+    },
     provider: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),

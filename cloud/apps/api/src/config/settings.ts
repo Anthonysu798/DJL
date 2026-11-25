@@ -19,7 +19,25 @@ const int = (fallback: number, min: number): SettingSpec<number> => ({
     typeof raw === "number" && Number.isInteger(raw) && raw >= min ? raw : undefined,
 });
 
+const perPlan = (fallback: number): SettingSpec<Readonly<Record<string, number>>> => ({
+  default: { default: fallback },
+  parse: (raw: unknown) =>
+    typeof raw === "object" &&
+    raw !== null &&
+    Object.values(raw).every((v) => Number.isInteger(v) && (v as number) > 0)
+      ? (raw as Readonly<Record<string, number>>)
+      : undefined,
+});
+
 export const SETTINGS = {
+  /** Sites per org, per plan id; plans not listed use `default`. */
+  "sites.max_count": perPlan(3),
+  /** Largest deploy zip per plan id, in bytes. */
+  "sites.max_zip_bytes": perPlan(25 * 1024 * 1024),
+  /** Most files in one deploy. */
+  "sites.max_files": int(2000, 1),
+  /** Deploys a user may start per hour. */
+  "sites.deploys_per_hour": int(30, 1),
   /** Above this many in-flight streams per instance, low-priority plans are shed first. */
   "gateway.soft_cap_streams": int(150, 1),
   /** At this many in-flight streams per instance, only the top plan is admitted. */
@@ -28,6 +46,8 @@ export const SETTINGS = {
   "gateway.ip_requests_per_minute": int(300, 1),
   /** Most a single background task run may spend, in credits, unless the run sets its own cap. */
   "agent.run_credit_cap": int(200, 1),
+  /** Total bytes of private files per org, per plan id; plans not listed use `default`. */
+  "files.max_org_bytes": perPlan(2 * 1024 ** 3),
   /** Largest upload per plan id, in bytes; plans not listed use `default`. */
   "files.max_upload_bytes": {
     default: { default: 25 * 1024 * 1024 } as Readonly<Record<string, number>>,

@@ -84,6 +84,9 @@ export function prepare(directory: string, checkProviders = true) {
     WEB_UPSTREAM: "127.0.0.1:3002",
     ADMIN_UPSTREAM: "127.0.0.1:3001",
     STORAGE_UPSTREAM: "127.0.0.1:8333",
+    SITES_UPSTREAM: env.SITES_BIND || "127.0.0.1:8790",
+    SITES_DOMAIN: env.SITES_DOMAIN || "slcor.site",
+    SITES_TLS_DIR: resolve(secrets, "sites-origin"),
   };
   const values = { ...env, ...upstreams };
   const caddy = readFileSync(resolve(directory, "Caddyfile"), "utf8").replace(
@@ -91,6 +94,11 @@ export function prepare(directory: string, checkProviders = true) {
     (_, name: string) => values[name] ?? "",
   );
   writeFileSync(resolve(directory, "Caddyfile.host"), caddy, { mode: 0o600 });
+  const sites = readFileSync(resolve(directory, "Caddyfile.sites"), "utf8").replace(
+    /\{\$([A-Z_]+)\}/g,
+    (_, name: string) => values[name] ?? "",
+  );
+  writeFileSync(resolve(directory, "Caddyfile.sites.host"), sites, { mode: 0o600 });
   return env;
 }
 

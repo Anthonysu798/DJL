@@ -4,9 +4,9 @@
 FROM oven/bun:1.3.13-slim AS deps
 WORKDIR /app
 COPY . .
-# Only this app and its workspace dependencies; lifecycle scripts belong to
+# Only this app, the sites server that shares its image, and their workspace dependencies; lifecycle scripts belong to
 # the desktop workspaces and never run in the server image.
-RUN bun install --frozen-lockfile --production --ignore-scripts --filter '@djl/api'
+RUN bun install --frozen-lockfile --production --ignore-scripts --filter '@djl/api' --filter '@djl/sites'
 
 FROM oven/bun:1.3.13-slim AS runtime
 WORKDIR /app

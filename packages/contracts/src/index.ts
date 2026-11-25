@@ -56,3 +56,4 @@ export * from "./browserAutomationToolCatalogue";
 export * from "./computerApi";
 
 export * from "./multipost";
+export * from "./sites";

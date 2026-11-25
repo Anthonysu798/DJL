@@ -19,6 +19,7 @@ import {
 } from "./AdminAuth.ts";
 import type { AdminService } from "./AdminService.ts";
 import type { ContentReportService } from "../reports/ContentReportService.ts";
+import type { SiteAdminService } from "../sites/SiteAdminService.ts";
 import type { UsageAdminService } from "../usage/UsageAdminService.ts";
 
 export interface AdminRouteDeps {
@@ -26,6 +27,7 @@ export interface AdminRouteDeps {
   readonly admin: AdminService;
   readonly usageAdmin: UsageAdminService;
   readonly contentReports: ContentReportService;
+  readonly siteAdmin: SiteAdminService;
   readonly secureCookies: boolean;
   readonly gatewayStatus: () => {
     readonly inFlight: number;
@@ -503,7 +505,7 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       "PUT",
       "/admin/v1/kill-switches/:name",
       opWithParam("name", (p, name, b) => {
-        if (name !== "gateway" && name !== "billing" && name !== "sync")
+        if (name !== "gateway" && name !== "billing" && name !== "sync" && name !== "sites")
           throw new ApiError(404, "not_found", "Unknown switch.");
         return deps.admin.setKillSwitch(p, name, b.engaged === true, str(b.reason) ?? "");
       }),
@@ -546,6 +548,68 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       "POST",
       "/admin/v1/content-reports/:id/resolve",
       opWithParam("id", (p, id, b) => deps.contentReports.resolve(p, id, str(b.reason))),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/sites",
+      opWithQuery((p, q) =>
+        deps.siteAdmin.list(p, {
+          ...(q.get("query") ? { query: q.get("query")! } : {}),
+          ...(q.get("status") ? { status: q.get("status")! } : {}),
+          ...(q.get("limit") ? { limit: Number(q.get("limit")) } : {}),
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/sites/held",
+      op((p) => deps.siteAdmin.held(p)),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/sites/reports",
+      opWithQuery((p, q) =>
+        deps.siteAdmin.reports(p, q.get("status") ? { status: q.get("status")! } : {}),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/sites/reports/resolve",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const body = (yield* readJson) as Record<string, unknown>;
+          const ids = Array.isArray(body.ids) ? body.ids.filter((v) => typeof v === "string") : [];
+          return json(
+            yield* attempt(() => deps.siteAdmin.resolveReports(p, ids, str(body.reason)), FAIL),
+          );
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/sites/:id/disable",
+      opWithParam("id", (p, id, b) => deps.siteAdmin.setStatus(p, id, "disabled", str(b.reason))),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/sites/:id/enable",
+      opWithParam("id", (p, id, b) => deps.siteAdmin.setStatus(p, id, "active", str(b.reason))),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/sites/:id/delete",
+      opWithParam("id", (p, id, b) => deps.siteAdmin.remove(p, id, str(b.reason))),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/site-deploys/:id/approve",
+      opWithParam("id", (p, id, b) => deps.siteAdmin.review(p, id, "approve", str(b.reason))),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/site-deploys/:id/reject",
+      opWithParam("id", (p, id, b) => deps.siteAdmin.review(p, id, "reject", str(b.reason))),
     ),
     HttpRouter.add(
       "GET",

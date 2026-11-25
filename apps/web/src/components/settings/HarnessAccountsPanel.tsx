@@ -1,4 +1,5 @@
 import { HarnessToolsPanel, harnessToolsQueryOptions } from "./HarnessToolsPanel";
+import { YourSitesSection } from "~/components/sites/YourSitesSection";
 import { SubscriptionPlansPanel } from "./SubscriptionPlansPanel";
 import type {
   HarnessAccount,
@@ -264,6 +265,7 @@ export function HarnessAccountsPanel({ revealPlans = false }: { revealPlans?: bo
         />
       ) : null}
       <DjlCloudAccountCard />
+      <YourSitesSection />
       <SettingsSection title={t("accounts.title")}>
         {HARNESSES.map((harness) => {
           const account = accounts.data?.accounts.find((item) => item.id === harness.id);

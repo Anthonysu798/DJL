@@ -3,8 +3,13 @@ import { schema } from "@djl/db";
 import type { CloudSendMessageInput } from "@djl/contracts/cloud";
 import { afterAll, describe, expect, it } from "vitest";
 
+import type { Principal } from "../auth/guard.ts";
+import { Settings } from "../config/settings.ts";
+import { createMemoryRateLimiter } from "../gateway/RateLimiter.ts";
 import { ApiError } from "../http/errors.ts";
 import { chatHarness } from "../testing/chat.ts";
+import { seedOrg } from "../testing/db.ts";
+import { FileService, UPLOADS_PER_HOUR } from "./FileService.ts";
 
 const h = chatHarness();
 afterAll(() => h.close());
@@ -153,5 +158,44 @@ describe("files", () => {
     const sent = await h.chat.send(facts, c.id, message(image.id, "b"));
     await h.runner.idle();
     expect((await h.runs.get(p, sent.run.id)).run.status).toBe("succeeded");
+  });
+});
+
+const declare = (files: FileService, p: Principal, size = 1000) =>
+  files.create(p, {
+    name: "a.pdf",
+    mimeType: "application/pdf",
+    size,
+    sha256: "a".repeat(64),
+    purpose: "attachment",
+  } as never);
+
+describe("upload limits", () => {
+  it("refuses uploads once the org's storage is full, counting other members' files", async () => {
+    const { p } = await h.user("file-quota");
+    const { userId: mate } = await seedOrg(h.db, "file-quota-mate");
+    await h.db.insert(schema.files).values({
+      orgId: p.orgId,
+      userId: mate,
+      name: "big.bin",
+      mimeType: "application/pdf",
+      sizeBytes: 2 * 1024 ** 3 - 500,
+      sha256: "b".repeat(64),
+      purpose: "attachment",
+      storageKey: `org/${p.orgId}/files/${crypto.randomUUID()}`,
+      status: "ready",
+    });
+    const files = new FileService(h.db, h.blobs, new Settings(h.db, { ttlMs: 0 }));
+    expect((await failure(declare(files, p))).code).toBe("storage_full");
+    expect((await declare(files, p, 400)).file.status).toBe("pending");
+  });
+
+  it("limits how many uploads one user can start per hour", async () => {
+    const { p } = await h.user("file-rate");
+    const files = new FileService(h.db, h.blobs, new Settings(h.db, { ttlMs: 0 }), {
+      limiter: createMemoryRateLimiter(),
+    });
+    for (let i = 0; i < UPLOADS_PER_HOUR; i++) await declare(files, p, 10);
+    expect((await failure(declare(files, p, 10))).code).toBe("rate_limited");
   });
 });

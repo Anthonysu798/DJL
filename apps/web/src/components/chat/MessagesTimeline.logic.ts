@@ -600,12 +600,24 @@ function collapseSettledTurns(
     if (row.leadingWorkEntries) collectWorkItems(row.leadingWorkEntries, collapsedItems);
     if (row.inlineWorkEntries) collectWorkItems(row.inlineWorkEntries, collapsedItems);
 
+    // Cards the user acts on (a site ready to publish) stay visible above the answer.
+    const pinned = collapsedItems.flatMap((item) =>
+      item.kind === "work" && item.entry.siteReady ? [item.entry] : [],
+    );
+    const details = pinned.length
+      ? collapsedItems.filter((item) => !(item.kind === "work" && item.entry.siteReady))
+      : collapsedItems;
+
     if (collapsedItems.length > 0) {
       const elapsed = formatElapsed(collapsedStart, row.message.completedAt);
-      row.collapsedTurnItems = collapsedItems;
+      if (details.length > 0) row.collapsedTurnItems = details;
       row.collapsedWorkElapsed = elapsed ?? null;
       delete row.leadingWorkEntries;
       delete row.leadingWorkGroupId;
+      if (pinned.length > 0) {
+        row.leadingWorkEntries = pinned;
+        row.leadingWorkGroupId = `${row.id}:site-ready`;
+      }
       delete row.inlineWorkEntries;
       delete row.inlineWorkGroupId;
 
@@ -767,6 +779,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&
     workLogSubagentsEqual(a.subagents, b.subagents) &&
     workLogAutomationsEqual(a.automation, b.automation) &&
+    JSON.stringify(a.siteReady) === JSON.stringify(b.siteReady) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails)
   );
 }

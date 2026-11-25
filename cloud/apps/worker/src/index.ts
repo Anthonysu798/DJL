@@ -30,6 +30,7 @@ import { sql } from "drizzle-orm";
 
 import { registerAgentJobs } from "./agent.ts";
 import { COMMERCE_IMAGE_CLEANUP, JOBS } from "./jobs.ts";
+import { expireIdleSites } from "./sites.ts";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -171,17 +172,32 @@ try {
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:63799", {
   maxRetriesPerRequest: 2,
 });
+const email = mockExternals
+  ? new MockOutbox(true)
+  : createResendSender({
+      apiKey: requireEnv("RESEND_API_KEY"),
+      from: process.env.EMAIL_FROM ?? "DJL Cloud <no-reply@slcor.com>",
+      replyTo: process.env.EMAIL_REPLY_TO ?? "support@slcor.com",
+    });
+await boss.createQueue("sites.expire-idle");
+await boss.schedule("sites.expire-idle", "25 4 * * *", undefined, { tz: "UTC" });
+await boss.work("sites.expire-idle", { batchSize: 1 }, async () => {
+  const started = Date.now();
+  const result = await expireIdleSites({
+    db,
+    blobs,
+    email,
+    sitesDomain: process.env.SITES_DOMAIN?.trim() || "slcor.site",
+  });
+  console.log(
+    JSON.stringify({ level: "info", job: "sites.expire-idle", ms: Date.now() - started, result }),
+  );
+});
 const agent = createAgentRuntime({
   db,
   redis,
   blobs,
-  email: mockExternals
-    ? new MockOutbox(true)
-    : createResendSender({
-        apiKey: requireEnv("RESEND_API_KEY"),
-        from: process.env.EMAIL_FROM ?? "DJL Cloud <no-reply@slcor.com>",
-        replyTo: process.env.EMAIL_REPLY_TO ?? "support@slcor.com",
-      }),
+  email,
   mockExternals,
   webPublicUrl: process.env.WEB_PUBLIC_URL ?? "http://localhost:3000",
   env: process.env,

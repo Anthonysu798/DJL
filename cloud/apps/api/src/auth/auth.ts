@@ -357,6 +357,11 @@ export function createAuth(input: {
         organizationHooks: {
           beforeCreateOrganization: refusePersonalMarker,
           beforeUpdateOrganization: refusePersonalMarker,
+          // A personal organization has exactly one member, its owner. Letting anyone else
+          // in would share the owner's credits, files and synced history.
+          beforeCreateInvitation: refusePersonalTarget,
+          beforeAcceptInvitation: refusePersonalTarget,
+          beforeAddMember: refusePersonalTarget,
         },
       }),
       ...(env.smsEnabled
@@ -443,6 +448,24 @@ async function refusePersonalMarker(input: {
 }) {
   if (input.organization.metadata?.["kind"] === "personal")
     throw new APIError("BAD_REQUEST", { message: "This organization kind is reserved." });
+}
+
+/** Whether an organization, as Better Auth hands it to a hook, is someone's personal org. */
+export function isPersonalOrganization(organization: { readonly metadata?: unknown }): boolean {
+  const metadata = organization.metadata;
+  if (typeof metadata === "string") return metadata === PERSONAL_ORG_METADATA;
+  return (
+    typeof metadata === "object" &&
+    metadata !== null &&
+    (metadata as Record<string, unknown>)["kind"] === "personal"
+  );
+}
+
+async function refusePersonalTarget(input: {
+  readonly organization: { readonly metadata?: unknown };
+}) {
+  if (isPersonalOrganization(input.organization))
+    throw new APIError("FORBIDDEN", { message: "Personal accounts cannot have other members." });
 }
 
 export async function createPersonalOrganization(

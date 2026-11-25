@@ -184,6 +184,16 @@ import type {
 import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
 import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import type {
+  SitesListResult,
+  SitesNameInput,
+  SitesNameResult,
+  SitesProjectStatus,
+  SitesPublishInput,
+  SitesPublishResult,
+  SitesThreadInput,
+  SitesUnpublishInput,
+} from "./sites";
+import type {
   DocumentRenderEvent,
   DocumentRendererStatus,
   DocumentIntelligenceStatus,
@@ -1019,6 +1029,14 @@ export interface NativeApi {
     signOut: () => Promise<CloudAccountStatus>;
     startBrowserSignIn: () => Promise<CloudBrowserSignInStartResult>;
     completeBrowserSignIn: (input: CloudBrowserSignInCompleteInput) => Promise<CloudAccountStatus>;
+  };
+  /** Publishing a chat's project to slcor.site through the signed-in DJL Cloud account. */
+  sites: {
+    list: () => Promise<SitesListResult>;
+    projectStatus: (input: SitesThreadInput) => Promise<SitesProjectStatus>;
+    nameAvailable: (input: SitesNameInput) => Promise<SitesNameResult>;
+    publish: (input: SitesPublishInput) => Promise<SitesPublishResult>;
+    unpublish: (input: SitesUnpublishInput) => Promise<SitesPublishResult>;
   };
   provider: {
     getComposerCapabilities: (
