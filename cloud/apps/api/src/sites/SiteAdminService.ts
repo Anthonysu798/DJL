@@ -120,7 +120,7 @@ export class SiteAdminService {
     requirePermission(p, PERMISSION);
     const why = needReason(reason);
     if (!UUID.test(siteId)) throw notFound("Site");
-    return this.db.transaction(async (tx) => {
+    const { orgId, closed } = await this.db.transaction(async (tx) => {
       const site = await tx.query.sites.findFirst({ where: eq(schema.sites.id, siteId) });
       if (!site) throw notFound("Site");
       await tx
@@ -128,13 +128,23 @@ export class SiteAdminService {
         .set({ status, disabledReason: status === "disabled" ? why : null })
         .where(eq(schema.sites.id, siteId));
       // Close uploads still open so none can finish into the site once it is restored.
-      if (status === "disabled")
-        await tx
-          .update(schema.siteDeploys)
-          .set({ status: "rejected", reason: "The site was taken down.", completedAt: new Date() })
-          .where(
-            and(eq(schema.siteDeploys.siteId, siteId), eq(schema.siteDeploys.status, "uploading")),
-          );
+      const closed =
+        status === "disabled"
+          ? await tx
+              .update(schema.siteDeploys)
+              .set({
+                status: "rejected",
+                reason: "The site was taken down.",
+                completedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(schema.siteDeploys.siteId, siteId),
+                  eq(schema.siteDeploys.status, "uploading"),
+                ),
+              )
+              .returning({ id: schema.siteDeploys.id })
+          : [];
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -145,8 +155,11 @@ export class SiteAdminService {
         after: { status },
         reason: why,
       });
-      return { id: siteId, status };
+      return { orgId: site.orgId, closed: closed.map((d) => d.id) };
     });
+    // After commit, as in review(), so a storage error cannot undo the takedown.
+    await this.sites.deleteUploads(orgId, siteId, closed);
+    return { id: siteId, status };
   }
 
   /** Approve a held deploy (it goes live) or reject it (its files are deleted). */

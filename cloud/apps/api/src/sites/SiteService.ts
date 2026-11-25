@@ -366,6 +366,11 @@ export class SiteService {
     return deleteSiteAndFiles(this.db, this.blobs, site);
   }
 
+  /** Delete the uploaded zips of deploys that were closed without being processed. */
+  deleteUploads(orgId: string, siteId: string, deployIds: readonly string[]) {
+    return Promise.all(deployIds.map((id) => this.blobs.remove(uploadKey(orgId, siteId, id))));
+  }
+
   async deleteDeployFiles(siteId: string, deployId: string) {
     const deploy = await this.db.query.siteDeploys.findFirst({
       where: eq(schema.siteDeploys.id, deployId),

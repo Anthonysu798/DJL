@@ -144,6 +144,7 @@ describe("site moderation", () => {
       where: eq(schema.siteDeploys.id, deploy.id),
     });
     expect(open?.status).toBe("rejected");
+    expect(blobs.objects.has(uploadKey(p.orgId, site.id, deploy.id))).toBe(false);
     const refused = await failure(sites.completeDeploy(p, site.id, deploy.id));
     expect([refused.status, refused.code]).toEqual([403, "site_disabled"]);
     const row = await db.query.sites.findFirst({ where: eq(schema.sites.id, site.id) });
