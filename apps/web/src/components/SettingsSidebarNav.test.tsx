@@ -184,7 +184,7 @@ describe("merged settings pages", () => {
       "appearance",
       "remote",
       "archived",
-      "models",
+      "local-models",
       "plugins",
       "usage",
       "advanced",
@@ -193,7 +193,7 @@ describe("merged settings pages", () => {
     expect(normalizeSettingsSection("notifications")).toBe("general");
     expect(normalizeSettingsSection("behavior")).toBe("general");
     expect(normalizeSettingsSection("skills")).toBe("plugins");
-    expect(normalizeSettingsSection("local-models")).toBe("models");
+    expect(normalizeSettingsSection("local-models")).toBe("local-models");
     expect(normalizeSettingsSection("shortcuts")).toBe("advanced");
     expect(normalizeSettingsSection("worktrees")).toBe("advanced");
     expect(normalizeSettingsSection("servers")).toBe("advanced");
