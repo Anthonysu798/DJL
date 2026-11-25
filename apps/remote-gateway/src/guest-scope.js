@@ -134,6 +134,29 @@ function redactGroup(scope, group) {
   };
 }
 
+// What the agents did on the owner's computer (files changed, commands run, the file being
+// read now) stays there, as it does in the chat history (see redactGuestThread).
+function redactReply(reply) {
+  return reply && typeof reply === "object" ? { ...reply, files: [], commands: [] } : reply;
+}
+
+function redactActivity(activity) {
+  return activity && typeof activity === "object" ? { ...activity, detail: null } : activity;
+}
+
+function redactMission(mission) {
+  if (!mission || typeof mission !== "object") return mission;
+  const stats = mission.stats && typeof mission.stats === "object" ? mission.stats : null;
+  return stats ? { ...mission, stats: { ...stats, files: [] } } : mission;
+}
+
+function redactActivities(activities) {
+  if (!activities || typeof activities !== "object") return activities;
+  return Object.fromEntries(
+    Object.entries(activities).map(([memberId, activity]) => [memberId, redactActivity(activity)]),
+  );
+}
+
 function pick(record, keys) {
   if (!record || typeof record !== "object") return record;
   return Object.fromEntries(Object.entries(record).filter(([key]) => keys.has(key)));
@@ -150,7 +173,7 @@ function filterGuestGroupsList(scope, result) {
       : [];
   return {
     groups: group ? [redactGroup(scope, group)] : [],
-    replies: ofGroup(source.replies),
+    replies: ofGroup(source.replies).map(redactReply),
     ...(source.live && typeof source.live === "object"
       ? {
           live: {
@@ -160,13 +183,13 @@ function filterGuestGroupsList(scope, result) {
               ? { rounds: pick(source.live.rounds, new Set([scope.groupId])) }
               : {}),
             ...(source.live.activities
-              ? { activities: pick(source.live.activities, memberIds) }
+              ? { activities: redactActivities(pick(source.live.activities, memberIds)) }
               : {}),
           },
         }
       : {}),
     ...(source.reactions ? { reactions: ofGroup(source.reactions) } : {}),
-    ...(source.missions ? { missions: ofGroup(source.missions) } : {}),
+    ...(source.missions ? { missions: ofGroup(source.missions).map(redactMission) } : {}),
   };
 }
 
@@ -185,15 +208,22 @@ function filterGuestGroupEvent(scope, event) {
         ? { type: "group.deleted", groupId: event.groupId, folder: "(hidden)" }
         : null;
     case "reply.recorded":
-      return event.reply?.groupId === scope.groupId ? event : null;
+      return event.reply?.groupId === scope.groupId
+        ? { ...event, reply: redactReply(event.reply) }
+        : null;
     case "reaction.set":
       return event.reaction?.groupId === scope.groupId ? event : null;
     case "mission.upserted":
-      return event.mission?.groupId === scope.groupId ? event : null;
+      return event.mission?.groupId === scope.groupId
+        ? { ...event, mission: redactMission(event.mission) }
+        : null;
+    case "member.activity":
+      return event.groupId === scope.groupId
+        ? { ...event, activity: redactActivity(event.activity) }
+        : null;
     case "member.state":
     case "reply.draft":
     case "reaction.removed":
-    case "member.activity":
     case "round.progress":
       return event.groupId === scope.groupId ? event : null;
     default:

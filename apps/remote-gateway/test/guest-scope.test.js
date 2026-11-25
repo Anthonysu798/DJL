@@ -134,7 +134,7 @@ test("the group list shows one group, without the owner's folder, brief or other
     listed.groups[0].guests.map((guest) => guest.name),
     ["Alex"],
   );
-  assert.deepEqual(listed.replies, [{ id: "r1", groupId: "group-1" }]);
+  assert.deepEqual(listed.replies, [{ id: "r1", groupId: "group-1", files: [], commands: [] }]);
   assert.deepEqual(listed.live.memberStates, { "group-1-m1": "working" });
   assert.deepEqual(listed.live.drafts, {});
   assert.deepEqual(listed.live.rounds, { "group-1": { hops: 1 } });
@@ -292,4 +292,48 @@ test("a lent agent's gateway lets out its turns and nothing of the chat", () => 
   assert.equal(out({ id: 7, method: "item/commandExecution/requestApproval" }), false);
   // And a person in the chat is never sent another guest's agent turns.
   assert.equal(allowGuestOutbound(scope, { method: "djl/groups/agent/turn", params: {} }), false);
+});
+
+test("what the agents did on the owner's computer never reaches a guest", () => {
+  const reply = {
+    groupId: "group-1",
+    replyId: "r1",
+    memberId: "group-1-m1",
+    status: "ok",
+    files: ["/Users/owner/project/.env"],
+    commands: ["cat ~/.ssh/id_rsa"],
+  };
+  const activity = { kind: "reading", detail: "/Users/owner/secret.txt", from: null };
+  const mission = {
+    id: "mission-1",
+    groupId: "group-1",
+    goal: "Ship it",
+    stats: { files: ["/Users/owner/project/a.ts"], commands: 3, reviews: 1, replies: 2 },
+  };
+  const list = filterGuestGroupsList(scope, {
+    groups: [group("group-1")],
+    replies: [reply],
+    live: { memberStates: {}, drafts: {}, activities: { "group-1-m1": activity } },
+    missions: [mission],
+  });
+  assert.deepEqual(list.replies[0], { ...reply, files: [], commands: [] });
+  assert.deepEqual(list.live.activities["group-1-m1"], { ...activity, detail: null });
+  assert.deepEqual(list.missions[0].stats, { files: [], commands: 3, reviews: 1, replies: 2 });
+
+  const event = (value) => filterGuestGroupEvent(scope, value);
+  assert.deepEqual(event({ type: "reply.recorded", reply }).reply.files, []);
+  assert.deepEqual(event({ type: "reply.recorded", reply }).reply.commands, []);
+  assert.equal(
+    event({ type: "member.activity", groupId: "group-1", memberId: "group-1-m1", activity })
+      .activity.detail,
+    null,
+  );
+  assert.equal(
+    event({ type: "member.activity", groupId: "group-1", memberId: "group-1-m1", activity: null })
+      .activity,
+    null,
+  );
+  assert.deepEqual(event({ type: "mission.upserted", mission }).mission.stats.files, []);
+  // The owner's own phone still gets everything: only a guest's gateway filters.
+  assert.deepEqual(reply.files, ["/Users/owner/project/.env"]);
 });
