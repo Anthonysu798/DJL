@@ -8,6 +8,7 @@ import {
   deriveMessagesTimelineRows,
   deriveTerminalAssistantMessageIds,
   deriveWorkStatusKind,
+  hideAgentFileCitations,
   normalizeCompactToolLabel,
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
@@ -681,6 +682,25 @@ describe("deriveWorkStatusKind", () => {
     [statusEntry({ itemType: "mcp_tool_call" }), "working"],
   ] as const)("describes %o as %s", (workEntry, expected) => {
     expect(deriveWorkStatusKind(workEntry)).toBe(expected);
+  });
+});
+
+describe("hideAgentFileCitations", () => {
+  it("drops Codex's file-citation lines and keeps the reply around them", () => {
+    expect(
+      hideAgentFileCitations(
+        'I wrote the summary.\n\n:codex-file-citation{path="/Users/me/Studio/Tasks/task-1/Outbox/Backups.docx" purpose="output"}\n\nIt is ready.',
+      ),
+    ).toBe("I wrote the summary.\n\nIt is ready.");
+  });
+
+  it("drops a citation written inline and leaves ordinary text alone", () => {
+    expect(
+      hideAgentFileCitations('Done ::codex-file-citation[path="/a/b.pdf"] — see the card.'),
+    ).toBe("Done — see the card.");
+    expect(hideAgentFileCitations("Use ::before in CSS [like this].")).toBe(
+      "Use ::before in CSS [like this].",
+    );
   });
 });
 

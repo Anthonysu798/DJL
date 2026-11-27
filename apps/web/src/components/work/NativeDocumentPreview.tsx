@@ -120,10 +120,13 @@ export function NativeDocumentPreview(props: {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const statusQuery = useQuery(workDocumentRendererStatusQueryOptions());
   const rendererReady = statusQuery.data?.state === "ready";
+  // The server resolves a relative path against the chat's own folder, which is not always this
+  // preview's workspace root (a Work chat's root is the Studio folder): send the full path.
+  const documentPath = props.openInTarget ?? props.filePath;
   const requestQuery = useQuery(
     workDocumentRenderRequestQueryOptions({
       threadId: props.threadId,
-      path: props.filePath,
+      path: documentPath,
       enabled: rendererReady && mode === "native",
     }),
   );
@@ -137,7 +140,7 @@ export function NativeDocumentPreview(props: {
   const readableQuery = useQuery(
     workDocumentPreviewQueryOptions({
       threadId: props.threadId,
-      path: props.filePath,
+      path: documentPath,
       enabled: mode === "readable" || detailsOpen,
     }),
   );

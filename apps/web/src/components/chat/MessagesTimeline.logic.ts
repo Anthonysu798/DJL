@@ -304,6 +304,18 @@ export function deriveWorkStatusKind(entry: WorkLogEntry | undefined): WorkStatu
   return "working";
 }
 
+// Codex reports a file it made with its own markup, `:codex-file-citation{path="…"}`, which
+// DJL does not render. In a Work chat the file already has its card below the answer, and the
+// raw line would put a full folder path in front of someone who should never see one.
+export function hideAgentFileCitations(text: string): string {
+  return text
+    .replace(/[ \t]*:{1,2}codex-file-citation(?:\{[^}\n]*\}|\[[^\]\n]*\])[ \t]*/g, (match) =>
+      /^[ \t]/.test(match) && /[ \t]$/.test(match) ? " " : "",
+    )
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 interface StudioOutputActivity {
   readonly kind: string;
   readonly turnId: TurnId | null;

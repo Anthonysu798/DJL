@@ -2790,6 +2790,20 @@ describe("MessagesTimeline simple view (Work chats)", () => {
     expect(markup).toContain("Show in folder");
   });
 
+  it("hides Codex's file-citation markup in a Work reply, but not in Code", () => {
+    const cited = {
+      ...answer,
+      message: {
+        ...answer.message,
+        text: 'Here is the summary.\n\n:codex-file-citation{path="/Users/me/Outbox/summary.docx" purpose="output"}',
+      },
+    };
+    expect(render({ simpleView: true, timelineEntries: [user, step, cited] })).not.toContain(
+      "codex-file-citation",
+    );
+    expect(render({ timelineEntries: [user, step, cited] })).toContain("codex-file-citation");
+  });
+
   it("offers only Show in folder for a produced file the system would run", () => {
     const markup = render({
       simpleView: true,

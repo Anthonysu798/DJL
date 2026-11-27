@@ -103,6 +103,7 @@ import {
 import {
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
+  hideAgentFileCitations,
   MAX_VISIBLE_WORK_LOG_ENTRIES,
   type CollapsedTurnItem,
   type MessagesTimelineRow,
@@ -1296,11 +1297,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       {row.kind === "message" &&
         row.message.role === "assistant" &&
         (() => {
-          const messageText = resolveAssistantMessageDisplayText({
+          const rawMessageText = resolveAssistantMessageDisplayText({
             ...row,
             emptyResponseLabel: t("timeline.emptyResponse"),
             protocolRecoveryLabel: t("timeline.protocolRecovery"),
           });
+          const messageText =
+            simpleView && rawMessageText ? hideAgentFileCitations(rawMessageText) : rawMessageText;
           const messageMarkers =
             threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
           const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {

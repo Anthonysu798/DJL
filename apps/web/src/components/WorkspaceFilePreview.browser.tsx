@@ -136,9 +136,11 @@ describe("WorkspaceFilePreview native Office viewer", () => {
     );
 
     await expect.element(page.getByText("Rendered DOCX pages")).toBeInTheDocument();
+    // The server resolves a relative path against the chat's own folder, which need not be the
+    // preview's workspace root (a Work chat's root is the Studio folder), so send the full path.
     expect(mocks.requestDocumentRender).toHaveBeenCalledWith({
       threadId: "thread-1",
-      path: "Deliverables/essay-v1.docx",
+      path: "/tmp/DJL task/Deliverables/essay-v1.docx",
     });
     expect(mocks.getDocumentRender).toHaveBeenCalledWith({
       threadId: "thread-1",
@@ -207,6 +209,10 @@ describe("WorkspaceFilePreview native Office viewer", () => {
     await expect.element(page.getByText("Install document viewer")).toBeInTheDocument();
     await page.getByRole("button", { name: "Readable text" }).click();
     await expect.element(page.getByText("Readable document content")).toBeInTheDocument();
+    expect(mocks.previewDocument).toHaveBeenCalledWith({
+      threadId: "thread-1",
+      path: "/tmp/DJL task/Deliverables/essay-v1.docx",
+    });
     expect(mocks.readFile).not.toHaveBeenCalled();
   });
 
