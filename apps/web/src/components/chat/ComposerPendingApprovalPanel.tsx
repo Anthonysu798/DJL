@@ -20,7 +20,7 @@ interface ComposerPendingApprovalPanelProps {
   pendingCount: number;
   isResponding: boolean;
   onRespond: (requestId: ApprovalRequestId, decision: ProviderApprovalDecision) => Promise<void>;
-  /** Work chats: ask in everyday words and keep the command or path behind "Details". */
+  /** Work chats: ask in everyday words. What is being approved stays in view. */
   plainLanguage?: boolean;
 }
 
@@ -126,7 +126,8 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
         ) : null}
       </div>
       {plainLanguage ? (
-        <details className="mt-1.5">
+        // Open by default: the user must be able to see what they are allowing.
+        <details className="mt-1.5" open>
           <summary className="cursor-pointer text-[12px] text-muted-foreground/65">
             {t("approval.details")}
           </summary>

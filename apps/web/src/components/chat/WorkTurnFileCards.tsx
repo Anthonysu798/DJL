@@ -6,6 +6,7 @@
 // Layer: Chat transcript UI
 // Depends on: work.resolveArtifactPath, the workspace file opener and shell open/reveal.
 
+import { isOpenableDocumentPath } from "@djl/shared/openableFiles";
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -57,18 +58,22 @@ export function WorkTurnFileCards({ paths }: { paths: ReadonlyArray<string> }) {
               <FileEntryIcon pathValue={name} kind="file" mimeType={null} />
               <span className="truncate">{name}</span>
             </button>
-            <button
-              type="button"
-              className={ACTION_CLASS_NAME}
-              onClick={() =>
-                withFullPath(path, (fullPath) => {
-                  const shell = readNativeApi()?.shell;
-                  return shell?.openPath ? shell.openPath(fullPath) : showInFolder(fullPath);
-                })
-              }
-            >
-              {t("timeline.workFiles.openInApp")}
-            </button>
+            {/* An agent wrote these files: only a document, image or media file may be
+                handed to the system to open. Anything else is reachable through its folder. */}
+            {isOpenableDocumentPath(name) ? (
+              <button
+                type="button"
+                className={ACTION_CLASS_NAME}
+                onClick={() =>
+                  withFullPath(path, (fullPath) => {
+                    const shell = readNativeApi()?.shell;
+                    return shell?.openPath ? shell.openPath(fullPath) : showInFolder(fullPath);
+                  })
+                }
+              >
+                {t("timeline.workFiles.openInApp")}
+              </button>
+            ) : null}
             <button
               type="button"
               className={ACTION_CLASS_NAME}

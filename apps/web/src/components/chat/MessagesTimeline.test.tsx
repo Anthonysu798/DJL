@@ -2790,6 +2790,19 @@ describe("MessagesTimeline simple view (Work chats)", () => {
     expect(markup).toContain("Show in folder");
   });
 
+  it("offers only Show in folder for a produced file the system would run", () => {
+    const markup = render({
+      simpleView: true,
+      timelineEntries: [user, step, answer],
+      workFilesByAssistantMessageId: new Map([
+        [MessageId.makeUnsafe("answer-1"), ["Outbox/Invoice.pdf.command"]],
+      ]),
+    });
+    expect(markup).toContain("Invoice.pdf.command");
+    expect(markup).toContain("Show in folder");
+    expect(markup).not.toContain("Open in app");
+  });
+
   it("shows a running turn as one plain status line", () => {
     const markup = render({
       simpleView: true,

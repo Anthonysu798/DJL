@@ -95,6 +95,7 @@ import { autoUpdater, BaseUpdater, CancellationToken } from "electron-updater";
 import type { ContextMenuItem } from "@djl/contracts";
 import { APP_BASE_NAME, resolveAppDisplayName } from "@djl/shared/branding";
 import { getMacTrafficLightPosition } from "@djl/shared/desktopChrome";
+import { isOpenableDocumentPath } from "@djl/shared/openableFiles";
 import {
   DJL_DESKTOP_ENTRY_URL,
   DJL_DESKTOP_SCHEME,
@@ -4527,6 +4528,12 @@ function registerIpcHandlers(): void {
       await FS.promises.stat(resolvedPath);
     } catch {
       throw new Error(`File not found: ${resolvedPath}`);
+    }
+    // Files in a chat are written by an agent. Opening one must never run it, so anything
+    // that is not a document, image or media file is shown in its folder instead.
+    if (!isOpenableDocumentPath(resolvedPath)) {
+      shell.showItemInFolder(resolvedPath);
+      return;
     }
     const errorMessage = await shell.openPath(resolvedPath);
     if (errorMessage.trim().length > 0) {
