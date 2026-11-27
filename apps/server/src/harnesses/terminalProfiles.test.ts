@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -202,6 +202,52 @@ describe("workspace terminals on the normal sign-in", () => {
       expect(input.agentProfile).toBeUndefined();
       expect(JSON.stringify(input)).not.toContain("/x/work");
       expect(JSON.stringify(input)).not.toContain("/codex/default");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("runs the CLI's own login command when the main account signs in", async () => {
+    const root = await mkdtemp(join(tmpdir(), "djl-terminal-default-login-"));
+    const settings = structuredClone(DEFAULT_SERVER_SETTINGS);
+    const configuredSettings = {
+      ...settings,
+      providers: {
+        ...settings.providers,
+        claudeAgent: { ...settings.providers.claudeAgent, binaryPath: "/bin/echo" },
+      },
+    };
+    const manager = {
+      isRunning: () => Effect.succeed(false),
+      open: vi.fn(() => Effect.succeed({} as never)),
+    };
+    const startupScripts = async () => {
+      const files = await readdir(root, { recursive: true, withFileTypes: true });
+      const texts = await Promise.all(
+        files
+          .filter((file) => file.isFile())
+          .map((file) => readFile(join(file.parentPath, file.name), "utf8")),
+      );
+      return texts.join("\n");
+    };
+    try {
+      const open = (action: "run" | "login", threadId: string) =>
+        Effect.runPromise(
+          openProfileTerminal(
+            {
+              threadId,
+              terminalId: "t",
+              cwd: root,
+              agentProfile: { provider: "claudeAgent", profileId: "default", action },
+            },
+            configuredSettings,
+            root,
+            manager,
+          ),
+        );
+      await open("run", "run");
+      expect(await startupScripts()).not.toContain("claude 'auth' 'login'");
+      await open("login", "login");
+      expect(await startupScripts()).toContain("claude 'auth' 'login'");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

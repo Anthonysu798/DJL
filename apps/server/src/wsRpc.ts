@@ -139,6 +139,7 @@ import {
   cliAccountsRoot,
   cliAccountsUsage,
   listCliAccounts,
+  readNormalCliIdentity,
   removeCliAccount,
   setActiveCliAccount,
 } from "./harnesses/cliAccounts";
@@ -1981,13 +1982,16 @@ export const makeWsRpcLayer = () =>
           rpcEffect(
             serverSettings.getSettings.pipe(
               Effect.flatMap((settings) =>
-                Effect.tryPromise(() =>
-                  readProfileAccount(
+                Effect.tryPromise(async () => {
+                  // The main account is the CLI's normal login, not a profile folder.
+                  const normal = readNormalCliIdentity(input, settings, cliAccountOptions);
+                  if (normal) return { ...input, ...(await normal) };
+                  return readProfileAccount(
                     input,
                     settings,
                     path.join(config.baseDir, "userdata", "terminal-accounts"),
-                  ),
-                ),
+                  );
+                }),
               ),
             ),
             "Failed to check profile account",

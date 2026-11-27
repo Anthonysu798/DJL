@@ -112,6 +112,7 @@ export function openProfileTerminal(
   // Workspaces offer the CLI's normal sign-in as the `default` account: run the installed CLI
   // with its usual login (not the account chosen for chats), no separate profile folder.
   const useNormalLogin = requested.agentProfile?.profileId === DEFAULT_CLI_ACCOUNT_ID;
+  const normalLogin = useNormalLogin && requested.agentProfile?.action === "login";
   const input: TerminalOpenInput = useNormalLogin
     ? (({ agentProfile, ...rest }) => ({ ...rest, harness: agentProfile!.provider }))(requested)
     : requested;
@@ -163,7 +164,8 @@ export function openProfileTerminal(
             provider: harness,
             executable,
             prefixArgs: invocation.prefixArgs,
-            initialArgs: [],
+            // The main account's sign-in dialog runs the CLI's own login command.
+            initialArgs: normalLogin ? [...invocation.loginArgs] : [],
             env,
             removeEnv,
           });

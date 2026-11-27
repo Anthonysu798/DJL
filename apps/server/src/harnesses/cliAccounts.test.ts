@@ -8,7 +8,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { claudeKeychainServiceForConfigDir } from "../providerUsage/providers/claude";
 import { buildHarnessInvocation } from "./accounts";
 import { activeCliAccountDir } from "./cliAccountSelection";
-import { addCliAccount, removeCliAccount, setActiveCliAccount } from "./cliAccounts";
+import {
+  addCliAccount,
+  listCliAccounts,
+  removeCliAccount,
+  setActiveCliAccount,
+} from "./cliAccounts";
 import { nativeProfileOptions } from "./native/profile";
 
 const dirs: string[] = [];
@@ -29,6 +34,51 @@ const apply = (settings: ServerSettings, patch: object) =>
   deepMerge(settings, patch as never) as ServerSettings;
 
 describe("AI accounts", () => {
+  it("reads each Claude account's sign-in from its own store, never by starting Claude", async () => {
+    const { homeDir, root } = await sandbox();
+    let settings: ServerSettings = deepMerge(DEFAULT_SERVER_SETTINGS, {
+      // Any Claude process would fail here, so a signed-in answer can only come from the store.
+      providers: { claudeAgent: { binaryPath: path.join(homeDir, "no-claude-here") } },
+    } as never) as ServerSettings;
+    const accounts = [];
+    for (const name of ["Two", "Three", "Four", "Five", "Six"]) {
+      const added = await addCliAccount(
+        settings,
+        { provider: "claudeAgent", name },
+        { root, homeDir },
+      );
+      settings = apply(settings, added.patch);
+      accounts.push(added.account);
+    }
+    const signedIn = accounts.slice(0, 4);
+    for (const [index, account] of signedIn.entries()) {
+      await writeFile(
+        path.join(account.dir, ".credentials.json"),
+        JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "expired",
+            refreshToken: `refresh-${index}`,
+            expiresAt: Date.now() - 60_000,
+            refreshTokenExpiresAt: Date.now() + 20 * 86_400_000,
+          },
+        }),
+      );
+      await writeFile(
+        path.join(account.dir, ".claude.json"),
+        JSON.stringify({ oauthAccount: { emailAddress: `account${index}@example.com` } }),
+      );
+    }
+    const listed = await listCliAccounts(settings, { root, homeDir });
+    const byId = new Map(listed.map((item) => [item.id, item]));
+    for (const [index, account] of signedIn.entries()) {
+      expect(byId.get(account.id)).toMatchObject({
+        status: "signedIn",
+        email: `account${index}@example.com`,
+      });
+    }
+    expect(byId.get(accounts[4]!.id)?.status).not.toBe("signedIn");
+  });
+
   it("creates an isolated folder that shares config but never the login", async () => {
     const { homeDir, root } = await sandbox();
     const { account, patch } = await addCliAccount(

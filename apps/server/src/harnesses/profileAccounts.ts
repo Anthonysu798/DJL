@@ -7,6 +7,7 @@ import type {
   ServerSettings,
 } from "@djl/contracts";
 import { buildProfileTerminalLaunch } from "./terminalProfiles";
+import { readClaudeLogin } from "./claudeLogin";
 import { resolveCodexTerminalBinary } from "./codexTerminalBinary";
 import { probe, type ProbeOutput, parseHarnessAccountStatus } from "./accounts";
 import { NativeRpc } from "./native/protocol";
@@ -63,6 +64,11 @@ export async function readProfileAccount(
     await access(launch.directory);
   } catch {
     return result(empty("signedOut"));
+  }
+  if (input.provider === "claudeAgent") {
+    // Read the account's stored login: starting `claude` could rotate its refresh token.
+    const login = await readClaudeLogin({ configDir: launch.env.CLAUDE_CONFIG_DIR });
+    if (login.signedIn) return result({ status: "signedIn", email: login.email });
   }
   const env = { ...process.env, ...launch.env };
   for (const name of launch.command.removeEnv) delete env[name];

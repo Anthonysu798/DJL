@@ -14,7 +14,8 @@ import { buildClaudeProcessEnv } from "../provider/claudeProcessEnv";
 
 const execFileAsync = promisify(execFile);
 
-const COMMAND_TIMEOUT_MS = 20_000;
+// A renewal is a network round trip; cutting it short is what loses a refresh token.
+const COMMAND_TIMEOUT_MS = 120_000;
 // Usage polls every minute while a turn runs; one CLI refresh per window is plenty.
 const MIN_INTERVAL_MS = 5 * 60 * 1000;
 

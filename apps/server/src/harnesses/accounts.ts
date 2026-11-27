@@ -30,6 +30,7 @@ import {
   resolveDjlOpenCodeBinaryPath,
 } from "../provider/opencodeRuntime";
 import { activeCliAccountDir } from "./cliAccountSelection";
+import { readClaudeLogin } from "./claudeLogin";
 
 export const NATIVE_HARNESS_IDS = [
   "codex",
@@ -241,6 +242,7 @@ export async function probeHarnessAccount(
   settings: ServerSettings,
   managedRootDir: string,
   runProbe: AccountProbe = probe,
+  readLogin: typeof readClaudeLogin = readClaudeLogin,
 ): Promise<HarnessAccount> {
   if (!settings.providers[harness].enabled)
     return { id: harness, installed: false, enabled: false, status: "disabled" };
@@ -344,6 +346,18 @@ export async function probeHarnessAccount(
         installed: true,
         enabled: true,
         status: "incompatible",
+        version: version.stdout.trim().slice(0, 100),
+      };
+  }
+  if (harness === "claudeAgent") {
+    // Read the stored Claude.ai login: `claude auth status` could rotate its refresh token.
+    const login = await readLogin({ configDir: invocation.env.CLAUDE_CONFIG_DIR });
+    if (login.signedIn)
+      return {
+        id: harness,
+        installed: true,
+        enabled: true,
+        status: "ready",
         version: version.stdout.trim().slice(0, 100),
       };
   }
