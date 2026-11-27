@@ -20,6 +20,8 @@ interface ComposerPendingApprovalPanelProps {
   pendingCount: number;
   isResponding: boolean;
   onRespond: (requestId: ApprovalRequestId, decision: ProviderApprovalDecision) => Promise<void>;
+  /** Work chats: ask in everyday words. What is being approved stays in view. */
+  plainLanguage?: boolean;
 }
 
 type ParsedApproval = {
@@ -75,6 +77,7 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
   pendingCount,
   isResponding,
   onRespond,
+  plainLanguage = false,
 }: ComposerPendingApprovalPanelProps) {
   const { t } = useTranslation("chat");
   const parsed = useMemo(() => parseApprovalDetail(approval.detail), [approval.detail]);
@@ -107,8 +110,10 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
     >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
-          {t(`approval.prompt.${KIND_PROMPT_KEY[approval.requestKind]}`)}
-          {parsed.tool ? (
+          {t(
+            `approval.${plainLanguage ? "plainPrompt" : "prompt"}.${KIND_PROMPT_KEY[approval.requestKind]}`,
+          )}
+          {parsed.tool && !plainLanguage ? (
             <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/50">
               {parsed.tool}
             </span>
@@ -120,7 +125,17 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
           </span>
         ) : null}
       </div>
-      <ApprovalDetail parsed={parsed} />
+      {plainLanguage ? (
+        // Open by default: the user must be able to see what they are allowing.
+        <details className="mt-1.5" open>
+          <summary className="cursor-pointer text-[12px] text-muted-foreground/65">
+            {t("approval.details")}
+          </summary>
+          <ApprovalDetail parsed={parsed} />
+        </details>
+      ) : (
+        <ApprovalDetail parsed={parsed} />
+      )}
       <div className="mt-2.5 space-y-0.5">
         {APPROVAL_ACTIONS.map((action, index) => (
           <ComposerChoiceRow

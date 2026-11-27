@@ -27,7 +27,11 @@ function makeApproval(overrides: Partial<PendingApproval> = {}): PendingApproval
   };
 }
 
-async function mountApprovalPanel(input?: { approval?: PendingApproval; isResponding?: boolean }) {
+async function mountApprovalPanel(input?: {
+  approval?: PendingApproval;
+  isResponding?: boolean;
+  plainLanguage?: boolean;
+}) {
   const onRespond = vi.fn(
     async (_requestId: ApprovalRequestId, _decision: ProviderApprovalDecision) => undefined,
   );
@@ -37,6 +41,7 @@ async function mountApprovalPanel(input?: { approval?: PendingApproval; isRespon
       pendingCount={1}
       isResponding={input?.isResponding ?? false}
       onRespond={onRespond}
+      {...(input?.plainLanguage ? { plainLanguage: true } : {})}
     />,
   );
 
@@ -76,6 +81,27 @@ describe("ComposerPendingApprovalPanel", () => {
     try {
       await expect.element(page.getByText("Approve this command?")).toBeInTheDocument();
       await expect.element(page.getByText("bun run test")).toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("asks a Work user in plain words while still showing what is being approved", async () => {
+    const mounted = await mountApprovalPanel({ plainLanguage: true });
+
+    try {
+      await expect
+        .element(page.getByText("DJL wants to run a step on your computer. Allow it?"))
+        .toBeInTheDocument();
+      await expect.element(page.getByText("Approve this command?")).not.toBeInTheDocument();
+      // The tool name is developer vocabulary and goes. What will run does not: consent to a
+      // command nobody was shown is not consent, so it is in view until the user folds it away.
+      await expect.element(page.getByText("Bash", { exact: true })).not.toBeInTheDocument();
+      await expect.element(page.getByText("bun run test")).toBeVisible();
+      await page.getByText("Details").click();
+      await expect.element(page.getByText("bun run test")).not.toBeVisible();
+      await page.getByRole("button", { name: /Approve once/u }).click();
+      expect(mounted.onRespond).toHaveBeenCalledWith(APPROVAL_REQUEST_ID, "accept");
     } finally {
       await mounted.cleanup();
     }

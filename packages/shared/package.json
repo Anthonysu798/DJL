@@ -176,6 +176,10 @@
       "types": "./src/localPreviewFiles.ts",
       "import": "./src/localPreviewFiles.ts"
     },
+    "./openableFiles": {
+      "types": "./src/openableFiles.ts",
+      "import": "./src/openableFiles.ts"
+    },
     "./composerSlashCommands": {
       "types": "./src/composerSlashCommands.ts",
       "import": "./src/composerSlashCommands.ts"

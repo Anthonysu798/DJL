@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { modelImages } from "./attachments";
 import { withDjlThreadId } from "./driverEnv";
 import { NativeRpc, object, string, type JsonObject } from "./protocol";
 import type { NativeDriverFactory } from "./types";
@@ -208,6 +209,8 @@ export function createNativeAcpDriver(config: {
       );
       if (init.protocolVersion !== 1)
         throw new Error(`Unsupported ${config.label} ACP protocol version`);
+      const takesImages =
+        object(object(init.agentCapabilities ?? {}).promptCapabilities ?? {}).image === true;
       await config.authenticate?.(rpc, init);
       // ACP uses the existing CLI login. Only the explicit Sign in action may open a browser.
       const resume =
@@ -254,10 +257,19 @@ export function createNativeAcpDriver(config: {
           initialModel = modelId;
           const modeId = config.modeId(session, turn);
           if (modeId) await rpc.request("session/set_mode", { sessionId: id, modeId });
+          // Only an agent that advertises image prompts may be sent one; the rest open the
+          // saved path listed in the text.
+          const images = takesImages ? await modelImages(turn.files) : [];
           const result = object(
             await rpc.request(
               "session/prompt",
-              { sessionId: id, prompt: [{ type: "text", text: turn.input! }] },
+              {
+                sessionId: id,
+                prompt: [
+                  { type: "text", text: turn.input! },
+                  ...images.map(({ data, mimeType }) => ({ type: "image", data, mimeType })),
+                ],
+              },
               30 * 60_000,
             ),
           );

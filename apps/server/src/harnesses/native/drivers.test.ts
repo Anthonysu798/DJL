@@ -41,6 +41,114 @@ const sink = (
   request: NativeSink["request"] = async () => "decline",
 ): NativeSink => ({ emit: (event) => events.push(event), request, fail: () => {} });
 
+describe("attached images reach each runtime in its own format", () => {
+  const attach = () => {
+    const dir = mkdtempSync(join(tmpdir(), "djl-driver-image-"));
+    dirs.push(dir);
+    const path = join(dir, "shot.png");
+    writeFileSync(path, "png-bytes");
+    return {
+      path,
+      data: Buffer.from("png-bytes").toString("base64"),
+      files: [
+        { path, name: "shot.png", mimeType: "image/png", sizeBytes: 9, image: true },
+        {
+          path: join(dir, "notes.txt"),
+          name: "notes.txt",
+          mimeType: "text/plain",
+          sizeBytes: 5,
+          image: false,
+        },
+      ],
+    };
+  };
+
+  it("Codex receives each image as a local image item beside the text", async () => {
+    const image = attach();
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start')reply(m,{thread:{id:'image-thread'}});
+      if(m.method==='turn/start'){
+        if(JSON.stringify(m.params.input)!==${JSON.stringify(
+          JSON.stringify([
+            { type: "text", text: "what is this?" },
+            { type: "localImage", path: "IMAGE_PATH" },
+          ]),
+        )}.replace('IMAGE_PATH',${JSON.stringify(image.path)}))throw Error('wrong input '+JSON.stringify(m.params.input));
+        reply(m,{turn:{id:'t'}});
+        note('turn/completed',{threadId:'image-thread',turn:{id:'t',status:'completed'}});
+      }
+    `);
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "what is this?", files: image.files });
+    } finally {
+      driver.close();
+    }
+  });
+
+  it.each([true, false])(
+    "an ACP runtime gets image blocks only when it says it takes them (image=%s)",
+    async (takesImages) => {
+      const image = attach();
+      const binary = fixture(`
+        if(m.method==='initialize')reply(m,{protocolVersion:1,agentCapabilities:{promptCapabilities:{image:${takesImages}}}});
+        if(m.method==='session/new')reply(m,{sessionId:'gemini-image',models:{availableModels:[{modelId:'gemini-2.5-pro',name:'Gemini 2.5 Pro'}]},modes:{currentModeId:'default',availableModes:[{id:'default'}]}});
+        if(m.method==='session/set_model'||m.method==='session/set_mode')reply(m,{});
+        if(m.method==='session/prompt'){
+          const expected=${JSON.stringify(
+            JSON.stringify([
+              { type: "text", text: "what is this?" },
+              ...(takesImages ? [{ type: "image", data: "DATA", mimeType: "image/png" }] : []),
+            ]),
+          )}.replace('DATA',${JSON.stringify(image.data)});
+          if(JSON.stringify(m.params.prompt)!==expected)throw Error('wrong prompt '+JSON.stringify(m.params.prompt));
+          reply(m,{stopReason:'end_turn'});
+        }
+      `);
+      const driver = await createGeminiDriver(
+        {
+          ...input,
+          providerOptions: { gemini: { binaryPath: binary } },
+          modelSelection: { provider: "gemini", model: "gemini-2.5-pro" },
+        },
+        sink([]),
+      );
+      try {
+        await driver.send({ threadId: input.threadId, input: "what is this?", files: image.files });
+      } finally {
+        driver.close();
+      }
+    },
+  );
+
+  it("Pi receives images on its prompt command", async () => {
+    const image = attach();
+    const binary = fixture(`
+      const ok=(data)=>send({id:m.id,type:'response',command:m.type,success:true,data});
+      if(m.type==='get_state')ok({sessionId:'pi-image',model:{id:'claude-sonnet-4-5',provider:'anthropic',name:'Claude Sonnet 4.5'},thinkingLevel:'medium'});
+      if(m.type==='prompt'){
+        if(JSON.stringify(m.images)!==${JSON.stringify(
+          JSON.stringify([{ type: "image", data: "DATA", mimeType: "image/png" }]),
+        )}.replace('DATA',${JSON.stringify(image.data)}))throw Error('wrong images '+JSON.stringify(m.images));
+        ok({});send({type:'agent_start'});send({type:'message_start',message:{role:'assistant'}});send({type:'message_end',message:{role:'assistant',stopReason:'stop'}});send({type:'agent_end'});send({type:'agent_settled'});
+      }
+    `);
+    const driver = await createPiDriver(
+      { ...input, providerOptions: { pi: { binaryPath: binary } } },
+      sink([]),
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "what is this?", files: image.files });
+    } finally {
+      driver.close();
+    }
+  });
+});
+
 describe("new official protocol drivers", () => {
   it("Kimi resumes, uses advertised permission choices, and cancels an active turn", async () => {
     const binary = fixture(`

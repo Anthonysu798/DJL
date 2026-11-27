@@ -369,7 +369,7 @@ describe("group native driver", () => {
     expect(prompts.get("Claude")!.at(-1)).toContain("/resolved/att-1.png");
   });
 
-  it("other native providers still reject attachments", async () => {
+  it("a native provider with no attachment store refuses attachments instead of dropping them", async () => {
     await expect(
       scenario(
         ({ adapter }) =>
@@ -378,7 +378,7 @@ describe("group native driver", () => {
           ),
         "codex",
       ),
-    ).rejects.toThrow("text prompts only");
+    ).rejects.toThrow("Attachments are not available");
   });
 
   it("closing the driver closes every child", async () => {

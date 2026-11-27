@@ -39,6 +39,13 @@
           "label": "Rechazar"
         }
       },
+      "details": "Detalles",
+      "plainPrompt": {
+        "command": "DJL quiere ejecutar un paso en tu computadora. ¿Lo permites?",
+        "fileChange": "DJL quiere modificar un archivo. ¿Lo permites?",
+        "fileRead": "DJL quiere leer un archivo. ¿Lo permites?",
+        "tool": "DJL quiere usar una herramienta. ¿Lo permites?"
+      },
       "prompt": {
         "command": "¿Aprobar este comando?",
         "fileChange": "¿Aprobar este cambio de archivo?",
@@ -1433,7 +1440,21 @@
       "showMoreCount_other": "Mostrar {{count}} más",
       "showMoreFiles_one": "Mostrar archivo {{count}} más",
       "showMoreFiles_other": "Mostrar más archivos {{count}}",
+      "showSteps": "Mostrar pasos",
       "unpinFromPanel": "Unpin del panel",
+      "workFiles": {
+        "openInApp": "Abrir en la app",
+        "preview": "Vista previa de {{name}}",
+        "showInFolder": "Mostrar en la carpeta"
+      },
+      "workStatus": {
+        "reading": "Leyendo tus archivos…",
+        "running": "Trabajando en tu computadora…",
+        "searching": "Buscando en la web…",
+        "thinking": "Pensando…",
+        "working": "Trabajando…",
+        "writing": "Escribiendo tus archivos…"
+      },
       "workedFor": "Trabajado para {{duration}}"
     },
     "tool": {

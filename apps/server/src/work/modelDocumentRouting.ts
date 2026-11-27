@@ -3,6 +3,8 @@
 
 import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@djl/contracts";
 
+import { isLocalHarness } from "../harnesses/native/types.ts";
+
 export interface WorkModelDocumentRouting {
   readonly capabilitiesKnown: boolean;
   readonly supportsVision: boolean;
@@ -34,14 +36,15 @@ export function resolveWorkModelDocumentRouting(
   selection: ModelSelection,
 ): WorkModelDocumentRouting {
   const descriptor = capabilitiesByModel.get(key(selection.provider, selection.model));
-  // These bridges currently transport text only, even when the underlying model has vision.
-  if (["codex", "claudeAgent", "cursor"].includes(selection.provider)) {
+  // A local harness is handed the saved file itself, so nothing has to be read out of an image
+  // first. Whether its model can see is the harness's own affair and its own error to report.
+  if (isLocalHarness(selection.provider)) {
     return {
       capabilitiesKnown: true,
-      supportsVision: false,
+      supportsVision: true,
       supportsPdf: false,
       processingLocality: descriptor?.processingLocality ?? "unknown",
-      requireOcrForImages: true,
+      requireOcrForImages: false,
     };
   }
   if (descriptor) {

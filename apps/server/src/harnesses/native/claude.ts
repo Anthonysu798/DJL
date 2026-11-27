@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { modelImages } from "./attachments";
 import { withDjlThreadId } from "./driverEnv";
 import type { PermissionMode, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { bounded, object, string } from "./protocol";
@@ -189,6 +190,7 @@ const startClaudeDriver = async (
   let next: ((value: IteratorResult<SDKUserMessage>) => void) | undefined;
   let queued: SDKUserMessage | undefined;
   let closed = false;
+  const attachedPaths = new Set<string>();
   const prompt: AsyncIterable<SDKUserMessage> = {
     [Symbol.asyncIterator]() {
       return {
@@ -304,6 +306,9 @@ const startClaudeDriver = async (
                 },
               };
         }
+        // The user attached these files for Claude to read; asking again would be noise.
+        if (tool === "Read" && attachedPaths.has(String(args.file_path)))
+          return { behavior: "allow", updatedInput: args };
         const requestType =
           tool === "Read"
             ? "file_read_approval"
@@ -376,14 +381,16 @@ const startClaudeDriver = async (
             };
             emitUsage();
           }
-          if (event.type === "message_start") assistantMessageId = event.message.id;
-          if (event.type === "content_block_delta" && event.delta.type === "text_delta")
+          // A subagent streams through the same channel; only the main agent's text is the reply.
+          const main = !message.parent_tool_use_id;
+          if (main && event.type === "message_start") assistantMessageId = event.message.id;
+          if (main && event.type === "content_block_delta" && event.delta.type === "text_delta")
             sink.emit({
               type: "content.delta",
               itemId: `assistant-${assistantMessageId}-${event.index}`,
               payload: { streamKind: "assistant_text", delta: event.delta.text },
             });
-          if (event.type === "content_block_delta" && event.delta.type === "thinking_delta")
+          if (main && event.type === "content_block_delta" && event.delta.type === "thinking_delta")
             sink.emit({
               type: "content.delta",
               itemId: `reasoning-${assistantMessageId}-${event.index}`,
@@ -511,11 +518,32 @@ const startClaudeDriver = async (
         finish = resolve;
         fail = reject;
       });
+      for (const file of turn.files ?? []) {
+        attachedPaths.add(file.path);
+        if (file.textPath) attachedPaths.add(file.textPath);
+      }
+      const images = await modelImages(turn.files);
       const message: SDKUserMessage = {
         type: "user",
         session_id: id,
         parent_tool_use_id: null,
-        message: { role: "user", content: turn.input! },
+        message: {
+          role: "user",
+          content:
+            images.length === 0
+              ? turn.input!
+              : [
+                  { type: "text", text: turn.input! },
+                  ...images.map((image) => ({
+                    type: "image" as const,
+                    source: {
+                      type: "base64" as const,
+                      media_type: image.mimeType,
+                      data: image.data,
+                    },
+                  })),
+                ],
+        },
       };
       if (next) {
         const resolve = next;

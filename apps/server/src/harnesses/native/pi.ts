@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { modelImages } from "./attachments";
 import { withDjlThreadId } from "./driverEnv";
 import { bounded, object, prepareNativeRpcLaunch, string, type JsonObject } from "./protocol";
 import type { NativeDriverFactory } from "./types";
@@ -395,7 +396,14 @@ export const createPiDriver: NativeDriverFactory = async (input, sink, _workTool
         const settled = new Promise<void>((settle, fail) => {
           turn = { settle, fail };
         });
-        await rpc.request({ type: "prompt", message: request.input! });
+        const images = await modelImages(request.files);
+        await rpc.request({
+          type: "prompt",
+          message: request.input!,
+          ...(images.length > 0
+            ? { images: images.map(({ data, mimeType }) => ({ type: "image", data, mimeType })) }
+            : {}),
+        });
         try {
           await bounded(settled, 30 * 60_000);
         } finally {

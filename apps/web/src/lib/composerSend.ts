@@ -32,6 +32,19 @@ export const FILE_SIZE_LIMIT_LABEL = `${Math.round(
   PROVIDER_SEND_TURN_MAX_FILE_BYTES / (1024 * 1024),
 )}MB`;
 
+// Outside Studio, attachments travel inside the command as base64 data URLs, which the contract
+// caps at PROVIDER_SEND_TURN_MAX_IMAGE_DATA_URL_CHARS (14,000,000) and
+// PROVIDER_SEND_TURN_MAX_FILE_DATA_URL_CHARS (35,000,000) in packages/contracts/src/orchestration.ts.
+// Those are not exported, so mirror them here, leaving room for a "data:<mime>;base64," header
+// with the longest MIME type the contract allows (100 chars).
+const DATA_URL_HEADER_MAX_CHARS = "data:;base64,".length + 100;
+const maxBytesForDataUrlChars = (maxChars: number) =>
+  Math.floor((maxChars - DATA_URL_HEADER_MAX_CHARS) / 4) * 3;
+export const DATA_URL_IMAGE_MAX_BYTES = maxBytesForDataUrlChars(14_000_000);
+export const DATA_URL_FILE_MAX_BYTES = maxBytesForDataUrlChars(35_000_000);
+const DATA_URL_IMAGE_SIZE_LIMIT_LABEL = `${Math.round(DATA_URL_IMAGE_MAX_BYTES / (1024 * 1024))}MB`;
+const DATA_URL_FILE_SIZE_LIMIT_LABEL = `${Math.round(DATA_URL_FILE_MAX_BYTES / (1024 * 1024))}MB`;
+
 export const COMPOSER_ATTACHMENT_ACCEPT = "image/*,.pdf,.docx,.xlsx,.pptx";
 
 export function partitionComposerAttachmentFiles(files: readonly File[]): {
@@ -95,15 +108,17 @@ function collectComposerAttachmentFiles(input: {
 }
 
 // Converts File objects into the exact attachment draft shape used by the chat composer.
+// `streaming` marks Studio sends, which upload over HTTP instead of embedding data URLs.
 export function buildComposerImageAttachmentsFromFiles(input: {
   files: readonly File[];
   existingAttachmentCount: number;
+  streaming?: boolean;
 }): ComposerImageBuildResult {
   const result = collectComposerAttachmentFiles({
     files: input.files,
     existingAttachmentCount: input.existingAttachmentCount,
-    maxBytes: PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
-    sizeLimitLabel: IMAGE_SIZE_LIMIT_LABEL,
+    maxBytes: input.streaming ? PROVIDER_SEND_TURN_MAX_IMAGE_BYTES : DATA_URL_IMAGE_MAX_BYTES,
+    sizeLimitLabel: input.streaming ? IMAGE_SIZE_LIMIT_LABEL : DATA_URL_IMAGE_SIZE_LIMIT_LABEL,
     acceptsFile: (file) => file.type.startsWith("image/"),
     unsupportedFileError: (file) =>
       `Unsupported file type for '${file.name}'. Please attach image files only.`,
@@ -126,12 +141,13 @@ export function buildComposerImageAttachmentsFromFiles(input: {
 export function buildComposerFileAttachmentsFromFiles(input: {
   files: readonly File[];
   existingAttachmentCount: number;
+  streaming?: boolean;
 }): ComposerFileBuildResult {
   const result = collectComposerAttachmentFiles({
     files: input.files,
     existingAttachmentCount: input.existingAttachmentCount,
-    maxBytes: PROVIDER_SEND_TURN_MAX_FILE_BYTES,
-    sizeLimitLabel: FILE_SIZE_LIMIT_LABEL,
+    maxBytes: input.streaming ? PROVIDER_SEND_TURN_MAX_FILE_BYTES : DATA_URL_FILE_MAX_BYTES,
+    sizeLimitLabel: input.streaming ? FILE_SIZE_LIMIT_LABEL : DATA_URL_FILE_SIZE_LIMIT_LABEL,
     acceptsFile: (file) => !file.type.startsWith("image/"),
   });
 

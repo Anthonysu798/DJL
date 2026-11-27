@@ -744,7 +744,7 @@ export async function normalizeDocument(input: NormalizeDocumentInput): Promise<
   };
 }
 
-function formatLocator(block: DocumentBlock): string {
+export function formatLocator(block: DocumentBlock): string {
   const parts: string[] = [];
   if (block.locator.page !== undefined) parts.push(`page ${block.locator.page}`);
   if (block.locator.sheet !== undefined) parts.push(`sheet ${block.locator.sheet}`);

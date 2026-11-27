@@ -529,7 +529,13 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
           bounded(completed, 30 * 60_000),
           rpc.request("turn/start", {
             threadId: id,
-            input: [{ type: "text", text: turn.input! }],
+            // Codex reads and scales a local image itself, so it only needs the path.
+            input: [
+              { type: "text", text: turn.input! },
+              ...(turn.files ?? [])
+                .filter((file) => file.image)
+                .map((file) => ({ type: "localImage", path: file.path })),
+            ],
             ...(computerQa
               ? { approvalPolicy: "untrusted", sandboxPolicy: { type: "readOnly" } }
               : {}),

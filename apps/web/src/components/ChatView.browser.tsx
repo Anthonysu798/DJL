@@ -3881,6 +3881,82 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it.each(
     (["project", "studio"] as const).flatMap((surface) =>
+      ([false, true] as const).map((active) => ({ surface, active })),
+    ),
+  )(
+    "shows a $surface thread's turn in its own view (running=$active)",
+    async ({ surface, active }) => {
+      const base = withStudioProject(createSnapshotWithInlineToolOverflow({ active }));
+      const snapshot = {
+        ...base,
+        // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
+        threads: base.threads.map((thread) => ({
+          ...thread,
+          projectId: surface === "studio" ? STUDIO_PROJECT_ID : PROJECT_ID,
+          activities: [
+            ...thread.activities,
+            {
+              id: EventId.makeUnsafe("activity-studio-outputs"),
+              createdAt: isoAt(1_108),
+              kind: "studio.outputs.captured",
+              summary: "Studio outputs captured",
+              tone: "info" as const,
+              turnId: TurnId.makeUnsafe("turn-inline-tools"),
+              payload: {
+                itemType: "studio_outputs",
+                data: { files: [{ path: "Outbox/quarterly-report.docx" }] },
+              },
+            },
+          ],
+        })),
+      };
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot,
+        configureFixture: (next) => {
+          next.welcome = {
+            ...next.welcome,
+            studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
+          };
+        },
+      });
+      try {
+        const work = surface === "studio";
+        if (active) {
+          // Work: one plain status line. Code: the live "Working for" header and its tool rows.
+          await expect
+            .element(page.getByText(work ? "Working…" : "Working for"))
+            .toBeInTheDocument();
+          await expect
+            .element(page.getByText(work ? "Working for" : "Working…"))
+            .not.toBeInTheDocument();
+          return;
+        }
+        await expect
+          .element(page.getByText("Wrapped up the inline tool review."))
+          .toBeInTheDocument();
+        await expect
+          .element(page.getByText(work ? "Show steps" : /^Worked for/))
+          .toBeInTheDocument();
+        await expect
+          .element(page.getByText(work ? /^Worked for/ : "Show steps"))
+          .not.toBeInTheDocument();
+        const fileCard = page.getByRole("button", { name: "Preview quarterly-report.docx" });
+        if (work) {
+          await expect.element(fileCard).toBeInTheDocument();
+          await expect.element(page.getByRole("button", { name: "Open in app" })).toBeVisible();
+          await expect.element(page.getByRole("button", { name: "Show in folder" })).toBeVisible();
+        } else {
+          await expect.element(fileCard).not.toBeInTheDocument();
+        }
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it.each(
+    (["project", "studio"] as const).flatMap((surface) =>
       (["codex", "claudeAgent"] as const).map((provider) => ({ surface, provider })),
     ),
   )(
@@ -4879,6 +4955,95 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 8_000, interval: 16 },
       );
       expect(mounted.router.state.location.pathname).toBe(newThreadPath);
+    } finally {
+      if (previousNativeApi) {
+        Object.defineProperty(window, "nativeApi", {
+          configurable: true,
+          value: previousNativeApi,
+        });
+      } else {
+        Reflect.deleteProperty(window, "nativeApi");
+      }
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a failed send visible after a session-set clears the thread error", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-send-failure-test" as MessageId,
+        targetText: "send failure test",
+      }),
+    });
+    const previousNativeApi = window.nativeApi;
+    const wsNativeApi = readNativeApi();
+    expect(wsNativeApi).toBeDefined();
+    const sendFailure = "The server rejected this turn.";
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...wsNativeApi,
+        orchestration: {
+          ...wsNativeApi?.orchestration,
+          dispatchCommand: vi.fn(async (command: { type: string }) => {
+            wsRequests.push({ _tag: ORCHESTRATION_WS_METHODS.dispatchCommand, command });
+            if (command.type === "thread.turn.start") {
+              throw new Error(sendFailure);
+            }
+            return { sequence: fixture.snapshot.snapshotSequence + 1 };
+          }),
+        },
+      },
+    });
+    const sendFailureAlertIsVisible = () =>
+      Array.from(document.querySelectorAll('[role="alert"]')).some((alert) =>
+        alert.textContent?.includes(sendFailure),
+      );
+
+    try {
+      await page.getByRole("textbox").fill("hi");
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await vi.waitFor(() => expect(sendFailureAlertIsVisible()).toBe(true), {
+        timeout: 8_000,
+        interval: 16,
+      });
+
+      // The server knows nothing about the rejected send, so its session has no error.
+      useStore.getState().applyOrchestrationEvents([
+        {
+          type: "thread.session-set",
+          payload: {
+            threadId: THREAD_ID,
+            session: {
+              threadId: THREAD_ID,
+              status: "ready",
+              providerName: "codex",
+              runtimeMode: "full-access",
+              activeTurnId: null,
+              lastError: null,
+              updatedAt: NOW_ISO,
+            },
+          },
+          sequence: fixture.snapshot.snapshotSequence + 1,
+          eventId: EventId.makeUnsafe("event-session-set-after-send-failure"),
+          aggregateKind: "thread",
+          aggregateId: THREAD_ID,
+          occurredAt: NOW_ISO,
+          commandId: null,
+          causationEventId: null,
+          correlationId: null,
+          metadata: {},
+        },
+      ]);
+      await vi.waitFor(() => {
+        expect(
+          useStore.getState().threads.find((thread) => thread.id === THREAD_ID)?.error,
+        ).toBeNull();
+      });
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+      expect(sendFailureAlertIsVisible()).toBe(true);
     } finally {
       if (previousNativeApi) {
         Object.defineProperty(window, "nativeApi", {

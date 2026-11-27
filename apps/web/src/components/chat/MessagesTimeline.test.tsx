@@ -2707,3 +2707,138 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain(".wrangler/state");
   });
 });
+
+describe("MessagesTimeline simple view (Work chats)", () => {
+  const user = {
+    id: "entry-user",
+    kind: "message" as const,
+    createdAt: "2026-03-17T19:12:00.000Z",
+    message: {
+      id: MessageId.makeUnsafe("user-1"),
+      role: "user" as const,
+      text: "Summarise the contracts",
+      createdAt: "2026-03-17T19:12:00.000Z",
+      streaming: false,
+    },
+  };
+  const step = {
+    id: "entry-step",
+    kind: "work" as const,
+    createdAt: "2026-03-17T19:12:05.000Z",
+    entry: {
+      id: "step",
+      createdAt: "2026-03-17T19:12:05.000Z",
+      label: "Write",
+      toolName: "Write",
+      tone: "tool" as const,
+    },
+  };
+  const answer = {
+    id: "entry-answer",
+    kind: "message" as const,
+    createdAt: "2026-03-17T19:12:20.000Z",
+    message: {
+      id: MessageId.makeUnsafe("answer-1"),
+      role: "assistant" as const,
+      text: "Here is the summary.",
+      turnId: TurnId.makeUnsafe("turn-1"),
+      createdAt: "2026-03-17T19:12:20.000Z",
+      completedAt: "2026-03-17T19:12:21.000Z",
+      streaming: false,
+    },
+  };
+  const render = (
+    props: Partial<Parameters<typeof MessagesTimeline>[0]> &
+      Pick<Parameters<typeof MessagesTimeline>[0], "timelineEntries">,
+  ) =>
+    renderToStaticMarkup(
+      <MessagesTimeline
+        hasMessages
+        isWorking={false}
+        activeTurnInProgress={false}
+        activeTurnStartedAt={null}
+        turnDiffSummaryByAssistantMessageId={new Map()}
+        nowIso="2026-03-17T19:12:30.000Z"
+        expandedWorkGroups={{}}
+        onToggleWorkGroup={() => {}}
+        onOpenTurnDiff={() => {}}
+        revertTurnCountByUserMessageId={new Map()}
+        onRevertUserMessage={() => {}}
+        isRevertingCheckpoint={false}
+        onImageExpand={() => {}}
+        markdownCwd={undefined}
+        resolvedTheme="light"
+        timestampFormat="locale"
+        workspaceRoot={undefined}
+        {...props}
+      />,
+    );
+
+  it("shows a finished reply as the answer, a Show steps link and a card per produced file", () => {
+    const markup = render({
+      simpleView: true,
+      timelineEntries: [user, step, answer],
+      workFilesByAssistantMessageId: new Map([
+        [MessageId.makeUnsafe("answer-1"), ["Outbox/contracts-summary.docx"]],
+      ]),
+    });
+    expect(markup).toContain("Here is the summary.");
+    expect(markup).toContain("Show steps");
+    expect(markup).not.toContain("Worked for");
+    expect(markup).toContain("contracts-summary.docx");
+    expect(markup).toContain("Open in app");
+    expect(markup).toContain("Show in folder");
+  });
+
+  it("hides Codex's file-citation markup in a Work reply, but not in Code", () => {
+    const cited = {
+      ...answer,
+      message: {
+        ...answer.message,
+        text: 'Here is the summary.\n\n:codex-file-citation{path="/Users/me/Outbox/summary.docx" purpose="output"}',
+      },
+    };
+    expect(render({ simpleView: true, timelineEntries: [user, step, cited] })).not.toContain(
+      "codex-file-citation",
+    );
+    expect(render({ timelineEntries: [user, step, cited] })).toContain("codex-file-citation");
+  });
+
+  it("offers only Show in folder for a produced file the system would run", () => {
+    const markup = render({
+      simpleView: true,
+      timelineEntries: [user, step, answer],
+      workFilesByAssistantMessageId: new Map([
+        [MessageId.makeUnsafe("answer-1"), ["Outbox/Invoice.pdf.command"]],
+      ]),
+    });
+    expect(markup).toContain("Invoice.pdf.command");
+    expect(markup).toContain("Show in folder");
+    expect(markup).not.toContain("Open in app");
+  });
+
+  it("shows a running turn as one plain status line", () => {
+    const markup = render({
+      simpleView: true,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnId: TurnId.makeUnsafe("turn-1"),
+      activeTurnStartedAt: "2026-03-17T19:12:00.000Z",
+      timelineEntries: [user, step],
+    });
+    expect(markup).toContain("Writing your files…");
+    expect(markup).toContain("30s");
+    expect(markup).not.toContain("Working for");
+    expect(markup).not.toContain('data-timeline-row-kind="work"');
+  });
+
+  it("keeps the Code view's own labels and shows no file cards there", () => {
+    const markup = render({
+      timelineEntries: [user, step, answer],
+      workFilesByAssistantMessageId: new Map(),
+    });
+    expect(markup).toContain("Worked for");
+    expect(markup).not.toContain("Show steps");
+    expect(markup).not.toContain("Open in app");
+  });
+});

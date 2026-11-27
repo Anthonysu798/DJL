@@ -85,6 +85,7 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { fileDiffStatsByPath, resolveFileDiffStatByChangedPath } from "~/lib/diffRendering";
 import { ReviewChangesButton } from "./ReviewChangesButton";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { WorkTurnFileCards } from "./WorkTurnFileCards";
 import { InlineMentionChip } from "./InlineMentionChip";
 import { InlineSkillChip } from "./InlineSkillChip";
 import { InlineAgentChip } from "./InlineAgentChip";
@@ -102,6 +103,7 @@ import {
 import {
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
+  hideAgentFileCitations,
   MAX_VISIBLE_WORK_LOG_ENTRIES,
   type CollapsedTurnItem,
   type MessagesTimelineRow,
@@ -420,6 +422,10 @@ interface MessagesTimelineProps {
   enteringUserMessageIds?: ReadonlySet<MessageId>;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
+  /** Work chats: a status line, the final answer and file cards instead of tool rows. */
+  simpleView?: boolean;
+  /** Files each Work turn produced, keyed by that reply's final answer. */
+  workFilesByAssistantMessageId?: ReadonlyMap<MessageId, ReadonlyArray<string>>;
   nowIso?: string;
   expandedWorkGroups?: Record<string, boolean>;
   onToggleWorkGroup?: (groupId: string) => void;
@@ -480,6 +486,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   enteringUserMessageIds = EMPTY_MESSAGE_ID_SET,
   timelineEntries,
   turnDiffSummaryByAssistantMessageId,
+  simpleView = false,
+  workFilesByAssistantMessageId,
   nowIso,
   expandedWorkGroups,
   onToggleWorkGroup,
@@ -632,6 +640,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         activeTurnStartedAt,
         turnDiffSummaryByAssistantMessageId,
         revertTurnCountByUserMessageId,
+        simpleView,
       }),
     [
       timelineEntries,
@@ -642,6 +651,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       activeTurnStartedAt,
       turnDiffSummaryByAssistantMessageId,
       revertTurnCountByUserMessageId,
+      simpleView,
     ],
   );
   const rows = useStableRows(rawRows);
@@ -659,8 +669,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       highlightedMessageId,
       pinnedMessageIds,
       settledTurnCollapseTransitions,
+      simpleView,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
+      workFilesByAssistantMessageId,
     }),
     [
       editingUserMessageId,
@@ -673,8 +685,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       highlightedMessageId,
       pinnedMessageIds,
       settledTurnCollapseTransitions,
+      simpleView,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
+      workFilesByAssistantMessageId,
     ],
   );
   const selectedToolDetailsEntry = useMemo(
@@ -1283,11 +1297,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       {row.kind === "message" &&
         row.message.role === "assistant" &&
         (() => {
-          const messageText = resolveAssistantMessageDisplayText({
+          const rawMessageText = resolveAssistantMessageDisplayText({
             ...row,
             emptyResponseLabel: t("timeline.emptyResponse"),
             protocolRecoveryLabel: t("timeline.protocolRecovery"),
           });
+          const messageText =
+            simpleView && rawMessageText ? hideAgentFileCitations(rawMessageText) : rawMessageText;
           const messageMarkers =
             threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
           const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {
@@ -1527,9 +1543,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       style={{ fontSize: chatTypographyStyle.fontSize }}
                     >
                       <span>
-                        {row.collapsedWorkElapsed
-                          ? t("timeline.workedFor", { duration: row.collapsedWorkElapsed })
-                          : t("timeline.details")}
+                        {simpleView
+                          ? t("timeline.showSteps")
+                          : row.collapsedWorkElapsed
+                            ? t("timeline.workedFor", { duration: row.collapsedWorkElapsed })
+                            : t("timeline.details")}
                       </span>
                       <DisclosureChevron
                         open={isCollapsedWorkExpanded}
@@ -1567,6 +1585,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   </div>
                 ) : null}
                 {renderWorkDisplay(inlineWorkDisplay, "inline")}
+                {workFilesByAssistantMessageId?.has(row.message.id) ? (
+                  <WorkTurnFileCards paths={workFilesByAssistantMessageId.get(row.message.id)!} />
+                ) : null}
                 {inlineEditedFilesFromTurnSummary.length > 0 && (
                   <div className="mt-2 space-y-0.5">
                     {inlineEditedFilesFromTurnSummary.map((file) => (
@@ -1843,7 +1864,26 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         </div>
       )}
 
-      {row.kind === "working" && (
+      {row.kind === "working" && row.status ? (
+        // Work chats: the whole live turn is this one line, in everyday words.
+        <div
+          className="flex items-center gap-2 pt-0.5 font-system-ui text-muted-foreground/70"
+          style={{ fontSize: `${appTypographyScale.chatPx}px` }}
+        >
+          <span className="shimmer">{t(`timeline.workStatus.${row.status}`)}</span>
+          {row.createdAt ? (
+            <span className="tabular-nums text-muted-foreground/50">
+              {nowIso ? (
+                (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
+              ) : (
+                <WorkingTimer createdAt={row.createdAt} />
+              )}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {row.kind === "working" && !row.status && (
         <div className="flex items-center gap-2 pt-0.5">
           {workingProvider ? (
             <span

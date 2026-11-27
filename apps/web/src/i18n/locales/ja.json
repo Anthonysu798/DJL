@@ -39,6 +39,13 @@
           "label": "拒否"
         }
       },
+      "details": "詳細",
+      "plainPrompt": {
+        "command": "DJL がコンピューターで処理を実行しようとしています。許可しますか？",
+        "fileChange": "DJL がファイルを変更しようとしています。許可しますか？",
+        "fileRead": "DJL がファイルを読み取ろうとしています。許可しますか？",
+        "tool": "DJL がツールを使おうとしています。許可しますか？"
+      },
       "prompt": {
         "command": "このコマンドを承認しますか？",
         "fileChange": "このファイル変更を承認しますか？",
@@ -1433,7 +1440,21 @@
       "showMoreCount_other": "{{count}}をもっと見る",
       "showMoreFiles_one": "{{count}} ファイルを表示",
       "showMoreFiles_other": "{{count}} より多くのファイルを表示する",
+      "showSteps": "手順を表示",
       "unpinFromPanel": "パネルからのアンピン",
+      "workFiles": {
+        "openInApp": "アプリで開く",
+        "preview": "{{name}} をプレビュー",
+        "showInFolder": "フォルダーで表示"
+      },
+      "workStatus": {
+        "reading": "ファイルを読んでいます…",
+        "running": "コンピューターで作業しています…",
+        "searching": "ウェブを検索しています…",
+        "thinking": "考えています…",
+        "working": "作業しています…",
+        "writing": "ファイルを作成しています…"
+      },
       "workedFor": "{{duration}} の作業"
     },
     "tool": {
