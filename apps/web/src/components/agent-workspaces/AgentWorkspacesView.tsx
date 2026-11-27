@@ -22,7 +22,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { CLI_ACCOUNTS_QUERY_KEY } from "~/lib/cliAccountsQuery";
 import { resolveWorkspaceProfile, terminalProfileId } from "~/lib/workspaceAccountIds";
 import { ProviderIcon } from "~/components/ProviderIcon";
@@ -294,7 +293,6 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
   const { t } = useTranslation("workspace", { keyPrefix: "agents" });
   const state = useAgentWorkspaceStore();
   const projects = useStore((s) => s.projects);
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   // The app's own accounts (normal sign-in + Settings → AI accounts), then workspace-only ones.
   const accounts = useWorkspaceAccounts(state.profiles);
@@ -409,14 +407,7 @@ export default function AgentWorkspacesView({ projectId }: { projectId: string |
     setEditing(null);
     setDialog("workspace");
   };
-  // The normal sign-in belongs to the CLI itself; extra accounts sign in into their own folder.
-  const signIn = (account: WorkspaceAccount) => {
-    if (account.id.startsWith("default-")) {
-      void navigate({ to: "/settings", search: { section: "ai-accounts" } });
-      return;
-    }
-    setSignInProfile(account);
-  };
+  const signIn = (account: WorkspaceAccount) => setSignInProfile(account);
   const startTerminal = (accountId: string | null) => {
     if (!active) return;
     if (accountId) state.selectProfile(accountId);

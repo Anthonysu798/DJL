@@ -23,6 +23,7 @@ import { fetchCliAccountUsage } from "../providerUsage";
 import { buildHarnessInvocation, probe } from "./accounts";
 import { activeCliAccountDir, withNormalCliLogin } from "./cliAccountSelection";
 import { buildProfileTerminalLaunch } from "./terminalProfiles";
+import { readClaudeLogin } from "./claudeLogin";
 import { parseProfileAccountOutput } from "./profileAccounts";
 
 export const CLI_ACCOUNT_PROVIDERS: readonly CliAccountProvider[] = ["claudeAgent", "codex"];
@@ -175,12 +176,29 @@ async function readIdentity(
       process.env,
       "account-status",
     );
+    const login = await readClaudeLogin({ configDir: launch.env.CLAUDE_CONFIG_DIR, homeDir });
+    if (login.signedIn) return { status: "signedIn", email: login.email };
     const env = { ...process.env, ...launch.env };
     for (const name of launch.command.removeEnv) delete env[name];
     return probeClaude(launch.command.executable, env);
   }
   const invocation = buildHarnessInvocation("claudeAgent", withNormalCliLogin(settings), root);
+  // A Claude.ai login is read from its store: starting `claude` could rotate its token.
+  const login = await readClaudeLogin({ configDir: invocation.env.CLAUDE_CONFIG_DIR, homeDir });
+  if (login.signedIn) return { status: "signedIn", email: login.email };
+  // No Claude.ai login (API key, Bedrock...): the CLI has no refresh token to rotate.
   return probeClaude(invocation.binary, invocation.env);
+}
+
+/** The normal login's identity when the sign-in dialog checks the `default` account; else null. */
+export function readNormalCliIdentity(
+  input: { readonly provider: string; readonly profileId: string },
+  settings: ServerSettings,
+  options: { readonly root: string; readonly homeDir: string },
+): Promise<{ status: CliAccountStatus; email: string | null }> | null {
+  const provider = CLI_ACCOUNT_PROVIDERS.find((item) => item === input.provider);
+  if (input.profileId !== DEFAULT_CLI_ACCOUNT_ID || !provider) return null;
+  return readIdentity(provider, settings, options.root, options.homeDir, null);
 }
 
 export async function listCliAccounts(

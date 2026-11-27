@@ -369,9 +369,8 @@ const makeServerProgram = (input: CliInput) =>
     // Start the retention loop after the server is live so startup can serve
     // existing history first, then hide inactive threads from the app in the background.
     yield* startThreadRetentionJob(orchestrationEngine, projectionSnapshotQuery);
-    // Optional Claude OAuth keepalive. Disabled by default because it touches
-    // Claude Code auth data in the background; users can opt in with
-    // DJL_CLAUDE_KEEPALIVE=1.
+    // Keeps the main Claude login and every extra Claude account renewed before it runs out
+    // (opt out with DJL_CLAUDE_KEEPALIVE=0). The account list is read again on every check.
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
@@ -382,6 +381,16 @@ const makeServerProgram = (input: CliInput) =>
           startClaudeCredentialKeepalive({
             binaryPath: settings.providers.claudeAgent.binaryPath,
             homeDir: config.homeDir,
+            listConfigDirs: async () => {
+              const latest = await Effect.runPromise(serverSettings.getSettings);
+              if (latest.providers.claudeAgent.enabled === false) return [];
+              return [
+                process.env.CLAUDE_CONFIG_DIR?.trim() || undefined,
+                ...latest.cliAccounts.accounts
+                  .filter((account) => account.provider === "claudeAgent")
+                  .map((account) => account.dir),
+              ];
+            },
             log: (message) => Effect.runFork(Effect.logInfo(message)),
           }),
         );

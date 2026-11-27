@@ -9,7 +9,6 @@ import {
   type CliAccountUsage,
 } from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -159,7 +158,6 @@ function AddAccountForm({
 export function CliAccountsSettingsPanel() {
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [adding, setAdding] = useState<CliAccountProvider | null>(null);
   const [signIn, setSignIn] = useState<CliAccountSummary | null>(null);
 
@@ -284,11 +282,7 @@ export function CliAccountsSettingsPanel() {
                     usage={usage.data ? usageById.get(`${provider}:${account.id}`) : undefined}
                     busy={busy}
                     onUse={() => setActive.mutate(account)}
-                    onSignIn={() =>
-                      account.isDefault
-                        ? void navigate({ to: "/settings", search: { section: "accounts" } })
-                        : setSignIn(account)
-                    }
+                    onSignIn={() => setSignIn(account)}
                     onRemove={() => {
                       if (window.confirm(t("aiAccounts.removeConfirm", { name: account.name })))
                         remove.mutate(account.id);

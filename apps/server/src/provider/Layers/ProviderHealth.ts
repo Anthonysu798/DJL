@@ -13,6 +13,7 @@ import { NATIVE_HARNESS_IDS, probeNativeHarnessStatuses } from "../../harnesses/
 import { readCloudSession } from "../../cloud/session";
 import { readClaudeCompatibleKey } from "../../harnesses/native/claudeCompatible";
 import { resolveClaudeExecutable } from "../../harnesses/native/claudeExecutable";
+import { readClaudeLogin } from "../../harnesses/claudeLogin";
 import type {
   ClaudeCompatibleProviderId,
   ProviderKind,
@@ -1138,7 +1139,11 @@ export const makeCheckClaudeProviderStatus = (
   resolveSubscriptionType?: Effect.Effect<string | undefined>,
   binaryPath?: string,
   homeDir?: string,
-  options?: { readonly falseNegativeRetryDelayMs?: number },
+  options?: {
+    readonly falseNegativeRetryDelayMs?: number;
+    /** Reads the stored Claude.ai login; tests pass their own. */
+    readonly readLogin?: typeof readClaudeLogin;
+  },
 ): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
@@ -1194,6 +1199,31 @@ export const makeCheckClaudeProviderStatus = (
       };
     }
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+
+    // A stored Claude.ai login answers without starting Claude. `claude auth status` (and the
+    // SDK probe below) can rotate the single-use refresh token, and a probe killed by its
+    // timeout mid-refresh loses the new token, after which Claude wipes the login.
+    const login = yield* Effect.promise(() =>
+      (options?.readLogin ?? readClaudeLogin)({
+        configDir: claudeEnv.CLAUDE_CONFIG_DIR,
+        ...(homeDir ? { homeDir } : {}),
+      }),
+    );
+    if (login.signedIn) {
+      const storedAuth = claudeAuthMetadata({
+        subscriptionType: login.subscriptionType ?? undefined,
+        authMethod: "claude.ai",
+      });
+      return {
+        provider: CLAUDE_AGENT_PROVIDER,
+        status: "ready" as const,
+        available: true,
+        authStatus: "authenticated" as const,
+        version: parsedVersion,
+        ...(storedAuth ? { authType: storedAuth.type, authLabel: storedAuth.label } : {}),
+        checkedAt,
+      } satisfies ServerProviderStatus;
+    }
 
     // Probe 2: `claude auth status` — is the user authenticated? The command can
     // redeem a single-use rotating OAuth refresh token, so it is serialized with

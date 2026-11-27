@@ -7,6 +7,16 @@ import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { vi } from "vitest";
 
+// These tests drive the CLI probes; the stored login on this machine must not decide them.
+vi.mock("../../harnesses/claudeLogin", () => ({
+  readClaudeLogin: async () => ({
+    signedIn: false,
+    email: null,
+    subscriptionType: null,
+    accessExpiresAtMs: null,
+  }),
+}));
+
 import { DJL_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
@@ -1159,6 +1169,31 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
                 stderr: "",
                 code: 0,
               };
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+
+    it.effect("answers from a stored Claude.ai login without running `claude auth status`", () =>
+      Effect.gen(function* () {
+        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", undefined, {
+          readLogin: async () => ({
+            signedIn: true,
+            email: "me@example.com",
+            subscriptionType: "max",
+            accessExpiresAtMs: Date.now() - 60_000,
+          }),
+        });
+        assert.strictEqual(status.status, "ready");
+        assert.strictEqual(status.authStatus, "authenticated");
+        assert.strictEqual(status.authType, "max");
+      }).pipe(
+        Effect.provide(
+          mockSpawnerLayer((args) => {
+            const joined = args.join(" ");
+            if (joined === "--version") return { stdout: "2.1.332\n", stderr: "", code: 0 };
+            // Renewing the token here is what could lose it; the check must not start it.
             throw new Error(`Unexpected args: ${joined}`);
           }),
         ),

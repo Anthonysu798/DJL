@@ -86,7 +86,7 @@ function SignInTerminal(props: { session: HarnessLoginResult; focused: boolean }
 }
 
 /** DJL and the agent, joined by a link that fills in once the account is connected. */
-function ConnectionMark(props: { harness: HarnessId; phase: SignInPhase }) {
+export function ConnectionMark(props: { harness: HarnessId; phase: SignInPhase }) {
   const { phase } = props;
   const tile =
     "flex size-11 items-center justify-center rounded-xl border border-border bg-[var(--color-background-elevated-secondary)]";
