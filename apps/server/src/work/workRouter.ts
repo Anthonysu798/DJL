@@ -141,6 +141,19 @@ export function decideWorkTurnPolicy(input: {
   return policy("chat", [], false, false);
 }
 
+/**
+ * Added to a Work chat's turn for a local agent. Work is the same agent as Code shown to people
+ * who are not developers, so only the tone and the hand-over change. The Outbox line matters:
+ * DJL lists the files a turn produced from inside the chat's own folder.
+ */
+export const STUDIO_WORK_INSTRUCTIONS = [
+  "<djl_work_instructions>",
+  "The person you are helping is not technical. Answer in their language, in plain, friendly words. Do not show code, commands or folder paths unless they ask for them; refer to a file by its name only.",
+  "Save every finished file in the Outbox folder inside your current working folder (create it if needed). Keep scratch files in tmp.",
+  "Finish with a short report: what you did, which files you made, and anything they still need to do.",
+  "</djl_work_instructions>",
+].join("\n");
+
 export function buildGroundedWorkPrompt(
   userPrompt: string,
   turnPolicy: WorkTurnPolicy,

@@ -108,6 +108,7 @@ import {
   buildGroundedWorkPrompt,
   decideWorkTurnPolicy,
   isMarketingRequest,
+  STUDIO_WORK_INSTRUCTIONS,
 } from "../../work/workRouter.ts";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
@@ -1953,16 +1954,18 @@ const make = Effect.gen(function* () {
       thread.modelSelection.provider;
     const isNativeProvider = isNativeProviderKind(selectedProvider);
     // A chat with a native harness goes to it as typed. A local harness also takes the chat's
-    // attachments as they are; hosted DJL Cloud needs them turned into text first.
+    // attachments as they are; hosted DJL Cloud needs them turned into text first. Work is the
+    // same local agent in a simpler view, so its turns go the same way.
     const isPlainNativeChat =
-      project?.kind === "chat" &&
+      (project?.kind === "chat" ||
+        (project?.kind === "studio" && isLocalHarness(selectedProvider))) &&
       isNativeProvider &&
       !preparedJob &&
       (isLocalHarness(selectedProvider) || (message.attachments?.length ?? 0) === 0) &&
       event.payload.memoryContext?.searchProject !== true &&
       (event.payload.memoryContext?.references.length ?? 0) === 0;
     const isWorkSurface =
-      project?.kind === "studio" || (project?.kind === "chat" && !isPlainNativeChat);
+      (project?.kind === "studio" || project?.kind === "chat") && !isPlainNativeChat;
     const requiresWorkPreparation =
       project?.kind === "studio" ||
       (message.attachments?.length ?? 0) > 0 ||
@@ -2112,7 +2115,9 @@ const make = Effect.gen(function* () {
             workTurnPolicy,
             isNativeProvider ? "native" : "opencode",
           )
-        : message.text,
+        : project?.kind === "studio" && isPlainNativeChat
+          ? `${message.text}\n\n${STUDIO_WORK_INSTRUCTIONS}`
+          : message.text,
       ...(providerAttachments !== undefined ? { attachments: providerAttachments } : {}),
       ...(event.payload.computerControl ? { computerControl: event.payload.computerControl } : {}),
       ...(message.skills !== undefined ? { skills: message.skills } : {}),

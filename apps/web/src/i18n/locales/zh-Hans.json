@@ -39,6 +39,13 @@
           "label": "拒绝"
         }
       },
+      "details": "详情",
+      "plainPrompt": {
+        "command": "DJL 想在你的电脑上执行一个步骤。是否允许？",
+        "fileChange": "DJL 想修改一个文件。是否允许？",
+        "fileRead": "DJL 想读取一个文件。是否允许？",
+        "tool": "DJL 想使用一个工具。是否允许？"
+      },
       "prompt": {
         "command": "批准此命令？",
         "fileChange": "批准此文件更改？",
@@ -1433,7 +1440,21 @@
       "showMoreCount_other": "显示{{count}} 更多",
       "showMoreFiles_one": "显示{{count}} 更多文件",
       "showMoreFiles_other": "显示 {{count}} 更多文件",
+      "showSteps": "显示步骤",
       "unpinFromPanel": "从面板中撤消",
+      "workFiles": {
+        "openInApp": "在应用中打开",
+        "preview": "预览 {{name}}",
+        "showInFolder": "在文件夹中显示"
+      },
+      "workStatus": {
+        "reading": "正在读取你的文件…",
+        "running": "正在你的电脑上处理…",
+        "searching": "正在搜索网络…",
+        "thinking": "正在思考…",
+        "working": "正在处理…",
+        "writing": "正在写入文件…"
+      },
       "workedFor": "为{{duration}}工作"
     },
     "tool": {

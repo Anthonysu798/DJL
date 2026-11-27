@@ -1,18 +1,20 @@
 import { CheckpointRef, MessageId, OrchestrationProposedPlanId, TurnId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  buildStudioOutputPathsByAssistantMessageId,
   buildTurnDiffSummaryByAssistantMessageId,
   computeMessageDurationStart,
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
   deriveTerminalAssistantMessageIds,
+  deriveWorkStatusKind,
   normalizeCompactToolLabel,
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
   type MessagesTimelineRow,
   type StableMessagesTimelineRowsState,
 } from "./MessagesTimeline.logic";
-import type { TimelineEntry } from "../../session-logic";
+import type { TimelineEntry, WorkLogEntry } from "../../session-logic";
 import type { TurnDiffSummary, WorktreeSetupSnapshot } from "../../types";
 
 function makeSummary(
@@ -660,6 +662,64 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
   });
 });
 
+describe("deriveWorkStatusKind", () => {
+  it.each([
+    [undefined, "thinking"],
+    [statusEntry({ tone: "thinking" }), "thinking"],
+    [statusEntry({ toolName: "Read" }), "reading"],
+    [statusEntry({ toolName: "Grep" }), "reading"],
+    [statusEntry({ requestKind: "file-read" }), "reading"],
+    [statusEntry({ itemType: "image_view" }), "reading"],
+    [statusEntry({ itemType: "web_search" }), "searching"],
+    [statusEntry({ toolName: "WebFetch" }), "searching"],
+    [statusEntry({ toolName: "Write" }), "writing"],
+    [statusEntry({ itemType: "file_change" }), "writing"],
+    [statusEntry({ changedFiles: ["report.docx"] }), "writing"],
+    [statusEntry({ toolName: "Bash" }), "running"],
+    [statusEntry({ itemType: "command_execution" }), "running"],
+    [statusEntry({ command: "ls" }), "running"],
+    [statusEntry({ itemType: "mcp_tool_call" }), "working"],
+  ] as const)("describes %o as %s", (workEntry, expected) => {
+    expect(deriveWorkStatusKind(workEntry)).toBe(expected);
+  });
+});
+
+describe("buildStudioOutputPathsByAssistantMessageId", () => {
+  const message = (id: string, role: "user" | "assistant", turnId: string | null) => ({
+    id: MessageId.makeUnsafe(id),
+    role,
+    turnId: turnId ? TurnId.makeUnsafe(turnId) : null,
+  });
+  const captured = (turnId: string | null, paths: string[], kind = "studio.outputs.captured") => ({
+    kind,
+    turnId: turnId ? TurnId.makeUnsafe(turnId) : null,
+    payload: { itemType: "studio_outputs", data: { files: paths.map((path) => ({ path })) } },
+  });
+
+  it("puts each turn's files on that reply's final answer, without duplicates", () => {
+    const byMessageId = buildStudioOutputPathsByAssistantMessageId({
+      activities: [
+        captured("t1", ["Outbox/report.docx"]),
+        captured("t1", ["Outbox/report.docx", "Outbox/chart.png"]),
+        captured("t2", ["Outbox/notes.md"]),
+        captured("t1", ["ignored.txt"], "tool.completed"),
+        captured(null, ["no-turn.txt"]),
+      ],
+      messages: [
+        message("u1", "user", null),
+        message("a1", "assistant", "t1"),
+        message("a2", "assistant", "t1"),
+        message("u2", "user", null),
+        message("a3", "assistant", "t2"),
+      ],
+    });
+    expect([...byMessageId]).toEqual([
+      ["a2", ["Outbox/report.docx", "Outbox/chart.png"]],
+      ["a3", ["Outbox/notes.md"]],
+    ]);
+  });
+});
+
 describe("resolveAssistantMessageCopyState", () => {
   it("shows copy only for non-empty settled assistant text", () => {
     expect(
@@ -1244,6 +1304,111 @@ describe("deriveMessagesTimelineRows", () => {
     expect(collapsedSignature(messageRow(rows, "a2")!)).toEqual(["narration:a1", "work:w1"]);
   });
 
+  describe("simple view (Work chats)", () => {
+    it("shows a live turn as one status row, with no tool rows or narration", () => {
+      const rows = deriveMessagesTimelineRows({
+        ...baseInput,
+        simpleView: true,
+        isWorking: true,
+        activeTurnInProgress: true,
+        activeTurnId: TurnId.makeUnsafe("t1"),
+        activeTurnStartedAt: "2026-01-01T00:00:00Z",
+        timelineEntries: [
+          userEntry("u1", "2026-01-01T00:00:00Z"),
+          assistantEntry("a1", "2026-01-01T00:00:01Z", {
+            turnId: "t1",
+            text: "I'll read the files first",
+            completedAt: "2026-01-01T00:00:01Z",
+          }),
+          detailedWorkEntry("w1", "2026-01-01T00:00:02Z", { toolName: "Read" }),
+          assistantEntry("a2", "2026-01-01T00:00:03Z", {
+            turnId: "t1",
+            text: "Now writing",
+            streaming: true,
+          }),
+          detailedWorkEntry("w2", "2026-01-01T00:00:04Z", { toolName: "Write" }),
+        ],
+      });
+      expect(rows.map((row) => row.kind)).toEqual(["message", "working"]);
+      expect(rows[1]).toMatchObject({
+        kind: "working",
+        status: "writing",
+        createdAt: "2026-01-01T00:00:00Z",
+      });
+    });
+
+    it("leaves a live turn in Code exactly as before", () => {
+      const rows = deriveMessagesTimelineRows({
+        ...baseInput,
+        isWorking: true,
+        activeTurnInProgress: true,
+        activeTurnId: TurnId.makeUnsafe("t1"),
+        activeTurnStartedAt: "2026-01-01T00:00:00Z",
+        timelineEntries: [
+          userEntry("u1", "2026-01-01T00:00:00Z"),
+          detailedWorkEntry("w1", "2026-01-01T00:00:02Z", { toolName: "Read" }),
+        ],
+      });
+      expect(rows.map((row) => row.kind)).toEqual(["message", "working-header", "work", "working"]);
+      expect(rows.at(-1)).not.toHaveProperty("status");
+    });
+
+    it("folds a finished turn behind the final answer but keeps results and real errors", () => {
+      const rows = deriveMessagesTimelineRows({
+        ...baseInput,
+        simpleView: true,
+        timelineEntries: [
+          userEntry("u1", "2026-01-01T00:00:00Z"),
+          assistantEntry("a1", "2026-01-01T00:00:01Z", {
+            turnId: "t1",
+            text: "Looking into it",
+            completedAt: "2026-01-01T00:00:01Z",
+          }),
+          detailedWorkEntry("tool", "2026-01-01T00:00:02Z", { toolName: "Bash" }),
+          detailedWorkEntry("failed-tool", "2026-01-01T00:00:02Z", {
+            tone: "error",
+            itemType: "command_execution",
+          }),
+          detailedWorkEntry("image", "2026-01-01T00:00:03Z", {
+            itemType: "image_generation",
+            activityKind: "tool.completed",
+          }),
+          detailedWorkEntry("automation", "2026-01-01T00:00:03Z", {
+            automation: { id: "auto-1", name: "Daily report", cadenceLabel: "Daily" },
+          }),
+          detailedWorkEntry("runtime-error", "2026-01-01T00:00:04Z", { tone: "error" }),
+          assistantEntry("a2", "2026-01-01T00:00:05Z", {
+            turnId: "t1",
+            text: "All done",
+            completedAt: "2026-01-01T00:00:06Z",
+          }),
+        ],
+      });
+      expect(rows.map((row) => row.kind)).toEqual(["message", "message"]);
+      const answer = messageRow(rows, "a2")!;
+      expect(collapsedSignature(answer)).toEqual(["narration:a1", "work:tool", "work:failed-tool"]);
+      expect(answer.leadingWorkEntries?.map((entry) => entry.id)).toEqual([
+        "image",
+        "automation",
+        "runtime-error",
+      ]);
+    });
+
+    it("keeps only the error from a turn that failed before any answer", () => {
+      const rows = deriveMessagesTimelineRows({
+        ...baseInput,
+        simpleView: true,
+        timelineEntries: [
+          userEntry("u1", "2026-01-01T00:00:00Z"),
+          detailedWorkEntry("tool", "2026-01-01T00:00:02Z", { toolName: "Bash" }),
+          detailedWorkEntry("runtime-error", "2026-01-01T00:00:04Z", { tone: "error" }),
+        ],
+      });
+      expect(rows.map((row) => row.kind)).toEqual(["message", "work"]);
+      expect(rows[1]).toMatchObject({ groupedEntries: [{ id: "runtime-error" }] });
+    });
+  });
+
   it("appends an open worktree-setup row and suppresses the generic working shimmer", () => {
     const setup = worktreeSetupSnapshot();
     const rows = deriveMessagesTimelineRows({
@@ -1309,6 +1474,25 @@ const workEntry = (
   kind: "work",
   createdAt,
   entry: { id, createdAt, label, tone },
+});
+
+const detailedWorkEntry = (
+  id: string,
+  createdAt: string,
+  entry: Partial<WorkLogEntry>,
+): TimelineEntry => ({
+  id: `entry-${id}`,
+  kind: "work",
+  createdAt,
+  entry: { id, createdAt, label: id, tone: "tool", ...entry },
+});
+
+const statusEntry = (fields: Partial<WorkLogEntry>): WorkLogEntry => ({
+  id: "w",
+  createdAt: "2026-01-01T00:00:00Z",
+  label: "step",
+  tone: "tool",
+  ...fields,
 });
 
 const makeRow = (

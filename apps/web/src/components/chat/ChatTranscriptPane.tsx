@@ -97,6 +97,10 @@ interface ChatTranscriptPaneProps {
   timelineEntries: ComponentProps<typeof MessagesTimeline>["timelineEntries"];
   timestampFormat: TimestampFormat;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
+  simpleView?: boolean;
+  workFilesByAssistantMessageId?: ComponentProps<
+    typeof MessagesTimeline
+  >["workFilesByAssistantMessageId"];
   workspaceRoot: string | undefined;
   worktreeSetup: WorktreeSetupSnapshot | null;
 }
@@ -156,6 +160,8 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   timelineEntries,
   timestampFormat,
   turnDiffSummaryByAssistantMessageId,
+  simpleView,
+  workFilesByAssistantMessageId,
   workspaceRoot,
   worktreeSetup,
 }: ChatTranscriptPaneProps) {
@@ -233,6 +239,8 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             timelineEntries={timelineEntries}
             turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
+            {...(simpleView ? { simpleView } : {})}
+            {...(workFilesByAssistantMessageId ? { workFilesByAssistantMessageId } : {})}
             onOpenTurnDiff={onOpenTurnDiff}
             onOpenThread={onOpenThread}
             {...(onOpenAutomation ? { onOpenAutomation } : {})}

@@ -39,6 +39,13 @@
           "label": "Decline"
         }
       },
+      "details": "Details",
+      "plainPrompt": {
+        "command": "DJL wants to run a step on your computer. Allow it?",
+        "fileChange": "DJL wants to change a file. Allow it?",
+        "fileRead": "DJL wants to read a file. Allow it?",
+        "tool": "DJL wants to use a tool. Allow it?"
+      },
       "prompt": {
         "command": "Approve this command?",
         "fileChange": "Approve this file change?",
@@ -1433,7 +1440,21 @@
       "showMoreCount_other": "Show {{count}} more",
       "showMoreFiles_one": "Show {{count}} more file",
       "showMoreFiles_other": "Show {{count}} more files",
+      "showSteps": "Show steps",
       "unpinFromPanel": "Unpin from panel",
+      "workFiles": {
+        "openInApp": "Open in app",
+        "preview": "Preview {{name}}",
+        "showInFolder": "Show in folder"
+      },
+      "workStatus": {
+        "reading": "Reading your files…",
+        "running": "Working on your computer…",
+        "searching": "Searching the web…",
+        "thinking": "Thinking…",
+        "working": "Working…",
+        "writing": "Writing your files…"
+      },
       "workedFor": "Worked for {{duration}}"
     },
     "tool": {

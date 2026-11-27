@@ -143,6 +143,7 @@ import { stripDiffSearchParams } from "../diffRouteSearch";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
 import { ensureHomeChatProject, isHomeChatContainerProject } from "../lib/chatProjects";
 import { ensureStudioProject, isStudioContainerProject } from "../lib/studioProjects";
+import { workDraftRuntimeMode } from "../lib/workDraftRuntimeMode";
 import { resolveFirstSendTarget } from "../lib/chatFirstSend";
 import {
   createOrRecoverProjectFromPath,
@@ -285,6 +286,7 @@ import {
   MAX_TERMINALS_PER_GROUP,
   type ChatMessage,
   type Thread,
+  type TurnDiffSummary,
 } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
@@ -485,7 +487,10 @@ import {
 } from "../routes/-automations.shared";
 import { ChatTranscriptPane } from "./chat/ChatTranscriptPane";
 import type { MessagesTimelineController } from "./chat/MessagesTimeline";
-import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
+import {
+  buildStudioOutputPathsByAssistantMessageId,
+  buildTurnDiffSummaryByAssistantMessageId,
+} from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
@@ -604,6 +609,7 @@ import {
 const ATTACHMENT_PREVIEW_HANDOFF_TTL_MS = 5000;
 const EMPTY_ACTIVITIES: OrchestrationThreadActivity[] = [];
 const EMPTY_MESSAGES: ChatMessage[] = [];
+const NO_TURN_DIFF_SUMMARIES = new Map<MessageId, TurnDiffSummary>();
 const EMPTY_PINNED_MESSAGES: readonly PinnedMessage[] = [];
 const EMPTY_THREAD_MARKERS: readonly ThreadMarker[] = [];
 const EMPTY_PINNED_TEXT: ReadonlyMap<MessageId, string> = new Map();
@@ -1822,13 +1828,6 @@ export default function ChatView({
       setIsRevertingCheckpoint(false);
     }
   }, [activeThread, pendingFileUndo]);
-  const runtimeMode = effectiveRuntimeMode(
-    activeThread?.session?.provider ??
-      composerDraft.activeProvider ??
-      activeThread?.modelSelection.provider ??
-      settings.defaultProvider,
-    composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-  );
   const interactionMode =
     composerDraft.interactionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
   const isServerThread = serverThread !== undefined;
@@ -3566,6 +3565,21 @@ export default function ChatView({
       messages: messagesForDiffAnchoring,
     });
   }, [inferredCheckpointTurnCountByTurnId, turnDiffSummaries, timelineMessages]);
+  // A Work chat lists the files each reply produced in place of the Code view's changes card.
+  const workFilesByAssistantMessageId = useMemo(
+    () =>
+      isStudioContainer
+        ? buildStudioOutputPathsByAssistantMessageId({
+            activities: threadActivities,
+            messages: timelineMessages.map((message) => ({
+              id: message.id,
+              role: message.role,
+              turnId: message.turnId ?? null,
+            })),
+          })
+        : undefined,
+    [isStudioContainer, threadActivities, timelineMessages],
+  );
   const revertTurnCountByUserMessageId = useMemo(() => {
     const byUserMessageId = new Map<MessageId, number>();
     for (let index = 0; index < timelineEntries.length; index += 1) {
@@ -3637,6 +3651,23 @@ export default function ChatView({
   const composerSkillCwd = providerModelDiscoveryCwd;
   const providerComposerCapabilitiesQuery = useQuery(
     providerComposerCapabilitiesQueryOptions(selectedProvider),
+  );
+  const runtimeMode = effectiveRuntimeMode(
+    activeThread?.session?.provider ??
+      composerDraft.activeProvider ??
+      activeThread?.modelSelection.provider ??
+      settings.defaultProvider,
+    composerDraft.runtimeMode ??
+      // A new Work chat has no mode of its own yet; an explicit pick above always wins.
+      (isStudioContainer && !isServerThread
+        ? workDraftRuntimeMode({
+            provider: selectedProvider,
+            permissionModes: providerComposerCapabilitiesQuery.data?.permissionModes,
+            supportsAutoMode: selectedRuntimeModel?.supportsAutoMode,
+          })
+        : undefined) ??
+      activeThread?.runtimeMode ??
+      DEFAULT_RUNTIME_MODE,
   );
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
@@ -11430,8 +11461,12 @@ export default function ChatView({
       }
     : null;
 
-  const showComposerLiveChangesHeader = latestTurnLive && activeTurnLiveDiffState.hasChanges;
-  const showComposerActiveTaskListCard = Boolean(activeTaskList && !planSidebarOpen);
+  // Work chats show no diffs, task lists or plan panel: only the reply and its files.
+  const showComposerLiveChangesHeader =
+    latestTurnLive && activeTurnLiveDiffState.hasChanges && !isStudioContainer;
+  const showComposerActiveTaskListCard = Boolean(
+    activeTaskList && !planSidebarOpen && !isStudioContainer,
+  );
 
   // Composer layout keeps the task list and footer actions in one render path so
   // follow-up prompts and normal chat mode stay visually in sync.
@@ -11496,6 +11531,7 @@ export default function ChatView({
                     pendingCount={pendingApprovals.length}
                     isResponding={respondingRequestIds.includes(activePendingApproval.requestId)}
                     onRespond={onRespondToApproval}
+                    plainLanguage={isStudioContainer}
                   />
                 </div>
               ) : pendingUserInputs.length > 0 ? (
@@ -12089,7 +12125,7 @@ export default function ChatView({
             gitCwd={threadWorkspaceCwd}
             diffTotals={repoDiffTotals}
             showGitActions={showGitActions && !isEditorRail}
-            showPanelLauncher={!isEditorRail}
+            showPanelLauncher={!isEditorRail && !isStudioContainer}
             browserOpen={resolvedBrowserOpen}
             diffOpen={resolvedDiffOpen}
             diffDisabledReason={diffDisabledReason}
@@ -12364,7 +12400,13 @@ export default function ChatView({
                       threadMarkers={threadMarkers}
                       enteringUserMessageIds={enteringUserMessageIds}
                       timelineEntries={timelineEntries}
-                      turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
+                      turnDiffSummaryByAssistantMessageId={
+                        isStudioContainer
+                          ? NO_TURN_DIFF_SUMMARIES
+                          : turnDiffSummaryByAssistantMessageId
+                      }
+                      simpleView={isStudioContainer}
+                      {...(workFilesByAssistantMessageId ? { workFilesByAssistantMessageId } : {})}
                       onOpenTurnDiff={onOpenTurnDiff}
                       onOpenThread={onNavigateToThread}
                       onOpenAutomation={onOpenAutomation}
@@ -12522,7 +12564,7 @@ export default function ChatView({
         {/* end chat column */}
 
         {/* Plan sidebar */}
-        {planSidebarOpen ? (
+        {planSidebarOpen && !isStudioContainer ? (
           <PlanSidebar
             activeTaskList={activeTaskList}
             activeProposedPlan={sidebarProposedPlan}

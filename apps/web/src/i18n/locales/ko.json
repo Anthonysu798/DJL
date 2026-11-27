@@ -39,6 +39,13 @@
           "label": "거부"
         }
       },
+      "details": "세부 정보",
+      "plainPrompt": {
+        "command": "DJL이 컴퓨터에서 작업 단계를 실행하려고 합니다. 허용할까요?",
+        "fileChange": "DJL이 파일을 변경하려고 합니다. 허용할까요?",
+        "fileRead": "DJL이 파일을 읽으려고 합니다. 허용할까요?",
+        "tool": "DJL이 도구를 사용하려고 합니다. 허용할까요?"
+      },
       "prompt": {
         "command": "이 명령을 승인할까요?",
         "fileChange": "이 파일 변경을 승인할까요?",
@@ -1433,7 +1440,21 @@
       "showMoreCount_other": "{{count}} 더보기",
       "showMoreFiles_one": "{{count}} 더 많은 파일보기",
       "showMoreFiles_other": "{{count}} 더 많은 파일보기",
+      "showSteps": "단계 보기",
       "unpinFromPanel": "패널에서 Unpin",
+      "workFiles": {
+        "openInApp": "앱에서 열기",
+        "preview": "{{name}} 미리보기",
+        "showInFolder": "폴더에서 보기"
+      },
+      "workStatus": {
+        "reading": "파일을 읽는 중…",
+        "running": "컴퓨터에서 작업하는 중…",
+        "searching": "웹을 검색하는 중…",
+        "thinking": "생각하는 중…",
+        "working": "작업하는 중…",
+        "writing": "파일을 작성하는 중…"
+      },
       "workedFor": "{{duration}}를 위해 일하는"
     },
     "tool": {

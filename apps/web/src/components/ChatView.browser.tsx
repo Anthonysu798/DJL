@@ -3881,6 +3881,82 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it.each(
     (["project", "studio"] as const).flatMap((surface) =>
+      ([false, true] as const).map((active) => ({ surface, active })),
+    ),
+  )(
+    "shows a $surface thread's turn in its own view (running=$active)",
+    async ({ surface, active }) => {
+      const base = withStudioProject(createSnapshotWithInlineToolOverflow({ active }));
+      const snapshot = {
+        ...base,
+        // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
+        threads: base.threads.map((thread) => ({
+          ...thread,
+          projectId: surface === "studio" ? STUDIO_PROJECT_ID : PROJECT_ID,
+          activities: [
+            ...thread.activities,
+            {
+              id: EventId.makeUnsafe("activity-studio-outputs"),
+              createdAt: isoAt(1_108),
+              kind: "studio.outputs.captured",
+              summary: "Studio outputs captured",
+              tone: "info" as const,
+              turnId: TurnId.makeUnsafe("turn-inline-tools"),
+              payload: {
+                itemType: "studio_outputs",
+                data: { files: [{ path: "Outbox/quarterly-report.docx" }] },
+              },
+            },
+          ],
+        })),
+      };
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot,
+        configureFixture: (next) => {
+          next.welcome = {
+            ...next.welcome,
+            studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
+          };
+        },
+      });
+      try {
+        const work = surface === "studio";
+        if (active) {
+          // Work: one plain status line. Code: the live "Working for" header and its tool rows.
+          await expect
+            .element(page.getByText(work ? "Working…" : "Working for"))
+            .toBeInTheDocument();
+          await expect
+            .element(page.getByText(work ? "Working for" : "Working…"))
+            .not.toBeInTheDocument();
+          return;
+        }
+        await expect
+          .element(page.getByText("Wrapped up the inline tool review."))
+          .toBeInTheDocument();
+        await expect
+          .element(page.getByText(work ? "Show steps" : /^Worked for/))
+          .toBeInTheDocument();
+        await expect
+          .element(page.getByText(work ? /^Worked for/ : "Show steps"))
+          .not.toBeInTheDocument();
+        const fileCard = page.getByRole("button", { name: "Preview quarterly-report.docx" });
+        if (work) {
+          await expect.element(fileCard).toBeInTheDocument();
+          await expect.element(page.getByRole("button", { name: "Open in app" })).toBeVisible();
+          await expect.element(page.getByRole("button", { name: "Show in folder" })).toBeVisible();
+        } else {
+          await expect.element(fileCard).not.toBeInTheDocument();
+        }
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it.each(
+    (["project", "studio"] as const).flatMap((surface) =>
       (["codex", "claudeAgent"] as const).map((provider) => ({ surface, provider })),
     ),
   )(

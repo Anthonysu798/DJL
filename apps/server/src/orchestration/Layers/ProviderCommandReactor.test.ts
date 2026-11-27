@@ -704,6 +704,21 @@ describe("ProviderCommandReactor", () => {
       });
       return;
     }
+    if (kind === "studio" && provider !== "djlCloud") {
+      // Work is the same agent in a simpler view: no preparation, only a note on how to reply.
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.enqueueWorkPreparation).not.toHaveBeenCalled();
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+      const input = String(harness.sendTurn.mock.calls[0]?.[0].input);
+      expect(input).toMatch(
+        /^Read the context\n\n<djl_work_instructions>\n[^<]*not technical[^<]*Outbox[^<]*\n<\/djl_work_instructions>$/,
+      );
+      const stored = (await Effect.runPromise(harness.engine.getReadModel())).threads
+        .find((thread) => thread.id === "thread-1")
+        ?.messages.find((message) => message.role === "user");
+      expect(stored?.text).toBe("Read the context");
+      return;
+    }
     await waitFor(() => harness.enqueueWorkPreparation.mock.calls.length === 1);
     expect(harness.sendTurn).not.toHaveBeenCalled();
     const queued = harness.enqueueWorkPreparation.mock.calls[0]![0];
@@ -810,7 +825,34 @@ describe("ProviderCommandReactor", () => {
     },
   );
 
-  it("forwards a prepared Studio turn's original files to a local harness", async () => {
+  it("keeps a Work social-media request on its own instructions, without the Work note", async () => {
+    const harness = await createHarness({
+      projectKind: "studio",
+      threadModelSelection: { provider: "claudeAgent", model: "native-test" },
+    });
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("native-studio-marketing"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("native-studio-marketing-message"),
+          role: "user",
+          text: "Write an Instagram post about our spring sale",
+          attachments: [],
+        },
+        interactionMode: "default",
+        runtimeMode: "approval-required",
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const input = String(harness.sendTurn.mock.calls[0]?.[0].input);
+    expect(input).toContain("djl_marketing_status");
+    expect(input).not.toContain("djl_work_instructions");
+  });
+
+  it("forwards a prepared Studio memory turn's original files to a local harness", async () => {
     const harness = await createHarness({
       projectKind: "studio",
       threadModelSelection: { provider: "claudeAgent", model: "native-test" },
@@ -832,6 +874,8 @@ describe("ProviderCommandReactor", () => {
           messageId: asMessageId("native-studio-image-message"),
           role: "user",
           text: "Describe the chart",
+          // Project memory still goes through preparation; the files must survive it.
+          memoryContext: { searchProject: true, references: [] },
           attachments: [image],
         },
         interactionMode: "default",

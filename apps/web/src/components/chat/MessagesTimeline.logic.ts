@@ -3,7 +3,7 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
-import { type MessageId, type TurnId } from "@djl/contracts";
+import { STUDIO_OUTPUTS_ACTIVITY_KIND, type MessageId, type TurnId } from "@djl/contracts";
 import { isProviderProtocolOnlyText } from "@djl/shared/chatThreads";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
@@ -72,7 +72,8 @@ export type MessagesTimelineRow =
       createdAt: string;
       proposedPlan: ProposedPlan;
     }
-  | { kind: "working"; id: string; createdAt: string | null }
+  // `status` is set only in the simple view, where this row is the whole live turn.
+  | { kind: "working"; id: string; createdAt: string | null; status?: WorkStatusKind }
   | {
       // Live-turn header that mirrors the settled "Worked for Xs" disclosure
       // (label + full-width divider), but is non-collapsible and counts up while
@@ -266,6 +267,96 @@ function mergeTurnDiffSummaries(
   };
 }
 
+/** What a Work chat says the agent is doing, in place of the tool rows a Code chat shows. */
+export type WorkStatusKind =
+  | "reading"
+  | "searching"
+  | "writing"
+  | "running"
+  | "thinking"
+  | "working";
+
+// Mirrors workEntryIcon's reading of an entry, reduced to an everyday phrase.
+export function deriveWorkStatusKind(entry: WorkLogEntry | undefined): WorkStatusKind {
+  if (!entry || entry.tone === "thinking") return "thinking";
+  const tool = (entry.toolName ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  if (entry.itemType === "web_search" || tool.startsWith("web")) return "searching";
+  if (
+    entry.requestKind === "file-change" ||
+    entry.itemType === "file_change" ||
+    (entry.changedFiles?.length ?? 0) > 0 ||
+    ["write", "edit", "multiedit", "notebookedit"].includes(tool)
+  )
+    return "writing";
+  if (
+    entry.requestKind === "file-read" ||
+    entry.itemType === "image_view" ||
+    ["read", "readfile", "viewfile", "grep", "glob", "ls"].includes(tool)
+  )
+    return "reading";
+  if (
+    entry.requestKind === "command" ||
+    entry.itemType === "command_execution" ||
+    entry.command ||
+    tool === "bash"
+  )
+    return "running";
+  return "working";
+}
+
+interface StudioOutputActivity {
+  readonly kind: string;
+  readonly turnId: TurnId | null;
+  readonly payload: unknown;
+}
+
+// The files each Work turn produced, keyed by the reply's final answer: the same anchor the
+// Code view's changes card uses (buildTurnDiffSummaryByAssistantMessageId).
+export function buildStudioOutputPathsByAssistantMessageId(input: {
+  activities: ReadonlyArray<StudioOutputActivity>;
+  messages: ReadonlyArray<TimelineDiffMessage>;
+}): Map<MessageId, string[]> {
+  const pathsByTurnId = new Map<string, Set<string>>();
+  for (const activity of input.activities) {
+    if (activity.kind !== STUDIO_OUTPUTS_ACTIVITY_KIND || !activity.turnId) continue;
+    const files = (activity.payload as { data?: { files?: unknown } } | null)?.data?.files;
+    if (!Array.isArray(files)) continue;
+    const paths = pathsByTurnId.get(activity.turnId) ?? new Set<string>();
+    for (const file of files) {
+      const path = (file as { path?: unknown } | null)?.path;
+      if (typeof path === "string" && path.trim()) paths.add(path.trim());
+    }
+    pathsByTurnId.set(activity.turnId, paths);
+  }
+
+  const byMessageId = new Map<MessageId, string[]>();
+  for (let index = 0; index < input.messages.length; index += 1) {
+    const message = input.messages[index]!;
+    const paths = message.turnId ? pathsByTurnId.get(message.turnId) : undefined;
+    if (message.role !== "assistant" || !paths || paths.size === 0) continue;
+    // Walk to the last assistant message before the next user message.
+    let terminal = message.id;
+    for (let next = index + 1; next < input.messages.length; next += 1) {
+      const following = input.messages[next]!;
+      if (following.role === "user") break;
+      if (following.role === "assistant") terminal = following.id;
+    }
+    byMessageId.set(terminal, [...new Set([...(byMessageId.get(terminal) ?? []), ...paths])]);
+    pathsByTurnId.delete(message.turnId!);
+  }
+  return byMessageId;
+}
+
+// In the simple view a result the user asked for, or a failure they must know about, stays in
+// sight; a failed tool call is a detail of the work and folds away with the rest.
+function isSimpleViewResultEntry(entry: WorkLogEntry): boolean {
+  return (
+    isVisibleGeneratedImageEntry(entry) ||
+    entry.automation !== undefined ||
+    (entry.tone === "error" && !entry.itemType)
+  );
+}
+
 export function deriveTerminalAssistantMessageIds(
   messages: ReadonlyArray<TimelineDurationMessage>,
 ): Set<string> {
@@ -303,6 +394,8 @@ export function deriveMessagesTimelineRows(input: {
   activeTurnStartedAt: string | null;
   turnDiffSummaryByAssistantMessageId: ReadonlyMap<MessageId, TurnDiffSummary>;
   revertTurnCountByUserMessageId: ReadonlyMap<MessageId, number>;
+  /** Work chats: no tool rows or narration, one status row while a turn runs. */
+  simpleView?: boolean;
 }): MessagesTimelineRow[] {
   const nextRows: MessagesTimelineRow[] = [];
   const timelineMessages = input.timelineEntries.flatMap((entry) =>
@@ -457,7 +550,15 @@ export function deriveMessagesTimelineRows(input: {
     terminalAssistantMessageIds,
     activeTurnInProgress: input.activeTurnInProgress ?? false,
     activeTurnId: input.activeTurnId ?? null,
+    simpleView: input.simpleView ?? false,
   });
+
+  if (input.simpleView) {
+    const status = hideWorkDetail(nextRows, input.isWorking);
+    const working = nextRows.at(-1);
+    if (working?.kind === "working") working.status = status;
+    return nextRows;
+  }
 
   // The live turn wears a "Working for Xs" header + divider — the counting-up
   // twin of a settled turn's "Worked for Xs" disclosure. It anchors to the top
@@ -522,6 +623,7 @@ function collapseSettledTurns(
     terminalAssistantMessageIds: ReadonlySet<string>;
     activeTurnInProgress: boolean;
     activeTurnId: TurnId | null;
+    simpleView: boolean;
   },
 ): void {
   const { terminalAssistantMessageIds, activeTurnInProgress, activeTurnId } = options;
@@ -603,7 +705,12 @@ function collapseSettledTurns(
     // Rows the user should still see stay above the answer: a site ready to publish, and a
     // note that the chat moved to another subscription account.
     const isPinned = (item: (typeof collapsedItems)[number]) =>
-      item.kind === "work" && Boolean(item.entry.siteReady || item.entry.accountSwitch);
+      item.kind === "work" &&
+      Boolean(
+        item.entry.siteReady ||
+        item.entry.accountSwitch ||
+        (options.simpleView && isSimpleViewResultEntry(item.entry)),
+      );
     const pinned = collapsedItems.flatMap((item) =>
       item.kind === "work" && isPinned(item) ? [item.entry] : [],
     );
@@ -630,6 +737,33 @@ function collapseSettledTurns(
       pass -= foldIndices.length;
     }
   }
+}
+
+// Simple view, after settled turns are folded: whatever tool rows and running narration are left
+// belong to the live turn (or to one that failed before answering). They are removed, leaving
+// results and real errors, and the live turn's latest step is returned for the status row.
+function hideWorkDetail(rows: MessagesTimelineRow[], isWorking: boolean): WorkStatusKind {
+  const liveStart = findLiveTurnHeaderInsertIndex(rows);
+  let latestLiveEntry: WorkLogEntry | undefined;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index]!;
+    if (row.kind === "work") {
+      if (index >= liveStart) latestLiveEntry ??= row.groupedEntries.at(-1);
+      const results = row.groupedEntries.filter(isSimpleViewResultEntry);
+      if (results.length > 0) row.groupedEntries = results;
+      else rows.splice(index, 1);
+    } else if (
+      row.kind === "message" &&
+      row.message.role === "assistant" &&
+      isWorking &&
+      (index >= liveStart || row.assistantTurnInProgress || row.message.streaming)
+    ) {
+      if (index >= liveStart)
+        latestLiveEntry ??= (row.inlineWorkEntries ?? row.leadingWorkEntries)?.at(-1);
+      rows.splice(index, 1);
+    }
+  }
+  return deriveWorkStatusKind(isWorking ? latestLiveEntry : undefined);
 }
 
 // Reuses stable row references so streaming updates only invalidate rows whose
@@ -822,7 +956,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
 
   switch (a.kind) {
     case "working":
-      return a.createdAt === (b as typeof a).createdAt;
+      return a.createdAt === (b as typeof a).createdAt && a.status === (b as typeof a).status;
 
     case "working-header":
       return a.createdAt === (b as typeof a).createdAt;
