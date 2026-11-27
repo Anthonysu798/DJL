@@ -1,7 +1,8 @@
+import * as FS from "node:fs";
 import { mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { resolveOpenableDocument } from "./openPathGuard";
 
@@ -30,6 +31,20 @@ describe("resolveOpenableDocument", () => {
     const disguised = join(dir, "invoice.pdf");
     symlinkSync(script, disguised);
     expect(await resolveOpenableDocument(disguised)).toBeNull();
+  });
+
+  it("refuses a document that was swapped for a link after its path was resolved", async () => {
+    const script = file("swap-payload.sh");
+    const swapped = join(dir, "swapped.pdf");
+    symlinkSync(script, swapped);
+    // The agent can replace the file between the two checks; simulate the first one having
+    // seen a real file at this path.
+    const realpath = vi.spyOn(FS.promises, "realpath").mockResolvedValueOnce(swapped);
+    try {
+      expect(await resolveOpenableDocument(swapped)).toBeNull();
+    } finally {
+      realpath.mockRestore();
+    }
   });
 
   it("refuses a folder named like a document", async () => {

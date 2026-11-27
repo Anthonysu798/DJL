@@ -13,7 +13,11 @@ import { isOpenableDocumentPath } from "@djl/shared/openableFiles";
 export async function resolveOpenableDocument(path: string): Promise<string | null> {
   try {
     const realPath = await FS.promises.realpath(path);
-    const stats = await FS.promises.stat(realPath);
+    // lstat, not stat: if the agent swapped the file for a link after the line above, this
+    // sees the link and refuses. A swap after this line cannot be ruled out, because the
+    // system opens by path; opening a private copy would close that gap but would send the
+    // user's edits to the copy instead of their file.
+    const stats = await FS.promises.lstat(realPath);
     return stats.isFile() && isOpenableDocumentPath(realPath) ? realPath : null;
   } catch {
     return null;
