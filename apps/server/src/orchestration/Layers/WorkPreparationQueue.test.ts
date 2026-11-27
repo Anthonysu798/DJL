@@ -116,9 +116,17 @@ describe("WorkPreparationQueue", () => {
       file: "scan.png",
       ready: false,
     },
+    {
+      name: "image for the thread's local harness",
+      prompt: "What does the screenshot show?",
+      mime: "image/png",
+      file: "shot.png",
+      ready: true,
+      threadProvider: "claudeAgent" as const,
+    },
   ])(
     "prepares $name without confusing media placement with document reading",
-    async ({ prompt, mime, file, ready }) => {
+    async ({ prompt, mime, file, ready, threadProvider }) => {
       const baseDir = mkdtempSync(path.join(tmpdir(), "djl-preparation-queue-"));
       tempDirs.push(baseDir);
       const attachmentsDir = path.join(baseDir, "attachments");
@@ -216,6 +224,9 @@ describe("WorkPreparationQueue", () => {
               {
                 id: ThreadId.makeUnsafe("thread-1"),
                 worktreePath: null,
+                ...(threadProvider
+                  ? { modelSelection: { provider: threadProvider, model: "native-test" } }
+                  : {}),
               },
             ],
           } as never),
@@ -318,13 +329,17 @@ describe("WorkPreparationQueue", () => {
       );
 
       if (!ready) {
+        // Nothing can be installed to read the image, so the turn fails where the user sees it
+        // instead of waiting forever for an add-on.
         expect(prepared).toEqual(Option.none());
+        expect((record as WorkPreparationJobRecord | null)?.status).toBe("failed");
         expect(commands).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              type: "thread.activity.append",
-              activity: expect.objectContaining({
-                kind: "work.preparation.needs_document_intelligence",
+              type: "thread.session.set",
+              session: expect.objectContaining({
+                status: "error",
+                lastError: expect.stringContaining("scan.png"),
               }),
             }),
           ]),

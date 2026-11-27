@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { stat } from "node:fs/promises";
-import { isAbsolute } from "node:path";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { isAbsolute, join } from "node:path";
 import {
   ProviderRuntimeEvent,
   ProviderApprovalPolicy,
@@ -25,6 +26,7 @@ import {
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
+import { nativeTurn, withAttachedFiles } from "./attachments";
 import { fakeUsageLimitError } from "./devFakeUsageLimit";
 import { mergeNativeProfile, profileAccountDir } from "./profile";
 import { nativeQuestions, nativeApprovalDetail } from "./requests";
@@ -89,6 +91,8 @@ export const makeNativeAdapter = (
   applyAccount: (options: ProviderStartOptions) => Promise<ProviderStartOptions> = async (
     options,
   ) => options,
+  /** Where chat attachments are saved; without it a turn cannot carry any. */
+  attachmentsDir?: string,
 ) =>
   Effect.gen(function* () {
     const queue = yield* Queue.unbounded<ProviderRuntimeEvent>();
@@ -128,18 +132,20 @@ export const makeNativeAdapter = (
         updatedAt: new Date().toISOString(),
       };
     };
-    const stop = (state: SessionState) => {
+    const stop = (state: SessionState, announce = true) => {
       if (state.stopped) return;
       state.stopped = true;
       complete(state, "interrupted");
       for (const pending of state.pending.values()) pending.resolve("cancel");
       state.driver?.close();
       state.session = { ...state.session, status: "closed" };
-      sessions.delete(state.session.threadId);
-      emit(state, {
-        type: "session.exited",
-        payload: { reason: "Native runtime stopped", exitKind: "graceful" },
-      });
+      // A restart may already have put its replacement under this thread id.
+      if (sessions.get(state.session.threadId) === state) sessions.delete(state.session.threadId);
+      if (announce)
+        emit(state, {
+          type: "session.exited",
+          payload: { reason: "Native runtime stopped", exitKind: "graceful" },
+        });
     };
     const requireSession = (threadId: string) => {
       const state = sessions.get(threadId);
@@ -159,14 +165,9 @@ export const makeNativeAdapter = (
       });
     const validateTurn = (input: ProviderSendTurnInput, state: SessionState) => {
       if (!input.input?.trim()) throw new Error("A text prompt is required");
-      // Groups pass attachment paths to members as text; other bridges cannot. Skills are
-      // already inlined into the prompt text upstream, so bridges may ignore the references.
-      const acceptsFiles = provider === "group";
-      if (
-        (!acceptsFiles && input.attachments?.length) ||
-        input.mentions?.length ||
-        input.workTurnPolicy
-      )
+      // Attachments travel as saved paths (see nativeTurn). Skills are already inlined into the
+      // prompt text upstream, so bridges may ignore the references.
+      if (input.mentions?.length || input.workTurnPolicy)
         throw new Error("This native bridge currently accepts text prompts only");
       if (input.modelSelection && input.modelSelection.provider !== provider)
         throw new Error("Model provider does not match runtime");
@@ -177,6 +178,7 @@ export const makeNativeAdapter = (
     };
     const beginTurn = (state: SessionState, input: ProviderSendTurnInput) => {
       validateTurn(input, state);
+      const turn = nativeTurn(provider, attachmentsDir, input);
       const turnId = TurnId.makeUnsafe(randomUUID());
       state.completed = false;
       state.session = {
@@ -187,7 +189,9 @@ export const makeNativeAdapter = (
       };
       emit(state, { type: "turn.started", payload: {} });
       const fakeLimit = fakeUsageLimitError(provider, state.profileOptions);
-      const sent = fakeLimit ? Promise.reject(new Error(fakeLimit)) : state.driver!.send(input);
+      const sent = fakeLimit
+        ? Promise.reject(new Error(fakeLimit))
+        : withAttachedFiles(turn, attachmentTextDir).then((ready) => state.driver!.send(ready));
       void sent.then(
         () => complete(state, "completed"),
         (error: unknown) => {
@@ -213,9 +217,13 @@ export const makeNativeAdapter = (
       attempt(method, async () => {
         throw new Error(`${method} is not supported by the native ${provider} bridge`);
       });
+    // Text extracted from attached PDF and Office files, kept only while this adapter lives.
+    let textDir: Promise<string> | undefined;
+    const attachmentTextDir = () => (textDir ??= mkdtemp(join(tmpdir(), "djl-attachment-text-")));
     yield* Effect.addFinalizer(() =>
       Effect.sync(() => {
         for (const state of sessions.values()) stop(state);
+        void textDir?.then((dir) => rm(dir, { recursive: true, force: true }));
       }),
     );
     const adapter: ProviderAdapterShape<ProviderAdapterError> = {
@@ -256,7 +264,10 @@ export const makeNativeAdapter = (
               );
           }
           const configured = await readProfile();
-          if (sessions.has(input.threadId)) throw new Error("Native session already exists");
+          // A restart (new permission mode, model or account) replaces the live session. No exit
+          // is announced: the chat carries on in the session started below.
+          const previous = sessions.get(input.threadId);
+          if (previous) stop(previous, false);
           if (input.modelSelection && input.modelSelection.provider !== provider)
             throw new Error("Model provider does not match runtime");
           const saved =
@@ -449,7 +460,12 @@ export const makeNativeAdapter = (
                 validateTurn(input, state);
                 if (!state.driver?.steer)
                   throw new Error("The native driver does not support steering");
-                await state.driver.steer(input);
+                await state.driver.steer(
+                  await withAttachedFiles(
+                    nativeTurn(provider, attachmentsDir, input),
+                    attachmentTextDir,
+                  ),
+                );
                 return {
                   threadId: input.threadId,
                   turnId,

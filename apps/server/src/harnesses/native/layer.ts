@@ -248,6 +248,7 @@ export const makeConfiguredNativeAdapter = (
       extraModels,
       async (options) =>
         applyChatAccount(provider, options, await Effect.runPromise(settings.getSettings)),
+      Option.getOrUndefined(config)?.attachmentsDir,
     );
     if (provider !== "codex") return adapter;
     return {

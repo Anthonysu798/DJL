@@ -653,86 +653,217 @@ describe("ProviderCommandReactor", () => {
     (["codex", "claudeAgent", "cursor", "djlCloud"] as const).flatMap((provider) =>
       (["attachment", "memory", "studio"] as const).map((kind) => ({ provider, kind })),
     ),
-  )(
-    "retains prepared context for $provider $kind without OpenCode wire fields",
-    async ({ provider, kind }) => {
-      const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-work-boundary-"));
-      const workspaceRoot = path.join(baseDir, "task");
-      fs.mkdirSync(workspaceRoot);
+  )("routes $provider $kind context without OpenCode wire fields", async ({ provider, kind }) => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-work-boundary-"));
+    const workspaceRoot = path.join(baseDir, "task");
+    fs.mkdirSync(workspaceRoot);
+    const harness = await createHarness({
+      baseDir,
+      projectKind: kind === "studio" ? "studio" : "chat",
+      projectWorkspaceRoot: workspaceRoot,
+      threadModelSelection: { provider, model: "native-test" },
+    });
+    const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("native-explicit-work"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("native-work-message"),
+          role: "user",
+          text: "Read the context",
+          ...(kind === "memory" ? { memoryContext: { searchProject: true, references: [] } } : {}),
+          attachments:
+            kind === "attachment"
+              ? [
+                  {
+                    type: "file",
+                    id: "native-file" as never,
+                    name: "report.pdf",
+                    mimeType: "application/pdf",
+                    sizeBytes: 10,
+                  },
+                ]
+              : [],
+        },
+
+        interactionMode: "default",
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    if (kind === "attachment" && provider !== "djlCloud") {
+      // A local harness opens the saved file itself: the chat goes straight to it, as typed.
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.enqueueWorkPreparation).not.toHaveBeenCalled();
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+      expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+        input: "Read the context",
+        attachments: [expect.objectContaining({ id: "native-file" })],
+      });
+      return;
+    }
+    await waitFor(() => harness.enqueueWorkPreparation.mock.calls.length === 1);
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    const queued = harness.enqueueWorkPreparation.mock.calls[0]![0];
+    await harness.emitPreparedWorkTurn({
+      id: "native-prepared",
+      sourceEventId: queued.event.eventId,
+      threadId: queued.event.payload.threadId,
+      projectId: queued.projectId,
+      messageId: queued.message.id,
+      request: queued.event.payload,
+      messageText: queued.message.text,
+      attachments: queued.message.attachments ?? [],
+      status: "completed",
+      preparedPrompt: "Prepared context",
+      error: null,
+      attemptCount: 1,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: now,
+      dispatchedAt: null,
+    });
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+    expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("attachments");
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: expect.stringContaining("Prepared context"),
+    });
+    if (provider === "djlCloud" && kind !== "studio") {
+      expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
+    } else {
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        cwd: expect.stringContaining(workspaceRoot),
+      });
+    }
+  });
+
+  it.each(["claudeAgent", "codex", "gemini"] as const)(
+    "sends a chat image straight to %s instead of parking it for OCR",
+    async (provider) => {
       const harness = await createHarness({
-        baseDir,
-        projectKind: kind === "studio" ? "studio" : "chat",
-        projectWorkspaceRoot: workspaceRoot,
+        projectKind: "chat",
         threadModelSelection: { provider, model: "native-test" },
       });
-      const now = new Date().toISOString();
       await Effect.runPromise(
         harness.engine.dispatch({
           type: "thread.turn.start",
-          commandId: CommandId.makeUnsafe("native-explicit-work"),
+          commandId: CommandId.makeUnsafe("native-chat-image"),
           threadId: ThreadId.makeUnsafe("thread-1"),
           message: {
-            messageId: asMessageId("native-work-message"),
+            messageId: asMessageId("native-chat-image-message"),
             role: "user",
-            text: "Read the context",
-            ...(kind === "memory"
-              ? { memoryContext: { searchProject: true, references: [] } }
-              : {}),
-            attachments:
-              kind === "attachment"
-                ? [
-                    {
-                      type: "file",
-                      id: "native-file" as never,
-                      name: "report.pdf",
-                      mimeType: "application/pdf",
-                      sizeBytes: 10,
-                    },
-                  ]
-                : [],
+            text: "what is this image about?",
+            attachments: [
+              {
+                type: "image",
+                id: "native-image" as never,
+                name: "image.png",
+                mimeType: "image/png",
+                sizeBytes: 10,
+              },
+            ],
           },
-
           interactionMode: "default",
           runtimeMode: "approval-required",
-          createdAt: now,
+          createdAt: new Date().toISOString(),
         }),
       );
-      await waitFor(() => harness.enqueueWorkPreparation.mock.calls.length === 1);
-      expect(harness.sendTurn).not.toHaveBeenCalled();
-      const queued = harness.enqueueWorkPreparation.mock.calls[0]![0];
-      await harness.emitPreparedWorkTurn({
-        id: "native-prepared",
-        sourceEventId: queued.event.eventId,
-        threadId: queued.event.payload.threadId,
-        projectId: queued.projectId,
-        messageId: queued.message.id,
-        request: queued.event.payload,
-        messageText: queued.message.text,
-        attachments: queued.message.attachments ?? [],
-        status: "completed",
-        preparedPrompt: "Prepared context",
-        error: null,
-        attemptCount: 1,
-        createdAt: now,
-        updatedAt: now,
-        completedAt: now,
-        dispatchedAt: null,
-      });
       await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.enqueueWorkPreparation).not.toHaveBeenCalled();
       expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
-      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("attachments");
       expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-        input: expect.stringContaining("Prepared context"),
+        input: "what is this image about?",
+        attachments: [expect.objectContaining({ id: "native-image", type: "image" })],
       });
-      if (provider === "djlCloud" && kind !== "studio") {
-        expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
-      } else {
-        expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
-          cwd: expect.stringContaining(workspaceRoot),
-        });
-      }
     },
   );
+
+  it.each(["gemini", "qwen", "pi", "deepseek"] as const)(
+    "sends a plain %s chat message without an OpenCode work policy",
+    async (provider) => {
+      const harness = await createHarness({
+        projectKind: "chat",
+        threadModelSelection: { provider, model: "native-test" },
+      });
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("native-chat-plain"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("native-chat-plain-message"),
+            role: "user",
+            text: "hello",
+            attachments: [],
+          },
+          interactionMode: "default",
+          runtimeMode: "approval-required",
+          createdAt: new Date().toISOString(),
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+      expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({ input: "hello" });
+    },
+  );
+
+  it("forwards a prepared Studio turn's original files to a local harness", async () => {
+    const harness = await createHarness({
+      projectKind: "studio",
+      threadModelSelection: { provider: "claudeAgent", model: "native-test" },
+    });
+    const now = new Date().toISOString();
+    const image = {
+      type: "image" as const,
+      id: "studio-image" as never,
+      name: "chart.png",
+      mimeType: "image/png",
+      sizeBytes: 10,
+    };
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("native-studio-image"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("native-studio-image-message"),
+          role: "user",
+          text: "Describe the chart",
+          attachments: [image],
+        },
+        interactionMode: "default",
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.enqueueWorkPreparation.mock.calls.length === 1);
+    const queued = harness.enqueueWorkPreparation.mock.calls[0]![0];
+    await harness.emitPreparedWorkTurn({
+      id: "studio-prepared",
+      sourceEventId: queued.event.eventId,
+      threadId: queued.event.payload.threadId,
+      projectId: queued.projectId,
+      messageId: queued.message.id,
+      request: queued.event.payload,
+      messageText: queued.message.text,
+      attachments: queued.message.attachments ?? [],
+      status: "completed",
+      preparedPrompt: "Prepared context",
+      error: null,
+      attemptCount: 1,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: now,
+      dispatchedAt: null,
+    });
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      attachments: [expect.objectContaining({ id: "studio-image" })],
+    });
+  });
 
   it("passes the materialized standalone chat folder to native fork startup", async () => {
     const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-chat-fork-"));

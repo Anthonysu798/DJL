@@ -101,6 +101,10 @@ import { ServerSettingsService } from "../../serverSettings.ts";
 import type { WorkPreparationJobRecord } from "../../persistence/Services/WorkPreparationRepository.ts";
 import { resolveWorkModelDocumentRouting } from "../../work/modelDocumentRouting.ts";
 import {
+  isLocalHarness,
+  isNativeProvider as isNativeProviderKind,
+} from "../../harnesses/native/types.ts";
+import {
   buildGroundedWorkPrompt,
   decideWorkTurnPolicy,
   isMarketingRequest,
@@ -183,8 +187,10 @@ export function attachmentsForPreparedWorkTurn(
   thread: Pick<OrchestrationThread, "modelSelection">,
 ): ReadonlyArray<ChatAttachment> {
   const modelSelection = job.request.modelSelection ?? thread.modelSelection;
-  // Native bridges consume the cited text/OCR in preparedPrompt, not OpenCode file parts.
-  if (["codex", "claudeAgent", "cursor", "djlCloud"].includes(modelSelection.provider)) return [];
+  // A local harness opens the saved originals itself. Hosted DJL Cloud cannot, and consumes
+  // the cited text in preparedPrompt instead.
+  if (isLocalHarness(modelSelection.provider)) return job.attachments;
+  if (modelSelection.provider === "djlCloud") return [];
   const routing = resolveWorkModelDocumentRouting(modelSelection);
   // A nonvision or unknown model receives normalized cited OCR/text only. This
   // avoids unsupported file parts and prevents an image from being sent to a
@@ -1945,17 +1951,14 @@ const make = Effect.gen(function* () {
       event.payload.modelSelection?.provider ??
       thread.session?.providerName ??
       thread.modelSelection.provider;
-    const isNativeProvider = ["codex", "claudeAgent", "cursor", "djlCloud", "group"].includes(
-      selectedProvider,
-    );
+    const isNativeProvider = isNativeProviderKind(selectedProvider);
+    // A chat with a native harness goes to it as typed. A local harness also takes the chat's
+    // attachments as they are; hosted DJL Cloud needs them turned into text first.
     const isPlainNativeChat =
       project?.kind === "chat" &&
-      (selectedProvider === "codex" ||
-        selectedProvider === "claudeAgent" ||
-        selectedProvider === "cursor" ||
-        selectedProvider === "djlCloud") &&
+      isNativeProvider &&
       !preparedJob &&
-      (message.attachments?.length ?? 0) === 0 &&
+      (isLocalHarness(selectedProvider) || (message.attachments?.length ?? 0) === 0) &&
       event.payload.memoryContext?.searchProject !== true &&
       (event.payload.memoryContext?.references.length ?? 0) === 0;
     const isWorkSurface =

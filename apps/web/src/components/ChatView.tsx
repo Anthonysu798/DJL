@@ -1393,6 +1393,11 @@ export default function ChatView({
   const [localDraftErrorsByThreadId, setLocalDraftErrorsByThreadId] = useState<
     Record<ThreadId, string | null>
   >({});
+  // Session updates and snapshot syncs overwrite thread.error with the server's lastError, so a
+  // rejected send is kept here until the next send attempt or a dismiss.
+  const [sendErrorsByThreadId, setSendErrorsByThreadId] = useState<Record<ThreadId, string | null>>(
+    {},
+  );
   const [localDispatch, setLocalDispatch] = useState<LocalDispatchSnapshot | null>(null);
   const failedWorktreeSetupDispatchStartedAtRef = useRef<string | null>(null);
   const [isLocalConnecting, _setIsLocalConnecting] = useState(false);
@@ -7164,6 +7169,7 @@ export default function ChatView({
             (currentDraft?.assistantSelections.length ?? 0)
           );
         })(),
+        streaming: activeProject?.kind === "studio",
       });
 
       if (nextImages.length === 1 && nextImages[0]) {
@@ -7174,6 +7180,7 @@ export default function ChatView({
       setThreadError(activeThreadId, error);
     },
     [
+      activeProject?.kind,
       activeThreadId,
       addComposerImage,
       addComposerImagesToDraft,
@@ -7209,6 +7216,7 @@ export default function ChatView({
             (currentDraft?.assistantSelections.length ?? 0)
           );
         })(),
+        streaming: activeProject?.kind === "studio",
       });
 
       if (nextFiles.length > 0) {
@@ -7216,7 +7224,14 @@ export default function ChatView({
       }
       setThreadError(activeThreadId, error);
     },
-    [activeThreadId, addComposerFilesToDraft, pendingUserInputs.length, setThreadError, t],
+    [
+      activeProject?.kind,
+      activeThreadId,
+      addComposerFilesToDraft,
+      pendingUserInputs.length,
+      setThreadError,
+      t,
+    ],
   );
 
   const removeComposerFile = (fileId: string) => {
@@ -8616,6 +8631,7 @@ export default function ChatView({
     armTranscriptAutoFollow(threadIdForSend, true);
 
     setThreadError(threadIdForSend, null);
+    setSendErrorsByThreadId((existing) => ({ ...existing, [threadIdForSend]: null }));
     if (expiredTerminalContextCount > 0) {
       const toastCopy = buildExpiredTerminalContextToastCopy(
         expiredTerminalContextCount,
@@ -8913,10 +8929,9 @@ export default function ChatView({
         updateSelectedComposerMentions(composerMentionsSnapshot);
         setComposerTrigger(detectComposerTrigger(promptForSend, promptForSend.length));
       }
-      setThreadError(
-        threadIdForSend,
-        err instanceof Error ? err.message : t("errors.sendMessageFailed"),
-      );
+      const sendError = err instanceof Error ? err.message : t("errors.sendMessageFailed");
+      setThreadError(threadIdForSend, sendError);
+      setSendErrorsByThreadId((existing) => ({ ...existing, [threadIdForSend]: sendError }));
     });
     sendInFlightRef.current = false;
     if (!turnStartSucceeded) {
@@ -9196,6 +9211,7 @@ export default function ChatView({
     sendInFlightRef.current = true;
     beginLocalDispatch();
     setThreadError(threadIdForSend, null);
+    setSendErrorsByThreadId((existing) => ({ ...existing, [threadIdForSend]: null }));
     setOptimisticUserMessages((existing) => [
       ...existing,
       {
@@ -9280,10 +9296,9 @@ export default function ChatView({
       setOptimisticUserMessages((existing) =>
         existing.filter((message) => message.id !== messageIdForSend),
       );
-      setThreadError(
-        threadIdForSend,
-        err instanceof Error ? err.message : t("errors.sendPlanFollowUpFailed"),
-      );
+      const sendError = err instanceof Error ? err.message : t("errors.sendPlanFollowUpFailed");
+      setThreadError(threadIdForSend, sendError);
+      setSendErrorsByThreadId((existing) => ({ ...existing, [threadIdForSend]: sendError }));
       sendInFlightRef.current = false;
       resetLocalDispatch();
       return false;
@@ -11042,6 +11057,7 @@ export default function ChatView({
   const dismissActiveThreadError = useCallback(() => {
     if (!activeThread) return;
     setThreadError(activeThread.id, null);
+    setSendErrorsByThreadId((existing) => ({ ...existing, [activeThread.id]: null }));
   }, [activeThread, setThreadError]);
   const dismissActiveProviderHealthBanner = useCallback(() => {
     if (!activeProviderHealthBannerDismissalKey) return;
@@ -12166,7 +12182,10 @@ export default function ChatView({
         status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
         onDismiss={dismissActiveProviderHealthBanner}
       />
-      <ThreadErrorBanner error={activeThread.error} onDismiss={dismissActiveThreadError} />
+      <ThreadErrorBanner
+        error={activeThread.error ?? sendErrorsByThreadId[activeThread.id] ?? null}
+        onDismiss={dismissActiveThreadError}
+      />
       <LimitSwitchBanner
         thread={activeThread}
         handoffDisabled={handoffDisabled}

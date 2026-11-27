@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import {
   CommandId,
   DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_RUNTIME_MODE,
   EventId,
   type DocumentIntelligenceStatus,
   type OrchestrationThreadActivity,
@@ -181,8 +182,14 @@ const make = Effect.gen(function* () {
         (attachment): attachment is WorkPreparationAttachment =>
           attachment.type === "file" || attachment.type === "image",
       );
+      // A turn that names no model runs on the thread's own.
+      const threadModelSelection =
+        job.request.modelSelection ??
+        (yield* orchestrationEngine.getReadModel()).threads.find(
+          (candidate) => candidate.id === job.threadId,
+        )?.modelSelection;
       const modelRouting = resolveWorkModelDocumentRouting(
-        job.request.modelSelection ?? {
+        threadModelSelection ?? {
           provider: "opencode",
           model: DEFAULT_MODEL_BY_PROVIDER.opencode,
         },
@@ -338,6 +345,58 @@ const make = Effect.gen(function* () {
           const squashed = Cause.squash(cause);
           const detail = Cause.pretty(cause).slice(0, 8_000);
           const failedAt = new Date().toISOString();
+          const cannotInstallReader =
+            squashed instanceof DocumentOcrRequiredError &&
+            !(yield* documentIntelligence.status).installAvailable;
+          if (cannotInstallReader) {
+            // Nothing the user can install would unblock this turn, so it must not wait for
+            // input that can never arrive. Fail it where the chat shows errors.
+            const message = `This model cannot read '${squashed.documentName}'. Switch to a model that reads images, such as Claude or Codex, or remove the file and send again.`;
+            yield* repository.fail(jobId, detail, failedAt).pipe(Effect.ignore);
+            const failedJob = yield* repository.get(jobId).pipe(
+              Effect.map(Option.getOrUndefined),
+              Effect.catch(() => Effect.succeed(undefined)),
+            );
+            if (failedJob) {
+              yield* appendPreparationActivity({
+                jobId,
+                threadId: failedJob.threadId,
+                kind: "work.preparation.failed",
+                summary: "Document preparation failed",
+                tone: "error",
+                payload: { detail: message },
+                createdAt: failedAt,
+              }).pipe(Effect.ignore);
+              const thread = (yield* orchestrationEngine.getReadModel()).threads.find(
+                (candidate) => candidate.id === failedJob.threadId,
+              );
+              yield* orchestrationEngine
+                .dispatch({
+                  type: "thread.session.set",
+                  commandId: serverCommandId(jobId, "session-error"),
+                  threadId: failedJob.threadId,
+                  session: {
+                    threadId: failedJob.threadId,
+                    status: "error",
+                    providerName:
+                      thread?.session?.providerName ??
+                      failedJob.request.modelSelection?.provider ??
+                      thread?.modelSelection?.provider ??
+                      "opencode",
+                    runtimeMode:
+                      thread?.session?.runtimeMode ??
+                      failedJob.request.runtimeMode ??
+                      DEFAULT_RUNTIME_MODE,
+                    activeTurnId: null,
+                    lastError: message,
+                    updatedAt: failedAt,
+                  },
+                  createdAt: failedAt,
+                })
+                .pipe(Effect.ignore);
+            }
+            return;
+          }
           if (
             squashed instanceof DocumentOcrRequiredError ||
             squashed instanceof DocumentIntelligenceError

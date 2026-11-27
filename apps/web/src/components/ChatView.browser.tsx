@@ -4892,6 +4892,95 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("keeps a failed send visible after a session-set clears the thread error", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-send-failure-test" as MessageId,
+        targetText: "send failure test",
+      }),
+    });
+    const previousNativeApi = window.nativeApi;
+    const wsNativeApi = readNativeApi();
+    expect(wsNativeApi).toBeDefined();
+    const sendFailure = "The server rejected this turn.";
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...wsNativeApi,
+        orchestration: {
+          ...wsNativeApi?.orchestration,
+          dispatchCommand: vi.fn(async (command: { type: string }) => {
+            wsRequests.push({ _tag: ORCHESTRATION_WS_METHODS.dispatchCommand, command });
+            if (command.type === "thread.turn.start") {
+              throw new Error(sendFailure);
+            }
+            return { sequence: fixture.snapshot.snapshotSequence + 1 };
+          }),
+        },
+      },
+    });
+    const sendFailureAlertIsVisible = () =>
+      Array.from(document.querySelectorAll('[role="alert"]')).some((alert) =>
+        alert.textContent?.includes(sendFailure),
+      );
+
+    try {
+      await page.getByRole("textbox").fill("hi");
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await vi.waitFor(() => expect(sendFailureAlertIsVisible()).toBe(true), {
+        timeout: 8_000,
+        interval: 16,
+      });
+
+      // The server knows nothing about the rejected send, so its session has no error.
+      useStore.getState().applyOrchestrationEvents([
+        {
+          type: "thread.session-set",
+          payload: {
+            threadId: THREAD_ID,
+            session: {
+              threadId: THREAD_ID,
+              status: "ready",
+              providerName: "codex",
+              runtimeMode: "full-access",
+              activeTurnId: null,
+              lastError: null,
+              updatedAt: NOW_ISO,
+            },
+          },
+          sequence: fixture.snapshot.snapshotSequence + 1,
+          eventId: EventId.makeUnsafe("event-session-set-after-send-failure"),
+          aggregateKind: "thread",
+          aggregateId: THREAD_ID,
+          occurredAt: NOW_ISO,
+          commandId: null,
+          causationEventId: null,
+          correlationId: null,
+          metadata: {},
+        },
+      ]);
+      await vi.waitFor(() => {
+        expect(
+          useStore.getState().threads.find((thread) => thread.id === THREAD_ID)?.error,
+        ).toBeNull();
+      });
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+      expect(sendFailureAlertIsVisible()).toBe(true);
+    } finally {
+      if (previousNativeApi) {
+        Object.defineProperty(window, "nativeApi", {
+          configurable: true,
+          value: previousNativeApi,
+        });
+      } else {
+        Reflect.deleteProperty(window, "nativeApi");
+      }
+      await mounted.cleanup();
+    }
+  });
+
   it("snapshots sticky codex settings into a new draft thread", async () => {
     useComposerDraftStore.setState({
       stickyModelSelectionByProvider: {

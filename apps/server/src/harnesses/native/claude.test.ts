@@ -9,6 +9,8 @@ const state = vi.hoisted(() => ({
   rateLimit: undefined as Record<string, unknown> | undefined,
   actualMode: "",
   permissionDenied: false,
+  subagentText: false,
+  messages: [] as unknown[],
   modes: [] as string[],
   flags: [] as Record<string, unknown>[],
 }));
@@ -23,7 +25,14 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
   }) => {
     state.options = options;
     const iterator = (async function* () {
-      for await (const _message of prompt) {
+      for await (const message of prompt) {
+        state.messages.push(message);
+        if (state.subagentText)
+          for (const event of [
+            { type: "message_start", message: { id: "subagent-message" } },
+            { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "sub" } },
+          ])
+            yield { type: "stream_event", parent_tool_use_id: "tool-1", event };
         if (state.permissionDenied)
           yield {
             type: "system",
@@ -420,6 +429,87 @@ describe("fresh Claude SDK bridge", () => {
     } finally {
       driver.close();
       state.multipleMessages = false;
+    }
+  });
+
+  it("keeps a subagent's text out of the main reply", async () => {
+    state.subagentText = true;
+    const events: Record<string, unknown>[] = [];
+    const driver = await createClaudeDriver(input, {
+      emit: (event) => events.push(event),
+      request: async () => "cancel",
+      fail: () => {},
+    });
+    try {
+      await driver.send({ threadId: input.threadId, input: "hello" });
+      const deltas = events.filter((event) => event.type === "content.delta");
+      expect(deltas.map((event) => (event.payload as { delta: string }).delta)).toEqual([
+        "native response",
+      ]);
+      expect(deltas[0]!.itemId).not.toContain("subagent-message");
+    } finally {
+      driver.close();
+      state.subagentText = false;
+    }
+  });
+
+  it("shows attached images to Claude and lets it read the attached files unprompted", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "djl-claude-attachments-"));
+    const png = join(folder, "shot.png");
+    const notes = join(folder, "notes.txt");
+    await writeFile(png, "png-bytes");
+    await writeFile(notes, "notes");
+    let asked = 0;
+    const driver = await createClaudeDriver(input, {
+      emit: () => {},
+      request: async () => {
+        asked += 1;
+        return "decline";
+      },
+      fail: () => {},
+    });
+    try {
+      state.messages.length = 0;
+      await driver.send({
+        threadId: input.threadId,
+        input: "what is this?",
+        files: [
+          { path: png, name: "shot.png", mimeType: "image/png", sizeBytes: 9, image: true },
+          { path: notes, name: "notes.txt", mimeType: "text/plain", sizeBytes: 5, image: false },
+        ],
+      });
+      expect((state.messages[0] as { message: unknown }).message).toEqual({
+        role: "user",
+        content: [
+          { type: "text", text: "what is this?" },
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: "image/png",
+              data: Buffer.from("png-bytes").toString("base64"),
+            },
+          },
+        ],
+      });
+      const request = state.options!.canUseTool as (
+        name: string,
+        args: Record<string, unknown>,
+        context: { toolUseID: string; signal: AbortSignal },
+      ) => Promise<Record<string, unknown>>;
+      const context = { toolUseID: "read", signal: new AbortController().signal };
+      expect(await request("Read", { file_path: notes }, context)).toMatchObject({
+        behavior: "allow",
+      });
+      expect(asked).toBe(0);
+      // Anything else on disk still goes to the user.
+      expect(await request("Read", { file_path: "/etc/hosts" }, context)).toMatchObject({
+        behavior: "deny",
+      });
+      expect(asked).toBe(1);
+    } finally {
+      driver.close();
+      await rm(folder, { recursive: true, force: true });
     }
   });
 

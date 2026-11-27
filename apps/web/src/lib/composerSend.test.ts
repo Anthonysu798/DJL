@@ -1,4 +1,7 @@
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@djl/contracts";
+import {
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+} from "@djl/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,8 +9,17 @@ import {
   buildComposerImageAttachmentsFromFiles,
   buildUploadComposerAttachments,
   COMPOSER_ATTACHMENT_ACCEPT,
+  DATA_URL_FILE_MAX_BYTES,
+  DATA_URL_IMAGE_MAX_BYTES,
+  FILE_SIZE_LIMIT_LABEL,
   partitionComposerAttachmentFiles,
 } from "./composerSend";
+
+function fileOfSize(name: string, type: string, size: number): File {
+  const file = new File(["x"], name, { type });
+  Object.defineProperty(file, "size", { value: size });
+  return file;
+}
 
 describe("composerSend attachment builders", () => {
   const originalCreateObjectUrl = URL.createObjectURL;
@@ -90,6 +102,51 @@ describe("composerSend attachment builders", () => {
     expect(result.error).toBe(
       `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
     );
+  });
+
+  it("keeps data URL attachment limits under the contract's data URL caps", () => {
+    // Contract caps (packages/contracts/src/orchestration.ts) and the longest allowed MIME type.
+    const header = `data:${"a".repeat(100)};base64,`.length;
+    const dataUrlChars = (bytes: number) => header + 4 * Math.ceil(bytes / 3);
+
+    expect(dataUrlChars(DATA_URL_IMAGE_MAX_BYTES)).toBeLessThanOrEqual(14_000_000);
+    expect(dataUrlChars(DATA_URL_IMAGE_MAX_BYTES + 3)).toBeGreaterThan(14_000_000);
+    expect(dataUrlChars(DATA_URL_FILE_MAX_BYTES)).toBeLessThanOrEqual(35_000_000);
+    expect(dataUrlChars(DATA_URL_FILE_MAX_BYTES + 3)).toBeGreaterThan(35_000_000);
+  });
+
+  it("rejects images and files too large to send as data URLs at attach time", () => {
+    const image = buildComposerImageAttachmentsFromFiles({
+      files: [fileOfSize("huge.png", "image/png", DATA_URL_IMAGE_MAX_BYTES + 1)],
+      existingAttachmentCount: 0,
+    });
+    expect(image.images).toEqual([]);
+    expect(image.error).toBe("'huge.png' exceeds the 10MB attachment limit.");
+
+    const file = buildComposerFileAttachmentsFromFiles({
+      files: [fileOfSize("huge.pdf", "application/pdf", DATA_URL_FILE_MAX_BYTES + 1)],
+      existingAttachmentCount: 0,
+    });
+    expect(file.files).toEqual([]);
+    expect(file.error).toBe("'huge.pdf' exceeds the 25MB attachment limit.");
+  });
+
+  it("keeps the upload limit for streamed Studio attachments", () => {
+    const image = buildComposerImageAttachmentsFromFiles({
+      files: [fileOfSize("huge.png", "image/png", DATA_URL_IMAGE_MAX_BYTES + 1)],
+      existingAttachmentCount: 0,
+      streaming: true,
+    });
+    expect(image.error).toBeNull();
+    expect(image.images).toHaveLength(1);
+
+    const file = buildComposerFileAttachmentsFromFiles({
+      files: [fileOfSize("huge.pdf", "application/pdf", PROVIDER_SEND_TURN_MAX_FILE_BYTES + 1)],
+      existingAttachmentCount: 0,
+      streaming: true,
+    });
+    expect(file.files).toEqual([]);
+    expect(file.error).toBe(`'huge.pdf' exceeds the ${FILE_SIZE_LIMIT_LABEL} attachment limit.`);
   });
 
   it("streams Work files and images after the task exists", async () => {
